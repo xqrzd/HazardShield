@@ -53,6 +53,7 @@
   <ItemGroup>
     <ResourceCompile Include="HzrFilter.rc" />
     <ClCompile Include="Context.c" />
+    <ClCompile Include="Handle.c" />
     <ClCompile Include="HzrFilter.c" />
     <Inf Include="HzrFilter.inf" />
   </ItemGroup>
@@ -260,6 +261,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Context.h" />
+    <ClInclude Include="Handle.h" />
     <ClInclude Include="HzrFilter.h" />
     <ClInclude Include="resource.h" />
   </ItemGroup>

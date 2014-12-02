@@ -30,6 +30,9 @@
     <ClCompile Include="Context.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Handle.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="HzrFilter.rc">
@@ -44,6 +47,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="HzrFilter.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Handle.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

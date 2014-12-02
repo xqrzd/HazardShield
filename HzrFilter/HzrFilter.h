@@ -23,6 +23,7 @@
 
 #include <fltKernel.h>
 #include "Context.h"
+#include "Handle.h"
 
 DRIVER_INITIALIZE DriverEntry;
 NTSTATUS DriverEntry(
