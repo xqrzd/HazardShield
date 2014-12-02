@@ -1,0 +1,11 @@
+# User-specific files
+*.suo
+*.user
+
+# Build results
+*Debug/
+*Release/
+
+# Visual C++ cache files
+*.aps
+*.sdf
