@@ -29,4 +29,14 @@ NTSTATUS HzrFilterGetFileSize(
 	_Out_ PLARGE_INTEGER Size
 	);
 
+BOOLEAN HzrFilterIsPrefetchEcpPresent(
+	_In_ PFLT_FILTER Filter,
+	_In_ PFLT_CALLBACK_DATA Data
+	);
+
+BOOLEAN HzrFilterIsPrefetchContextPresent(
+	_In_ PFLT_INSTANCE Instance,
+	_In_ PFILE_OBJECT FileObject
+	);
+
 #endif

@@ -33,6 +33,13 @@ const FLT_CONTEXT_REGISTRATION ContextRegistration[] = {
 		sizeof(FILTER_INSTANCE_CONTEXT),
 		'xtci'
 	},
+	{
+		FLT_STREAMHANDLE_CONTEXT,
+		0,
+		NULL,
+		sizeof(FILTER_STREAMHANDLE_CONTEXT),
+		'hctx'
+	},
 
 	{ FLT_CONTEXT_END }
 };

@@ -34,6 +34,18 @@ struct {
 
 CONST FLT_OPERATION_REGISTRATION Callbacks[] = {
 	{
+		IRP_MJ_CREATE,
+		0,
+		NULL,
+		HzrFilterPostCreate
+	},
+	{
+		IRP_MJ_CLEANUP,
+		0,
+		HzrFilterPreCleanup,
+		NULL
+	},
+	{
 		IRP_MJ_ACQUIRE_FOR_SECTION_SYNCHRONIZATION,
 		0,
 		HzrFilterPreAcquireForSectionSynchronization,
@@ -286,6 +298,90 @@ NTSTATUS HzrFilterClientMessage(
 	return status;
 }
 
+FLT_POSTOP_CALLBACK_STATUS HzrFilterPostCreate(
+	_Inout_ PFLT_CALLBACK_DATA Data,
+	_In_ PCFLT_RELATED_OBJECTS FltObjects,
+	_In_opt_ PVOID CompletionContext,
+	_In_ FLT_POST_OPERATION_FLAGS Flags)
+{
+	NTSTATUS status = Data->IoStatus.Status;
+	ULONG_PTR stackLow;
+	ULONG_PTR stackHigh;
+	BOOLEAN isDirectory = FALSE;
+	PFILE_OBJECT fileObject = Data->Iopb->TargetFileObject;
+
+	UNREFERENCED_PARAMETER(CompletionContext);
+	UNREFERENCED_PARAMETER(Flags);
+
+	// Don't continue if the create has already failed.
+	if (!NT_SUCCESS(status) || (status == STATUS_REPARSE))
+		return FLT_POSTOP_FINISHED_PROCESSING;
+
+	// Stack file objects are never scanned.
+	IoGetStackLimits(&stackLow, &stackHigh);
+
+	if (((ULONG_PTR)fileObject > stackLow) &&
+		((ULONG_PTR)fileObject < stackHigh))
+		return FLT_POSTOP_FINISHED_PROCESSING;
+
+	// Directory opens don't need to be scanned.
+	if (FlagOn(Data->Iopb->Parameters.Create.Options, FILE_DIRECTORY_FILE))
+		return FLT_POSTOP_FINISHED_PROCESSING;
+
+	// Skip pre-rename operations which always open a directory.
+	if (FlagOn(Data->Iopb->OperationFlags, SL_OPEN_TARGET_DIRECTORY))
+		return FLT_POSTOP_FINISHED_PROCESSING;
+
+	// Skip paging files.
+	if (FlagOn(Data->Iopb->OperationFlags, SL_OPEN_PAGING_FILE))
+		return FLT_POSTOP_FINISHED_PROCESSING;
+
+	// Skip scanning volume opens.
+	if (FlagOn(FltObjects->FileObject->Flags, FO_VOLUME_OPEN))
+		return FLT_POSTOP_FINISHED_PROCESSING;
+
+	// After creation, skip it if it is directory.
+	status = FltIsDirectory(FltObjects->FileObject, FltObjects->Instance, &isDirectory);
+
+	// Directory opens don't need to be scanned.
+	if (NT_SUCCESS(status) && isDirectory)
+		return FLT_POSTOP_FINISHED_PROCESSING;
+
+	// TODO: Check encrypted files here.
+
+	if (HzrFilterIsPrefetchEcpPresent(FltObjects->Filter, Data))
+	{
+		PFILTER_STREAMHANDLE_CONTEXT streamHandleContext;
+
+		status = FltAllocateContext(FltObjects->Filter,
+			FLT_STREAMHANDLE_CONTEXT,
+			sizeof(FILTER_STREAMHANDLE_CONTEXT),
+			PagedPool,
+			&streamHandleContext);
+
+		if (NT_SUCCESS(status))
+		{
+			streamHandleContext->PrefetchOpen = TRUE;
+
+			status = FltSetStreamHandleContext(
+				FltObjects->Instance,
+				FltObjects->FileObject,
+				FLT_SET_CONTEXT_KEEP_IF_EXISTS,
+				streamHandleContext,
+				NULL);
+
+			if (!NT_SUCCESS(status))
+				DbgPrint("HzrFilterPostCreate::FltSetStreamHandleContext failed %X", status);
+
+			FltReleaseContext(streamHandleContext);
+		}
+		else
+			DbgPrint("HzrFilterPostCreate::FltAllocateContext failed %X", status);
+	}
+
+	return FLT_POSTOP_FINISHED_PROCESSING;
+}
+
 FLT_PREOP_CALLBACK_STATUS HzrFilterPreAcquireForSectionSynchronization(
 	_Inout_ PFLT_CALLBACK_DATA Data,
 	_In_ PCFLT_RELATED_OBJECTS FltObjects,
@@ -293,7 +389,6 @@ FLT_PREOP_CALLBACK_STATUS HzrFilterPreAcquireForSectionSynchronization(
 {
 	UNREFERENCED_PARAMETER(FltObjects);
 	UNREFERENCED_PARAMETER(CompletionContext);
-	UNREFERENCED_PARAMETER(Data);
 
 	if (FlagOn(Data->Iopb->Parameters.AcquireForSectionSynchronization.PageProtection, PAGE_EXECUTE) &&
 		Data->Iopb->Parameters.AcquireForSectionSynchronization.SyncType == SyncTypeCreateSection)
@@ -301,6 +396,43 @@ FLT_PREOP_CALLBACK_STATUS HzrFilterPreAcquireForSectionSynchronization(
 	}
 
 	// Pass the I/O operation through without calling the minifilter's postoperation callback on completion.
+	return FLT_PREOP_SUCCESS_NO_CALLBACK;
+}
+
+FLT_PREOP_CALLBACK_STATUS HzrFilterPreCleanup(
+	_Inout_ PFLT_CALLBACK_DATA Data,
+	_In_ PCFLT_RELATED_OBJECTS FltObjects,
+	_Flt_CompletionContext_Outptr_ PVOID *CompletionContext)
+{
+	NTSTATUS status;
+	PFILTER_STREAMHANDLE_CONTEXT streamHandleContext;
+
+	UNREFERENCED_PARAMETER(Data);
+	UNREFERENCED_PARAMETER(CompletionContext);
+
+	// Skip scan on prefetcher handles to avoid deadlocks.
+	status = FltGetStreamHandleContext(FltObjects->Instance, FltObjects->FileObject, &streamHandleContext);
+
+	if (NT_SUCCESS(status))
+	{
+		if (streamHandleContext->PrefetchOpen)
+		{
+			// Because the Memory Manager can cache the file object
+			// and use it for other applications performing mapped I/O,
+			// whenever a Cleanup operation is seen on a prefetcher
+			// file object, that file object should no longer be
+			// considered prefetcher-opened.
+
+			FltDeleteStreamHandleContext(FltObjects->Instance, FltObjects->FileObject, NULL);
+
+			FltReleaseContext(streamHandleContext);
+
+			return FLT_PREOP_SUCCESS_NO_CALLBACK;
+		}
+
+		FltReleaseContext(streamHandleContext);
+	}
+
 	return FLT_PREOP_SUCCESS_NO_CALLBACK;
 }
 

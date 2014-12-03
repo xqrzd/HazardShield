@@ -18,6 +18,8 @@
 *  MA 02110-1301, USA.
 */
 
+#include <initguid.h>
+#include "Context.h"
 #include "Utility.h"
 
 NTSTATUS HzrFilterGetFileSize(
@@ -40,4 +42,54 @@ NTSTATUS HzrFilterGetFileSize(
 		*Size = standardInfo.EndOfFile;
 
 	return status;
+}
+
+BOOLEAN HzrFilterIsPrefetchEcpPresent(
+	_In_ PFLT_FILTER Filter,
+	_In_ PFLT_CALLBACK_DATA Data)
+{
+	NTSTATUS status;
+	PECP_LIST ecpList;
+	PVOID ecpContext;
+
+	status = FltGetEcpListFromCallbackData(Filter, Data, &ecpList);
+
+	if (NT_SUCCESS(status) && (ecpList != NULL))
+	{
+		status = FltFindExtraCreateParameter(Filter,
+			ecpList,
+			&GUID_ECP_PREFETCH_OPEN,
+			&ecpContext,
+			NULL);
+
+		if (NT_SUCCESS(status))
+		{
+			if (!FltIsEcpFromUserMode(Filter, ecpContext))
+				return TRUE;
+		}
+	}
+
+	return FALSE;
+}
+
+BOOLEAN HzrFilterIsPrefetchContextPresent(
+	_In_ PFLT_INSTANCE Instance,
+	_In_ PFILE_OBJECT FileObject)
+{
+	NTSTATUS status;
+	PFILTER_STREAMHANDLE_CONTEXT context;
+	BOOLEAN prefetchOpen = FALSE;
+
+	status = FltGetStreamHandleContext(
+		Instance,
+		FileObject,
+		&context);
+
+	if (NT_SUCCESS(status))
+	{
+		prefetchOpen = context->PrefetchOpen;
+		FltReleaseContext(context);
+	}
+
+	return prefetchOpen;
 }
