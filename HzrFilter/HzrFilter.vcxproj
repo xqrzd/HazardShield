@@ -51,6 +51,8 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Service.c" />
+    <ClCompile Include="Utility.c" />
     <ResourceCompile Include="HzrFilter.rc" />
     <ClCompile Include="Context.c" />
     <ClCompile Include="Handle.c" />
@@ -264,6 +266,8 @@
     <ClInclude Include="Handle.h" />
     <ClInclude Include="HzrFilter.h" />
     <ClInclude Include="resource.h" />
+    <ClInclude Include="Service.h" />
+    <ClInclude Include="Utility.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

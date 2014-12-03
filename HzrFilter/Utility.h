@@ -18,45 +18,15 @@
 *  MA 02110-1301, USA.
 */
 
-#ifndef HZRFILTER_HANDLE_H
-#define HZRFILTER_HANDLE_H
+#ifndef HZRFILTER_UTILITY_H
+#define HZRFILTER_UTILITY_H
 
 #include <fltKernel.h>
 
-#define MAX_HANDLE_COUNT 16
-
-typedef struct _HANDLE_ENTRY {
-	PVOID Object;
-} HANDLE_ENTRY, *PHANDLE_ENTRY;
-
-typedef struct _HANDLE_SYSTEM {
-	EX_PUSH_LOCK PushLock;
-	HANDLE_ENTRY Handles[MAX_HANDLE_COUNT];
-} HANDLE_SYSTEM, *PHANDLE_SYSTEM;
-
-VOID HndInitialize(
-	_In_ PHANDLE_SYSTEM HandleSystem
-	);
-
-VOID HndFree(
-	_In_ PHANDLE_SYSTEM HandleSystem
-	);
-
-NTSTATUS HndCreateHandle(
-	_In_ PHANDLE_SYSTEM HandleSystem,
-	_In_ PVOID Object,
-	_Out_ PULONG Handle
-	);
-
-NTSTATUS HndLookupObject(
-	_In_ PHANDLE_SYSTEM HandleSystem,
-	_In_ ULONG Handle,
-	_Out_ PVOID* Object
-	);
-
-VOID HndReleaseHandle(
-	_In_ PHANDLE_SYSTEM HandleSystem,
-	_In_ ULONG Handle
+NTSTATUS HzrFilterGetFileSize(
+	_In_ PFLT_INSTANCE Instance,
+	_In_ PFILE_OBJECT FileObject,
+	_Out_ PLARGE_INTEGER Size
 	);
 
 #endif

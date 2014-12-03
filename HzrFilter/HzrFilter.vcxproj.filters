@@ -33,6 +33,12 @@
     <ClCompile Include="Handle.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Service.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Utility.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="HzrFilter.rc">
@@ -50,6 +56,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Handle.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Service.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Utility.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

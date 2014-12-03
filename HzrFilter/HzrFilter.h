@@ -24,6 +24,11 @@
 #include <fltKernel.h>
 #include "Context.h"
 #include "Handle.h"
+#include "Service.h"
+#include "Utility.h"
+
+#define DRV_CMD_GET_BUFFER 1
+#define MAX_FILE_SCAN_SIZE 8388608 // 8 MB
 
 DRIVER_INITIALIZE DriverEntry;
 NTSTATUS DriverEntry(
@@ -72,6 +77,13 @@ FLT_PREOP_CALLBACK_STATUS HzrFilterPreAcquireForSectionSynchronization(
 	_Inout_ PFLT_CALLBACK_DATA Data,
 	_In_ PCFLT_RELATED_OBJECTS FltObjects,
 	_Flt_CompletionContext_Outptr_ PVOID *CompletionContext
+	);
+
+NTSTATUS HzrFilterScanFile(
+	_In_ PFLT_INSTANCE Instance,
+	_In_ PFILE_OBJECT FileObject,
+	_In_ UCHAR FileAccess,
+	_Out_ PSERVICE_RESPONSE Response
 	);
 
 #endif

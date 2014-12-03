@@ -28,6 +28,8 @@ struct {
 	PFLT_PORT ServerPort;
 	PFLT_PORT ClientPort;
 	PEPROCESS ClientProcess;
+
+	HANDLE_SYSTEM HandleSystem;
 } FilterData;
 
 CONST FLT_OPERATION_REGISTRATION Callbacks[] = {
@@ -234,16 +236,54 @@ NTSTATUS HzrFilterClientMessage(
 	_In_ ULONG OutputBufferLength,
 	_Out_ PULONG ReturnOutputBufferLength)
 {
+	NTSTATUS status = STATUS_INVALID_PARAMETER;
+	UCHAR capturedInput[sizeof(PVOID) * 4];
+	ULONG command;
+
 	UNREFERENCED_PARAMETER(PortCookie);
-	UNREFERENCED_PARAMETER(InputBuffer);
-	UNREFERENCED_PARAMETER(InputBufferLength);
-	UNREFERENCED_PARAMETER(OutputBuffer);
-	UNREFERENCED_PARAMETER(OutputBufferLength);
-	UNREFERENCED_PARAMETER(ReturnOutputBufferLength);
 
-	DbgPrint("Message received");
+	if (InputBuffer == NULL || InputBufferLength == 0 || InputBufferLength > sizeof(capturedInput))
+		return STATUS_INVALID_PARAMETER;
 
-	return STATUS_NOT_IMPLEMENTED;
+	// The filter manager calls ProbeForRead/Write on the user buffers, however
+	// they must still be accessed in a try/except, to avoid potential access violations.
+	__try
+	{
+		RtlCopyMemory(capturedInput, InputBuffer, InputBufferLength);
+	}
+	__except (EXCEPTION_EXECUTE_HANDLER)
+	{
+		return GetExceptionCode();
+	}
+
+	command = *(PULONG)capturedInput;
+
+	if (command == DRV_CMD_GET_BUFFER)
+	{
+		PSERVICE_REQUEST_BUFFER request = (PSERVICE_REQUEST_BUFFER)capturedInput;
+		PBUFFER_INFO bufferInfo;
+
+		// Lookup the buffer the client is requesting.
+		status = HndLookupObject(&FilterData.HandleSystem, request->Handle, &bufferInfo);
+		if (NT_SUCCESS(status))
+		{
+			if (bufferInfo->BufferSize > OutputBufferLength)
+				return STATUS_INVALID_PARAMETER;
+
+			__try
+			{
+				RtlCopyMemory(OutputBuffer, bufferInfo->Buffer, bufferInfo->BufferSize);
+			}
+			__except (EXCEPTION_EXECUTE_HANDLER)
+			{
+				return GetExceptionCode();
+			}
+
+			*ReturnOutputBufferLength = bufferInfo->BufferSize;
+		}
+	}
+
+	return status;
 }
 
 FLT_PREOP_CALLBACK_STATUS HzrFilterPreAcquireForSectionSynchronization(
@@ -255,6 +295,84 @@ FLT_PREOP_CALLBACK_STATUS HzrFilterPreAcquireForSectionSynchronization(
 	UNREFERENCED_PARAMETER(CompletionContext);
 	UNREFERENCED_PARAMETER(Data);
 
+	if (FlagOn(Data->Iopb->Parameters.AcquireForSectionSynchronization.PageProtection, PAGE_EXECUTE) &&
+		Data->Iopb->Parameters.AcquireForSectionSynchronization.SyncType == SyncTypeCreateSection)
+	{
+	}
+
 	// Pass the I/O operation through without calling the minifilter's postoperation callback on completion.
 	return FLT_PREOP_SUCCESS_NO_CALLBACK;
+}
+
+NTSTATUS HzrFilterScanFile(
+	_In_ PFLT_INSTANCE Instance,
+	_In_ PFILE_OBJECT FileObject,
+	_In_ UCHAR FileAccess,
+	_Out_ PSERVICE_RESPONSE Response)
+{
+	NTSTATUS status;
+	LARGE_INTEGER fileSize;
+
+	status = HzrFilterGetFileSize(Instance, FileObject, &fileSize);
+	if (NT_SUCCESS(status))
+	{
+		if (fileSize.QuadPart <= MAX_FILE_SCAN_SIZE)
+		{
+			POBJECT_NAME_INFORMATION fullFilePath;
+
+			status = IoQueryFileDosDeviceName(FileObject, &fullFilePath);
+			if (NT_SUCCESS(status))
+			{
+				PVOID buffer;
+
+				buffer = ExAllocatePoolWithTag(PagedPool, fileSize.LowPart, 'file');
+				if (buffer)
+				{
+					LARGE_INTEGER byteOffset;
+
+					byteOffset.QuadPart = 0;
+
+					status = FltReadFile(
+						Instance,
+						FileObject,
+						&byteOffset,
+						fileSize.LowPart,
+						buffer,
+						0, NULL, NULL, NULL);
+
+					if (NT_SUCCESS(status))
+					{
+						status = SvcScanFile(
+							&FilterData.HandleSystem,
+							FilterData.Filter,
+							&FilterData.ClientPort,
+							FileAccess,
+							fullFilePath,
+							buffer,
+							fileSize.LowPart,
+							Response);
+					}
+					else
+						DbgPrint("HzrFilterScanFile: FltReadFile failed %X", status);
+
+					ExFreePoolWithTag(buffer, 'file');
+				}
+				else
+					status = STATUS_INSUFFICIENT_RESOURCES;
+
+				ExFreePool(fullFilePath);
+			}
+			else
+				DbgPrint("HzrFilterScanFile: IoQueryFileDosDeviceName failed %X", status);
+		}
+		else
+		{
+			status = STATUS_FILE_TOO_LARGE;
+			DbgPrint("Ignoring large file");
+		}
+	}
+	else
+		DbgPrint("HzrFilterScanFile: HzrFilterGetFileSize failed %X", status);
+
+	return status;
 }
