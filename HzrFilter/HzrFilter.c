@@ -106,6 +106,9 @@ NTSTATUS HzrFilterInstanceSetup(
 			if (VolumeDeviceType == FILE_DEVICE_DISK_FILE_SYSTEM &&
 				VolumeFilesystemType == FLT_FSTYPE_NTFS)
 			{
+				FltInitializePushLock(&context->CacheLock);
+				RtlInitializeGenericTableAvl(&context->AvlCacheTable, AvlCompareNtfsEntry, AvlAllocate, AvlFree, NULL);
+
 				context->CacheSupported = TRUE;
 			}
 			else
@@ -340,7 +343,6 @@ FLT_POSTOP_CALLBACK_STATUS HzrFilterPostCreate(
 	if (FlagOn(FltObjects->FileObject->Flags, FO_VOLUME_OPEN))
 		return FLT_POSTOP_FINISHED_PROCESSING;
 
-	// After creation, skip it if it is directory.
 	status = FltIsDirectory(FltObjects->FileObject, FltObjects->Instance, &isDirectory);
 
 	// Directory opens don't need to be scanned.
@@ -378,6 +380,84 @@ FLT_POSTOP_CALLBACK_STATUS HzrFilterPostCreate(
 		else
 			DbgPrint("HzrFilterPostCreate::FltAllocateContext failed %X", status);
 	}
+	else
+	{
+		PFILTER_STREAM_CONTEXT streamContext;
+		BOOLEAN infected = FALSE;
+
+		// Check to see if there's already a stream context.
+		status = FltGetStreamContext(FltObjects->Instance, FltObjects->FileObject, &streamContext);
+
+		if (NT_SUCCESS(status))
+		{
+			infected = BooleanFlagOn(streamContext->Flags, STREAM_FLAG_INFECTED);
+
+			if (infected)
+				DbgPrint("Blocking create on infected stream context %wZ", &FltObjects->FileObject->FileName);
+
+			FltReleaseContext(streamContext);
+		}
+		else if (status == STATUS_NOT_FOUND)
+		{
+			status = FltAllocateContext(
+				FltObjects->Filter,
+				FLT_STREAM_CONTEXT,
+				sizeof(FILTER_STREAM_CONTEXT),
+				PagedPool,
+				&streamContext);
+
+			if (NT_SUCCESS(status))
+			{
+				PFILTER_STREAM_CONTEXT oldStreamContext;
+
+				// Initialize new stream context.
+				streamContext->Flags = 0;
+				FltInitializePushLock(&streamContext->ScanLock);
+
+				// Don't bother storing the return value, since even if the cache fails, the scanning must continue.
+				if (NT_SUCCESS(HzrFilterGetFileCacheStatus(FltObjects->Instance, FltObjects->FileObject, &infected)))
+				{
+					if (infected)
+					{
+						streamContext->Flags = STREAM_FLAG_INFECTED;
+						DbgPrint("Blocking create on infected cached file %wZ", &FltObjects->FileObject->FileName);
+					}
+				}
+				else
+				{
+					// The file hasn't been seen before, mark it as modified so it's scanned later.
+					streamContext->Flags = STREAM_FLAG_NOT_SCANNED;
+				}
+
+				status = FltSetStreamContext(
+					FltObjects->Instance,
+					FltObjects->FileObject,
+					FLT_SET_CONTEXT_KEEP_IF_EXISTS,
+					streamContext,
+					&oldStreamContext);
+
+				if (status == STATUS_FLT_CONTEXT_ALREADY_DEFINED)
+				{
+					// Stream context was already set.
+					FltReleaseContext(oldStreamContext);
+				}
+
+				// Always release.
+				FltReleaseContext(streamContext);
+			}
+			else
+				DbgPrint("HzrFilterPostCreate::FltAllocateContext failed %X", status);
+		}
+		else
+			DbgPrint("HzrFilterPostCreate::FltGetStreamContext failed %X", status);
+
+		if (infected)
+		{
+			FltCancelFileOpen(FltObjects->Instance, FltObjects->FileObject);
+			Data->IoStatus.Status = STATUS_ACCESS_DENIED;
+			Data->IoStatus.Information = 0;
+		}
+	}
 
 	return FLT_POSTOP_FINISHED_PROCESSING;
 }
@@ -387,12 +467,29 @@ FLT_PREOP_CALLBACK_STATUS HzrFilterPreAcquireForSectionSynchronization(
 	_In_ PCFLT_RELATED_OBJECTS FltObjects,
 	_Flt_CompletionContext_Outptr_ PVOID *CompletionContext)
 {
-	UNREFERENCED_PARAMETER(FltObjects);
 	UNREFERENCED_PARAMETER(CompletionContext);
 
 	if (FlagOn(Data->Iopb->Parameters.AcquireForSectionSynchronization.PageProtection, PAGE_EXECUTE) &&
-		Data->Iopb->Parameters.AcquireForSectionSynchronization.SyncType == SyncTypeCreateSection)
+		Data->Iopb->Parameters.AcquireForSectionSynchronization.SyncType == SyncTypeCreateSection &&
+		!HzrFilterIsPrefetchContextPresent(FltObjects->Instance, FltObjects->FileObject) &&
+		IoGetCurrentProcess() != FilterData.ClientProcess)
 	{
+		NTSTATUS status;
+		SERVICE_RESPONSE response;
+
+		status = HzrFilterScanStream(FltObjects->Instance, FltObjects->FileObject, FILE_ACCESS_EXECUTE, &response);
+
+		if (NT_SUCCESS(status))
+		{
+			if (FlagOn(response.Flags, RESPONSE_FLAG_BLOCK_OPERATION))
+			{
+				Data->IoStatus.Status = STATUS_ACCESS_DENIED;
+				Data->IoStatus.Information = 0;
+
+				// Stop processing for the operation and assign final NTSTATUS value.
+				return FLT_PREOP_COMPLETE;
+			}
+		}
 	}
 
 	// Pass the I/O operation through without calling the minifilter's postoperation callback on completion.
@@ -406,6 +503,9 @@ FLT_PREOP_CALLBACK_STATUS HzrFilterPreCleanup(
 {
 	NTSTATUS status;
 	PFILTER_STREAMHANDLE_CONTEXT streamHandleContext;
+	PFILTER_STREAM_CONTEXT streamContext;
+	ULONG_PTR stackLow;
+	ULONG_PTR stackHigh;
 
 	UNREFERENCED_PARAMETER(Data);
 	UNREFERENCED_PARAMETER(CompletionContext);
@@ -419,7 +519,7 @@ FLT_PREOP_CALLBACK_STATUS HzrFilterPreCleanup(
 		{
 			// Because the Memory Manager can cache the file object
 			// and use it for other applications performing mapped I/O,
-			// whenever a Cleanup operation is seen on a prefetcher
+			// whenever a cleanup operation is seen on a prefetcher
 			// file object, that file object should no longer be
 			// considered prefetcher-opened.
 
@@ -433,7 +533,98 @@ FLT_PREOP_CALLBACK_STATUS HzrFilterPreCleanup(
 		FltReleaseContext(streamHandleContext);
 	}
 
+	// Stack file objects are never scanned.
+	IoGetStackLimits(&stackLow, &stackHigh);
+
+	if (((ULONG_PTR)FltObjects->FileObject > stackLow) &&
+		((ULONG_PTR)FltObjects->FileObject < stackHigh))
+		return FLT_PREOP_SUCCESS_NO_CALLBACK;
+
+	// TODO: Check for encrypted files.
+
+	status = FltGetStreamContext(FltObjects->Instance, FltObjects->FileObject, &streamContext);
+
+	if (NT_SUCCESS(status))
+	{
+		if (FlagOn(streamContext->Flags, STREAM_FLAG_MODIFIED))
+		{
+			// Scan write here.
+		}
+
+		// Only update the cache if the file has actually been scanned.
+		if (!FlagOn(streamContext->Flags, STREAM_FLAG_NOT_SCANNED))
+		{
+			// Only insert/update the cache if the file hasn't been modified.
+			if (!FlagOn(streamContext->Flags, STREAM_FLAG_MODIFIED) ||
+				FlagOn(streamContext->Flags, STREAM_FLAG_INFECTED))
+			{
+				HzrFilterSyncCache(FltObjects->Instance, FltObjects->FileObject, streamContext);
+			}
+		}
+
+		if (FlagOn(streamContext->Flags, STREAM_FLAG_DELETE))
+		{
+			HzrFilterDeleteFile(FltObjects->Instance, FltObjects->FileObject);
+		}
+
+		FltReleaseContext(streamContext);
+	}
+
 	return FLT_PREOP_SUCCESS_NO_CALLBACK;
+}
+
+NTSTATUS HzrFilterScanStream(
+	_In_ PFLT_INSTANCE Instance,
+	_In_ PFILE_OBJECT FileObject,
+	_In_ UCHAR FileAccess,
+	_Out_ PSERVICE_RESPONSE Response)
+{
+	NTSTATUS status;
+	PFILTER_STREAM_CONTEXT streamContext;
+
+	status = FltGetStreamContext(Instance, FileObject, &streamContext);
+
+	if (NT_SUCCESS(status))
+	{
+		FltAcquirePushLockExclusive(&streamContext->ScanLock);
+
+		if (FlagOn(streamContext->Flags, STREAM_FLAG_MODIFIED) ||
+			FlagOn(streamContext->Flags, STREAM_FLAG_NOT_SCANNED))
+		{
+			status = HzrFilterScanFile(Instance, FileObject, FileAccess, Response);
+
+			if (NT_SUCCESS(status))
+			{
+				if (FlagOn(Response->Flags, RESPONSE_FLAG_BLOCK_OPERATION))
+				{
+					RtlInterlockedSetBits(&streamContext->Flags, STREAM_FLAG_INFECTED);
+				}
+
+				if (FlagOn(Response->Flags, RESPONSE_FLAG_DELETE))
+				{
+					RtlInterlockedSetBits(&streamContext->Flags, STREAM_FLAG_DELETE);
+				}
+
+				if (FlagOn(Response->Flags, RESPONSE_FLAG_WHITELIST))
+				{
+					RtlInterlockedClearBits(&streamContext->Flags, STREAM_FLAG_MODIFIED);
+					RtlInterlockedClearBits(&streamContext->Flags, STREAM_FLAG_NOT_SCANNED);
+				}
+			}
+		}
+		else
+		{
+			// Redo this.
+			Response->Flags = BooleanFlagOn(streamContext->Flags, STREAM_FLAG_INFECTED);
+		}
+
+		FltReleasePushLock(&streamContext->ScanLock);
+		FltReleaseContext(streamContext);
+	}
+	else
+		DbgPrint("HzrFilterScanStream::FltGetStreamContext failed %X", status);
+
+	return status;
 }
 
 NTSTATUS HzrFilterScanFile(
@@ -500,11 +691,124 @@ NTSTATUS HzrFilterScanFile(
 		else
 		{
 			status = STATUS_FILE_TOO_LARGE;
-			DbgPrint("Ignoring large file");
 		}
 	}
 	else
 		DbgPrint("HzrFilterScanFile: HzrFilterGetFileSize failed %X", status);
+
+	return status;
+}
+
+NTSTATUS HzrFilterDeleteFile(
+	_In_ PFLT_INSTANCE Instance,
+	_In_ PFILE_OBJECT FileObject)
+{
+	FILE_DISPOSITION_INFORMATION fileDispositionInfo;
+
+	fileDispositionInfo.DeleteFile = TRUE;
+
+	return FltSetInformationFile(
+		Instance,
+		FileObject,
+		&fileDispositionInfo,
+		sizeof(fileDispositionInfo),
+		FileDispositionInformation);
+}
+
+NTSTATUS HzrFilterGetFileCacheStatus(
+	_In_ PFLT_INSTANCE Instance,
+	_In_ PFILE_OBJECT FileObject,
+	_Out_ PBOOLEAN Infected)
+{
+	NTSTATUS status;
+	PFILTER_INSTANCE_CONTEXT instanceContext;
+
+	status = FltGetInstanceContext(Instance, &instanceContext);
+
+	if (NT_SUCCESS(status))
+	{
+		if (instanceContext->CacheSupported)
+		{
+			FILE_INTERNAL_INFORMATION fileId;
+
+			status = HzrFilterGetFileId64(Instance, FileObject, &fileId);
+
+			if (NT_SUCCESS(status))
+			{
+				PNTFS_CACHE_ENTRY entry;
+
+				FltAcquirePushLockShared(&instanceContext->CacheLock);
+
+				entry = RtlLookupElementGenericTableAvl(&instanceContext->AvlCacheTable, &fileId.IndexNumber.QuadPart);
+				if (entry)
+					*Infected = entry->Infected;
+				else
+					status = STATUS_NOT_FOUND;
+
+				FltReleasePushLock(&instanceContext->CacheLock);
+			}
+			else
+				DbgPrint("HzrFilterGetFileCacheStatus::HzrFilterGetFileId64 failed %X", status);
+		}
+		else
+			status = STATUS_NOT_SUPPORTED;
+
+		FltReleaseContext(instanceContext);
+	}
+	else
+		DbgPrint("HzrFilterGetFileCacheStatus::FltGetInstanceContext failed %X", status);
+
+	return status;
+}
+
+NTSTATUS HzrFilterSyncCache(
+	_In_ PFLT_INSTANCE Instance,
+	_In_ PFILE_OBJECT FileObject,
+	_In_ PFILTER_STREAM_CONTEXT StreamContext)
+{
+	NTSTATUS status;
+	PFILTER_INSTANCE_CONTEXT instanceContext;
+
+	status = FltGetInstanceContext(Instance, &instanceContext);
+
+	if (NT_SUCCESS(status))
+	{
+		if (instanceContext->CacheSupported)
+		{
+			NTFS_CACHE_ENTRY entry;
+
+			status = HzrFilterGetFileId64(Instance, FileObject, &entry.FileId);
+
+			if (NT_SUCCESS(status))
+			{
+				PNTFS_CACHE_ENTRY tableEntry;
+				BOOLEAN inserted;
+
+				FltAcquirePushLockExclusive(&instanceContext->CacheLock);
+
+				tableEntry = RtlInsertElementGenericTableAvl(
+					&instanceContext->AvlCacheTable,
+					&entry,
+					sizeof(NTFS_CACHE_ENTRY),
+					&inserted);
+
+				if (tableEntry)
+				{
+					tableEntry->Infected = BooleanFlagOn(StreamContext->Flags, STREAM_FLAG_INFECTED);
+				}
+
+				FltReleasePushLock(&instanceContext->CacheLock);
+			}
+			else
+				DbgPrint("HzrFilterSyncCache::HzrFilterGetFileId64 failed %X", status);
+		}
+		else
+			status = STATUS_NOT_SUPPORTED;
+
+		FltReleaseContext(instanceContext);
+	}
+	else
+		DbgPrint("HzrFilterSyncCache::FltGetInstanceContext failed %X", status);
 
 	return status;
 }

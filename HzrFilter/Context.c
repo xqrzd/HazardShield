@@ -19,8 +19,14 @@
 */
 
 #include "Context.h"
+#include "Utility.h"
 
 VOID HzrFilterInstanceContextCleanup(
+	_In_ PFLT_CONTEXT Context,
+	_In_ FLT_CONTEXT_TYPE ContextType
+	);
+
+VOID HzrFilterStreamContextCleanup(
 	_In_ PFLT_CONTEXT Context,
 	_In_ FLT_CONTEXT_TYPE ContextType
 	);
@@ -32,6 +38,13 @@ const FLT_CONTEXT_REGISTRATION ContextRegistration[] = {
 		HzrFilterInstanceContextCleanup,
 		sizeof(FILTER_INSTANCE_CONTEXT),
 		'xtci'
+	},
+	{
+		FLT_STREAM_CONTEXT,
+		0,
+		HzrFilterStreamContextCleanup,
+		sizeof(FILTER_STREAM_CONTEXT),
+		'sctx'
 	},
 	{
 		FLT_STREAMHANDLE_CONTEXT,
@@ -54,6 +67,22 @@ VOID HzrFilterInstanceContextCleanup(
 
 	if (context->CacheSupported)
 	{
-		// Cleanup cache, etc.
+		FltAcquirePushLockExclusive(&context->CacheLock);
+
+		AvlDeleteAllElements(&context->AvlCacheTable);
+
+		FltReleasePushLock(&context->CacheLock);
+		FltDeletePushLock(&context->CacheLock);
 	}
+}
+
+VOID HzrFilterStreamContextCleanup(
+	_In_ PFLT_CONTEXT Context,
+	_In_ FLT_CONTEXT_TYPE ContextType)
+{
+	PFILTER_STREAM_CONTEXT context = (PFILTER_STREAM_CONTEXT)Context;
+
+	UNREFERENCED_PARAMETER(ContextType);
+
+	FltDeletePushLock(&context->ScanLock);
 }

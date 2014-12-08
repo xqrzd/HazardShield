@@ -44,6 +44,20 @@ NTSTATUS HzrFilterGetFileSize(
 	return status;
 }
 
+NTSTATUS HzrFilterGetFileId64(
+	_In_ PFLT_INSTANCE Instance,
+	_In_ PFILE_OBJECT FileObject,
+	_Out_ PFILE_INTERNAL_INFORMATION FileId)
+{
+	return FltQueryInformationFile(
+		Instance,
+		FileObject,
+		FileId,
+		sizeof(FILE_INTERNAL_INFORMATION),
+		FileInternalInformation,
+		NULL);
+}
+
 BOOLEAN HzrFilterIsPrefetchEcpPresent(
 	_In_ PFLT_FILTER Filter,
 	_In_ PFLT_CALLBACK_DATA Data)
@@ -56,7 +70,8 @@ BOOLEAN HzrFilterIsPrefetchEcpPresent(
 
 	if (NT_SUCCESS(status) && (ecpList != NULL))
 	{
-		status = FltFindExtraCreateParameter(Filter,
+		status = FltFindExtraCreateParameter(
+			Filter,
 			ecpList,
 			&GUID_ECP_PREFETCH_OPEN,
 			&ecpContext,
@@ -92,4 +107,52 @@ BOOLEAN HzrFilterIsPrefetchContextPresent(
 	}
 
 	return prefetchOpen;
+}
+
+PVOID NTAPI AvlAllocate(
+	_In_ PRTL_AVL_TABLE Table,
+	_In_ CLONG ByteSize)
+{
+	UNREFERENCED_PARAMETER(Table);
+
+	return ExAllocatePoolWithTag(PagedPool, ByteSize, 'AVLT');
+}
+
+VOID NTAPI AvlFree(
+	_In_ PRTL_AVL_TABLE Table,
+	_In_ __drv_freesMem(Mem) _Post_invalid_ PVOID Entry)
+{
+	UNREFERENCED_PARAMETER(Table);
+
+	ExFreePoolWithTag(Entry, 'AVLT');
+}
+
+RTL_GENERIC_COMPARE_RESULTS AvlCompareNtfsEntry(
+	_In_ PRTL_AVL_TABLE Table,
+	_In_ PVOID Lhs,
+	_In_ PVOID Rhs)
+{
+	PNTFS_CACHE_ENTRY lhs = (PNTFS_CACHE_ENTRY)Lhs;
+	PNTFS_CACHE_ENTRY rhs = (PNTFS_CACHE_ENTRY)Rhs;
+
+	UNREFERENCED_PARAMETER(Table);
+
+	if (lhs->FileId.IndexNumber.QuadPart < rhs->FileId.IndexNumber.QuadPart)
+		return GenericLessThan;
+	else if (lhs->FileId.IndexNumber.QuadPart > rhs->FileId.IndexNumber.QuadPart)
+		return GenericGreaterThan;
+	else
+		return GenericEqual;
+}
+
+VOID AvlDeleteAllElements(
+	_In_ PRTL_AVL_TABLE Table)
+{
+	PVOID entry;
+
+	while (!RtlIsGenericTableEmptyAvl(Table))
+	{
+		entry = RtlGetElementGenericTableAvl(Table, 0);
+		RtlDeleteElementGenericTableAvl(Table, entry);
+	}
 }

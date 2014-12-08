@@ -92,11 +92,35 @@ FLT_PREOP_CALLBACK_STATUS HzrFilterPreCleanup(
 	_Flt_CompletionContext_Outptr_ PVOID *CompletionContext
 	);
 
+NTSTATUS HzrFilterScanStream(
+	_In_ PFLT_INSTANCE Instance,
+	_In_ PFILE_OBJECT FileObject,
+	_In_ UCHAR FileAccess,
+	_Out_ PSERVICE_RESPONSE Response
+	);
+
 NTSTATUS HzrFilterScanFile(
 	_In_ PFLT_INSTANCE Instance,
 	_In_ PFILE_OBJECT FileObject,
 	_In_ UCHAR FileAccess,
 	_Out_ PSERVICE_RESPONSE Response
+	);
+
+NTSTATUS HzrFilterDeleteFile(
+	_In_ PFLT_INSTANCE Instance,
+	_In_ PFILE_OBJECT FileObject
+	);
+
+NTSTATUS HzrFilterGetFileCacheStatus(
+	_In_ PFLT_INSTANCE Instance,
+	_In_ PFILE_OBJECT FileObject,
+	_Out_ PBOOLEAN Infected
+	);
+
+NTSTATUS HzrFilterSyncCache(
+	_In_ PFLT_INSTANCE Instance,
+	_In_ PFILE_OBJECT FileObject,
+	_In_ PFILTER_STREAM_CONTEXT StreamContext
 	);
 
 #endif
