@@ -420,8 +420,6 @@ FLT_POSTOP_CALLBACK_STATUS HzrFilterPostCreate(
 
 			if (NT_SUCCESS(status))
 			{
-				PFILTER_STREAM_CONTEXT oldStreamContext;
-
 				// Initialize new stream context.
 				streamContext->Flags = 0;
 				FltInitializePushLock(&streamContext->ScanLock);
@@ -446,12 +444,11 @@ FLT_POSTOP_CALLBACK_STATUS HzrFilterPostCreate(
 					FltObjects->FileObject,
 					FLT_SET_CONTEXT_KEEP_IF_EXISTS,
 					streamContext,
-					&oldStreamContext);
+					NULL);
 
-				if (status == STATUS_FLT_CONTEXT_ALREADY_DEFINED)
+				if (!NT_SUCCESS(status) && (status != STATUS_FLT_CONTEXT_ALREADY_DEFINED))
 				{
-					// Stream context was already set.
-					FltReleaseContext(oldStreamContext);
+					DbgPrint("HzrFilterPostCreate::FltSetStreamContext failed %X", status);
 				}
 
 				// Always release.
