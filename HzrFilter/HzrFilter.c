@@ -195,8 +195,7 @@ NTSTATUS DriverEntry(
 
 				if (NT_SUCCESS(status))
 				{
-					// Init
-					DbgPrint("HzrFilter loaded successfully");
+					HndInitialize(&FilterData.HandleSystem);
 				}
 			}
 
@@ -218,6 +217,7 @@ NTSTATUS HzrFilterUnload(
 
 	FltCloseCommunicationPort(FilterData.ServerPort);
 	FltUnregisterFilter(FilterData.Filter);
+	HndFree(&FilterData.HandleSystem);
 
 	return STATUS_SUCCESS;
 }
