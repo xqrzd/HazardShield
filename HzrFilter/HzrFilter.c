@@ -40,6 +40,18 @@ CONST FLT_OPERATION_REGISTRATION Callbacks[] = {
 		HzrFilterPostCreate
 	},
 	{
+		IRP_MJ_WRITE,
+		0,
+		HzrFilterPreWrite,
+		NULL
+	},
+	{
+		IRP_MJ_SET_INFORMATION,
+		0,
+		HzrFilterPreSetInformation,
+		NULL
+	},
+	{
 		IRP_MJ_CLEANUP,
 		0,
 		HzrFilterPreCleanup,
@@ -462,6 +474,37 @@ FLT_POSTOP_CALLBACK_STATUS HzrFilterPostCreate(
 	return FLT_POSTOP_FINISHED_PROCESSING;
 }
 
+FLT_PREOP_CALLBACK_STATUS HzrFilterPreWrite(
+	_Inout_ PFLT_CALLBACK_DATA Data,
+	_In_ PCFLT_RELATED_OBJECTS FltObjects,
+	_Flt_CompletionContext_Outptr_ PVOID *CompletionContext)
+{
+	UNREFERENCED_PARAMETER(Data);
+	UNREFERENCED_PARAMETER(CompletionContext);
+
+	HzrFilterMarkStreamModified(FltObjects->Instance, FltObjects->FileObject);
+
+	return FLT_PREOP_SUCCESS_NO_CALLBACK;
+}
+
+FLT_PREOP_CALLBACK_STATUS HzrFilterPreSetInformation(
+	_Inout_ PFLT_CALLBACK_DATA Data,
+	_In_ PCFLT_RELATED_OBJECTS FltObjects,
+	_Flt_CompletionContext_Outptr_ PVOID *CompletionContext)
+{
+	FILE_INFORMATION_CLASS fileInformationClass = Data->Iopb->Parameters.SetFileInformation.FileInformationClass;
+
+	UNREFERENCED_PARAMETER(CompletionContext);
+
+	if (fileInformationClass == FileEndOfFileInformation ||
+		fileInformationClass == FileValidDataLengthInformation)
+	{
+		HzrFilterMarkStreamModified(FltObjects->Instance, FltObjects->FileObject);
+	}
+
+	return FLT_PREOP_SUCCESS_NO_CALLBACK;
+}
+
 FLT_PREOP_CALLBACK_STATUS HzrFilterPreAcquireForSectionSynchronization(
 	_Inout_ PFLT_CALLBACK_DATA Data,
 	_In_ PCFLT_RELATED_OBJECTS FltObjects,
@@ -713,6 +756,24 @@ NTSTATUS HzrFilterDeleteFile(
 		&fileDispositionInfo,
 		sizeof(fileDispositionInfo),
 		FileDispositionInformation);
+}
+
+NTSTATUS HzrFilterMarkStreamModified(
+	_In_ PFLT_INSTANCE Instance,
+	_In_ PFILE_OBJECT FileObject)
+{
+	NTSTATUS status;
+	PFILTER_STREAM_CONTEXT streamContext;
+
+	status = FltGetStreamContext(Instance, FileObject, &streamContext);
+	if (NT_SUCCESS(status))
+	{
+		RtlInterlockedSetBits(&streamContext->Flags, STREAM_FLAG_MODIFIED);
+
+		FltReleaseContext(streamContext);
+	}
+
+	return status;
 }
 
 NTSTATUS HzrFilterGetFileCacheStatus(

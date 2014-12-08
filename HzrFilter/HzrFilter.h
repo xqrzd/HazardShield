@@ -80,6 +80,18 @@ FLT_POSTOP_CALLBACK_STATUS HzrFilterPostCreate(
 	_In_ FLT_POST_OPERATION_FLAGS Flags
 	);
 
+FLT_PREOP_CALLBACK_STATUS HzrFilterPreWrite(
+	_Inout_ PFLT_CALLBACK_DATA Data,
+	_In_ PCFLT_RELATED_OBJECTS FltObjects,
+	_Flt_CompletionContext_Outptr_ PVOID *CompletionContext
+	);
+
+FLT_PREOP_CALLBACK_STATUS HzrFilterPreSetInformation(
+	_Inout_ PFLT_CALLBACK_DATA Data,
+	_In_ PCFLT_RELATED_OBJECTS FltObjects,
+	_Flt_CompletionContext_Outptr_ PVOID *CompletionContext
+	);
+
 FLT_PREOP_CALLBACK_STATUS HzrFilterPreAcquireForSectionSynchronization(
 	_Inout_ PFLT_CALLBACK_DATA Data,
 	_In_ PCFLT_RELATED_OBJECTS FltObjects,
@@ -107,6 +119,11 @@ NTSTATUS HzrFilterScanFile(
 	);
 
 NTSTATUS HzrFilterDeleteFile(
+	_In_ PFLT_INSTANCE Instance,
+	_In_ PFILE_OBJECT FileObject
+	);
+
+NTSTATUS HzrFilterMarkStreamModified(
 	_In_ PFLT_INSTANCE Instance,
 	_In_ PFILE_OBJECT FileObject
 	);
