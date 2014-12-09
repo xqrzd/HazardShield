@@ -70,7 +70,7 @@ NTSTATUS SvcScanFile(
 	NTSTATUS status;
 	BUFFER_INFO bufferInfo;
 
-	bufferInfo.BufferSize = sizeof(FILE_SCAN_INFO) + FullFilePath->Name.Length + FileSize;
+	bufferInfo.BufferSize = sizeof(FILE_SCAN_INFO) + FullFilePath->Name.Length + FileSize + sizeof(WCHAR);
 	bufferInfo.Buffer = ExAllocatePoolWithTag(PagedPool, bufferInfo.BufferSize, 'fibf');
 
 	if (bufferInfo.Buffer)
@@ -88,6 +88,9 @@ NTSTATUS SvcScanFile(
 
 		info->FileNameOffset = offset;
 		WriteData(bufferInfo.Buffer, FullFilePath->Name.Buffer, FullFilePath->Name.Length, offset);
+
+		// Add NULL terminator to file path.
+		*(PWCHAR)((PUCHAR)bufferInfo.Buffer + offset) = L'\0';
 
 		status = SvcpSendMessage(HandleSystem, Filter, ClientPort, &bufferInfo, Response);
 
