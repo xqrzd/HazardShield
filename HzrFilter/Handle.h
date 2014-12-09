@@ -29,6 +29,7 @@ typedef struct _HANDLE_ENTRY {
 	PVOID Object;
 } HANDLE_ENTRY, *PHANDLE_ENTRY;
 
+// TODO: Use a tree instead of a static array.
 typedef struct _HANDLE_SYSTEM {
 	EX_PUSH_LOCK PushLock;
 	HANDLE_ENTRY Handles[MAX_HANDLE_COUNT];

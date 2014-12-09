@@ -237,8 +237,6 @@ NTSTATUS HzrFilterPortConnect(
 	FilterData.ClientProcess = IoGetCurrentProcess();
 	FilterData.ClientPort = ClientPort;
 
-	DbgPrint("Client connected %d", PsGetCurrentProcessId());
-
 	return STATUS_SUCCESS;
 }
 
@@ -251,8 +249,6 @@ VOID HzrFilterPortDisconnect(
 	FltCloseClientPort(FilterData.Filter, &FilterData.ClientPort);
 
 	FilterData.ClientProcess = NULL;
-
-	DbgPrint("Client disconnected");
 }
 
 NTSTATUS HzrFilterClientMessage(
@@ -424,7 +420,7 @@ FLT_POSTOP_CALLBACK_STATUS HzrFilterPostCreate(
 				streamContext->Flags = 0;
 				FltInitializePushLock(&streamContext->ScanLock);
 
-				// Don't bother storing the return value, since even if the cache fails, the scanning must continue.
+				// Don't store the return value, since even if the cache fails, the scanning should continue.
 				if (NT_SUCCESS(HzrFilterGetFileCacheStatus(FltObjects->Instance, FltObjects->FileObject, &infected)))
 				{
 					if (infected)
@@ -447,9 +443,7 @@ FLT_POSTOP_CALLBACK_STATUS HzrFilterPostCreate(
 					NULL);
 
 				if (!NT_SUCCESS(status) && (status != STATUS_FLT_CONTEXT_ALREADY_DEFINED))
-				{
 					DbgPrint("HzrFilterPostCreate::FltSetStreamContext failed %X", status);
-				}
 
 				// Always release.
 				FltReleaseContext(streamContext);
