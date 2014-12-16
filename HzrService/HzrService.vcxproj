@@ -83,11 +83,13 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="DriverHandler.c" />
+    <ClCompile Include="Logger.c" />
     <ClCompile Include="Main.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="clamav.h" />
     <ClInclude Include="DriverHandler.h" />
+    <ClInclude Include="Logger.h" />
     <ClInclude Include="resource.h" />
   </ItemGroup>
   <ItemGroup>

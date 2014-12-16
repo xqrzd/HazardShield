@@ -19,6 +19,7 @@
 */
 
 #include "DriverHandler.h"
+#include "Logger.h"
 #include <fltUser.h> // Relies on Windows.h
 
 #define DRV_CMD_GET_BUFFER 1
@@ -92,8 +93,8 @@ BOOLEAN DrvpReply(
 
 	result = FilterReplyMessage(DriverInstance->CommunicationPort, &response.ReplyHeader, MessageHeader->ReplyLength);
 
-	//if (result != S_OK)
-	//Logger::Log(LogType::Error, "DriverHandler::Reply FilterReplyMessage failed %X", result);
+	if (result != S_OK)
+		LogMessageA("DriverHandler::DrvpReply FilterReplyMessage failed %X", result);
 
 	return result == S_OK;
 }
@@ -151,8 +152,8 @@ DWORD WINAPI DrvpEventHandler(LPVOID DriverInstance)
 		FIELD_OFFSET(DRIVER_MESSAGE, Overlapped),
 		&messageBuffer.Overlapped);
 
-	//if (result != HRESULT_FROM_WIN32(ERROR_IO_PENDING))
-		//printf("DriverHandler::ListenForMessages FilterGetMessage failed %X\n", result);
+	if (result != HRESULT_FROM_WIN32(ERROR_IO_PENDING))
+		LogMessageA("DriverHandler::DrvpEventHandler FilterGetMessage failed %X", result);
 
 	while (TRUE)
 	{
@@ -211,13 +212,14 @@ BOOLEAN DrvConnect(
 		}
 		else
 		{
+			DWORD error = GetLastError();
 			CloseHandle(communicationPort);
-			result = HRESULT_FROM_WIN32(GetLastError());
-			//Logger::Log(LogType::Error, "DriverHandler::Connect CreateIoCompletionPort failed %u", error);
+			result = HRESULT_FROM_WIN32(error);
+			LogMessageA("DriverHandler::DrvConnect CreateIoCompletionPort failed %u", error);
 		}
 	}
-	//else
-		//Logger::Log(LogType::Error, "DriverHandler::Connect FilterConnectCommunicationPort failed %X", result);
+	else
+		LogMessageA("DriverHandler::DrvConnect FilterConnectCommunicationPort failed %X", result);
 
 	return result == S_OK;
 }
