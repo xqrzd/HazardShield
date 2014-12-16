@@ -18,18 +18,23 @@
 *  MA 02110-1301, USA.
 */
 
-#include "Service.h"
+#pragma once
 
-int main(int argc, char* argv[])
-{
-	SERVICE_TABLE_ENTRY serviceEntry[] =
-	{
-		{ SERVICE_NAME, HzrServiceMain },
-		{ NULL, NULL }
-	};
+#include <Windows.h>
 
-	if (!StartServiceCtrlDispatcherW(serviceEntry))
-		return GetLastError();
+#define SERVICE_NAME L"HazardShield"
+#define PORT_NAME L"\\HzrFilterPort"
 
-	return 0;
-}
+#define CLAMAV_DATABASE_PATH "%AllUsersProfile%\\Hazard Shield"
+
+VOID WINAPI HzrServiceMain(
+	_In_ DWORD dwArgc,
+	_In_ LPTSTR *lpszArgv
+	);
+
+DWORD WINAPI HzrHandlerEx(
+	_In_ DWORD dwControl,
+	_In_ DWORD dwEventType,
+	_In_ LPVOID lpEventData,
+	_In_ LPVOID lpContext
+	);

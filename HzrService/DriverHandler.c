@@ -153,7 +153,7 @@ DWORD WINAPI DrvpEventHandler(LPVOID DriverInstance)
 		&messageBuffer.Overlapped);
 
 	if (result != HRESULT_FROM_WIN32(ERROR_IO_PENDING))
-		LogMessageA("DriverHandler::DrvpEventHandler FilterGetMessage failed %X", result);
+		LogMessageA("DrvpEventHandler::FilterGetMessage failed %X", result);
 
 	while (TRUE)
 	{
@@ -215,11 +215,11 @@ BOOLEAN DrvConnect(
 			DWORD error = GetLastError();
 			CloseHandle(communicationPort);
 			result = HRESULT_FROM_WIN32(error);
-			LogMessageA("DriverHandler::DrvConnect CreateIoCompletionPort failed %u", error);
+			LogMessageA("DrvConnect::CreateIoCompletionPort failed %u", error);
 		}
 	}
 	else
-		LogMessageA("DriverHandler::DrvConnect FilterConnectCommunicationPort failed %X", result);
+		LogMessageA(":DrvConnect::FilterConnectCommunicationPort failed %X", result);
 
 	return result == S_OK;
 }

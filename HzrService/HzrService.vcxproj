@@ -59,7 +59,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>FltLib.lib;libclamav.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>libclamav.lib;FltLib.lib;Sfc.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -78,19 +78,23 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>FltLib.lib;libclamav.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>libclamav.lib;FltLib.lib;Sfc.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="DriverHandler.c" />
     <ClCompile Include="Logger.c" />
     <ClCompile Include="Main.c" />
+    <ClCompile Include="Service.c" />
+    <ClCompile Include="Utility.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="clamav.h" />
     <ClInclude Include="DriverHandler.h" />
     <ClInclude Include="Logger.h" />
     <ClInclude Include="resource.h" />
+    <ClInclude Include="Service.h" />
+    <ClInclude Include="Utility.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="HzrService.rc" />

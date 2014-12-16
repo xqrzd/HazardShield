@@ -18,18 +18,15 @@
 *  MA 02110-1301, USA.
 */
 
-#include "Service.h"
+#pragma once
 
-int main(int argc, char* argv[])
+#include "Utility.h"
+
+DWORD GetProcessorCount()
 {
-	SERVICE_TABLE_ENTRY serviceEntry[] =
-	{
-		{ SERVICE_NAME, HzrServiceMain },
-		{ NULL, NULL }
-	};
+	SYSTEM_INFO systemInfo;
 
-	if (!StartServiceCtrlDispatcherW(serviceEntry))
-		return GetLastError();
+	GetSystemInfo(&systemInfo);
 
-	return 0;
+	return systemInfo.dwNumberOfProcessors;
 }
