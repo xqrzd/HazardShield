@@ -82,3 +82,74 @@ BOOLEAN NtfsInitVolume(
 
 	return success;
 }
+
+// Notes: FileRecord must be at least the size of NTFS_VOLUME.FileRecordSize
+BOOLEAN NtfsReadFileRecord(
+	_In_ PNTFS_VOLUME NtfsVolume,
+	_In_ ULONG RecordNumber,
+	_Out_ PNTFS_FILE_RECORD FileRecord)
+{
+	BOOLEAN success = FALSE;
+	BOOLEAN found = FALSE;
+
+	ULONG fileRecordSizeInSectors = NtfsVolume->FileRecordSize / NtfsVolume->BytesPerSector;
+	ULONGLONG fileRecordStartSector = 0;
+
+	if (RecordNumber <= MFT_RECORD_USER)
+	{
+		fileRecordStartSector = NtfsVolume->MftStartSector;
+		found = TRUE;
+	}
+	else
+	{
+		// TODO: walk through MFT data runs.
+	}
+
+	if (found)
+	{
+		// Read file record
+		if (NtfsVolume->NtfsReadSector(NtfsVolume, fileRecordStartSector, fileRecordSizeInSectors, FileRecord))
+		{
+			if (FileRecord->Magic == FILE_RECORD_MAGIC /*&& NtfsFileExists(FileRecord)*/)
+			{
+				PUSHORT usnAddress = NtfsOffsetToPointer(FileRecord, FileRecord->UpdateSequenceOffset);
+				success = NtfsPatchUpdateSequence(NtfsVolume, (PUSHORT)FileRecord, fileRecordSizeInSectors, usnAddress);
+
+				if (!success)
+					printf("NtfsReadFileRecord: NtfsPatchUpdateSequence failed for record %u\n", RecordNumber);
+			}
+			else
+				printf("NtfsReadFileRecord: File record %u is invalid\n", RecordNumber);
+		}
+		else
+			printf("NtfsReadFileRecord: Unable to find record %u\n", RecordNumber);
+	}
+	else
+		printf("NtfsReadFileRecord: Unable to find record %u\n", RecordNumber);
+
+	return success;
+}
+
+BOOLEAN NtfsPatchUpdateSequence(
+	_In_ PNTFS_VOLUME NtfsVolume,
+	_Inout_ PUSHORT Sector,
+	_In_ ULONG SectorCount,
+	_In_ PUSHORT UsnAddress)
+{
+	USHORT usn = *UsnAddress;
+	PUSHORT usArray = UsnAddress + 1;
+	ULONG i;
+
+	for (i = 0; i < SectorCount; i++)
+	{
+		Sector += ((NtfsVolume->BytesPerSector >> 1) - 1);
+
+		if (*Sector != usn)
+			return FALSE;
+
+		*Sector = usArray[i]; // Write back correct data
+		Sector++;
+	}
+
+	return TRUE;
+}
