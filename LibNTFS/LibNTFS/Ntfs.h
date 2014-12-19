@@ -23,23 +23,23 @@
 #include <Windows.h>
 
 // The first 17 file records
-#define	MFT_RECORD_MFT			0
-#define	MFT_RECORD_MFT_MIRROR	1
-#define	MFT_RECORD_LOG_FILE		2
-#define	MFT_RECORD_VOLUME		3
-#define	MFT_RECORD_ATTR_DEF		4
-#define	MFT_RECORD_ROOT			5
-#define	MFT_RECORD_BITMAP		6
-#define	MFT_RECORD_BOOT			7
-#define	MFT_RECORD_BAD_CLUSTER	8
-#define	MFT_RECORD_SECURE		9
-#define	MFT_RECORD_UPCASE		10
-#define	MFT_RECORD_EXTEND		11
-#define	MFT_RECORD_RESERVED12	12
-#define	MFT_RECORD_RESERVED13	13
-#define	MFT_RECORD_RESERVED14	14
-#define	MFT_RECORD_RESERVED15	15
-#define	MFT_RECORD_USER			16
+#define MFT_RECORD_MFT			0
+#define MFT_RECORD_MFT_MIRROR	1
+#define MFT_RECORD_LOG_FILE		2
+#define MFT_RECORD_VOLUME		3
+#define MFT_RECORD_ATTR_DEF		4
+#define MFT_RECORD_ROOT			5
+#define MFT_RECORD_BITMAP		6
+#define MFT_RECORD_BOOT			7
+#define MFT_RECORD_BAD_CLUSTER	8
+#define MFT_RECORD_SECURE		9
+#define MFT_RECORD_UPCASE		10
+#define MFT_RECORD_EXTEND		11
+#define MFT_RECORD_RESERVED12	12
+#define MFT_RECORD_RESERVED13	13
+#define MFT_RECORD_RESERVED14	14
+#define MFT_RECORD_RESERVED15	15
+#define MFT_RECORD_USER			16
 
 #pragma pack(push, 1)
 typedef struct _NTFS_BOOT_SECTOR {
@@ -98,13 +98,64 @@ typedef struct _NTFS_FILE_RECORD {
 	USHORT		HardlinkCount;
 	USHORT		AttributeOffset;		// Offset to the first attribute
 	USHORT		Flags;
-	ULONG		FileSize;				// Real size of the file record
+	ULONG		RealSize;				// Real size of the file record
 	ULONG		AllocSize;				// Allocated size of the file record
 	NTFS_FILE_REFERENCE	BaseReference;	// File reference to the base file record
 	USHORT		NextAttributeId;
 	USHORT		Padding;				// Align to 4 byte boundary
 	ULONG		RecordNumber;			// MFT record number
 } NTFS_FILE_RECORD, *PNTFS_FILE_RECORD;
+
+#define ATTR_TYPE_STANDARD_INFORMATION	0x10
+#define ATTR_TYPE_ATTRIBUTE_LIST		0x20
+#define ATTR_TYPE_FILE_NAME				0x30
+#define ATTR_TYPE_OBJECT_ID				0x40
+#define ATTR_TYPE_SECURITY_DESCRIPTOR	0x50
+#define ATTR_TYPE_VOLUME_NAME			0x60
+#define ATTR_TYPE_VOLUME_INFORMATION	0x70
+#define ATTR_TYPE_DATA					0x80
+#define ATTR_TYPE_INDEX_ROOT			0x90
+#define ATTR_TYPE_INDEX_ALLOCATION		0xA0
+#define ATTR_TYPE_BITMAP				0xB0
+#define ATTR_TYPE_REPARSE_POINT			0xC0
+#define ATTR_TYPE_EA_INFORMATION		0xD0
+#define ATTR_TYPE_EA					0xE0
+#define ATTR_TYPE_LOGGED_UTILITY_STREAM	0x100
+#define ATTR_TYPE_END					0xFFFFFFFF
+
+#define ATTR_FLAG_COMPRESSED	0x0001
+#define ATTR_FLAG_ENCRYPTED		0x4000
+#define ATTR_FLAG_SPARSE		0x8000
+
+typedef	struct _NTFS_ATTRIBUTE {
+	ULONG	Type;		// Attribute type
+	ULONG	Size;		// Size in bytes (including this header)
+	BOOLEAN	NonResident;
+	UCHAR	NameLength;	// Name length in WCHARs
+	USHORT	NameOffset;
+	USHORT	Flags;
+	USHORT	Id;			// Each attribute has a unique identifier (unique only to the file record)
+} NTFS_ATTRIBUTE, *PNTFS_ATTRIBUTE;
+
+typedef	struct _NTFS_RESIDENT_ATTRIBUTE {
+	NTFS_ATTRIBUTE	Header;
+	ULONG		DataSize;
+	USHORT		DataOffset;
+	UCHAR		IndexedFlag;
+	UCHAR		Padding;
+} NTFS_RESIDENT_ATTRIBUTE, *PNTFS_RESIDENT_ATTRIBUTE;
+
+typedef struct _NTFS_NONRESIDENT_ATTRIBUTE {
+	NTFS_ATTRIBUTE	Header;
+	ULONGLONG	StartVCN;
+	ULONGLONG	EndVCN;
+	USHORT		DataRunOffset;
+	USHORT		CompressionUnitSize;// Compression unit size = 2^x clusters. 0 implies uncompressed
+	ULONG		Padding;
+	ULONGLONG	AllocSize;			// This is the attribute size rounded up to the cluster size
+	ULONGLONG	RealSize;
+	ULONGLONG	InitializedSize;	// Initialized data size of the stream
+} NTFS_NONRESIDENT_ATTRIBUTE, *PNTFS_NONRESIDENT_ATTRIBUTE;
 
 typedef BOOLEAN NTFS_READ_SECTOR(
 	_In_ struct _NTFS_VOLUME* NtfsVolume,
@@ -136,6 +187,12 @@ BOOLEAN NtfsInitVolume(
 	_Out_ PNTFS_VOLUME Volume
 	);
 
+BOOLEAN NtfsReadFileRecord(
+	_In_ PNTFS_VOLUME NtfsVolume,
+	_In_ ULONG RecordNumber,
+	_Out_ PNTFS_FILE_RECORD FileRecord
+	);
+
 BOOLEAN NtfsPatchUpdateSequence(
 	_In_ PNTFS_VOLUME NtfsVolume,
 	_Inout_ PUSHORT Sector,
@@ -143,10 +200,9 @@ BOOLEAN NtfsPatchUpdateSequence(
 	_In_ PUSHORT UsnAddress
 	);
 
-BOOLEAN NtfsReadFileRecord(
+VOID NtfsReadFileAttributes(
 	_In_ PNTFS_VOLUME NtfsVolume,
-	_In_ ULONG RecordNumber,
-	_Out_ PNTFS_FILE_RECORD FileRecord
+	_In_ PNTFS_FILE_RECORD FileRecord
 	);
 
 FORCEINLINE ULONG NtfsClustersToBytes(

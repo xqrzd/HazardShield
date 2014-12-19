@@ -21,6 +21,10 @@
 #include "Ntfs.h"
 #include <stdio.h>
 
+#ifdef _DEBUG
+#include <assert.h>
+#endif
+
 PVOID FORCEINLINE NtfspAllocate(
 	_In_ SIZE_T Size)
 {
@@ -70,7 +74,7 @@ BOOLEAN NtfsInitVolume(
 			printf("\tSectorsPerCluster: %u\n", NtfsVolume->SectorsPerCluster);
 			printf("\tFile record size: %u\n", NtfsVolume->FileRecordSize);
 			printf("\tIndex block size: %u\n", NtfsVolume->IndexBlockSize);
-			printf("\tMFT start sector: %llu\n", NtfsVolume->MftStartSector);
+			printf("\tMFT start sector: %llu\n\n", NtfsVolume->MftStartSector);
 		}
 		else
 			printf("NtfsInitVolume: Volume isn't NTFS [OemId: %s] [EndMarker: %X]\n", bootSector->OemId, bootSector->EndMarker);
@@ -92,12 +96,13 @@ BOOLEAN NtfsReadFileRecord(
 	BOOLEAN success = FALSE;
 	BOOLEAN found = FALSE;
 
-	ULONG fileRecordSizeInSectors = NtfsVolume->FileRecordSize / NtfsVolume->BytesPerSector;
-	ULONGLONG fileRecordStartSector = 0;
+	ULONG sectorCount = NtfsVolume->FileRecordSize / NtfsVolume->BytesPerSector;
+	ULONGLONG relativeSector = RecordNumber * sectorCount; // Relative to the data run it belongs to
+	ULONGLONG startSector = 0;
 
 	if (RecordNumber <= MFT_RECORD_USER)
 	{
-		fileRecordStartSector = NtfsVolume->MftStartSector;
+		startSector = NtfsVolume->MftStartSector;
 		found = TRUE;
 	}
 	else
@@ -108,12 +113,12 @@ BOOLEAN NtfsReadFileRecord(
 	if (found)
 	{
 		// Read file record
-		if (NtfsVolume->NtfsReadSector(NtfsVolume, fileRecordStartSector, fileRecordSizeInSectors, FileRecord))
+		if (NtfsVolume->NtfsReadSector(NtfsVolume, startSector + relativeSector, sectorCount, FileRecord))
 		{
 			if (FileRecord->Magic == FILE_RECORD_MAGIC /*&& NtfsFileExists(FileRecord)*/)
 			{
 				PUSHORT usnAddress = NtfsOffsetToPointer(FileRecord, FileRecord->UpdateSequenceOffset);
-				success = NtfsPatchUpdateSequence(NtfsVolume, (PUSHORT)FileRecord, fileRecordSizeInSectors, usnAddress);
+				success = NtfsPatchUpdateSequence(NtfsVolume, (PUSHORT)FileRecord, sectorCount, usnAddress);
 
 				if (!success)
 					printf("NtfsReadFileRecord: NtfsPatchUpdateSequence failed for record %u\n", RecordNumber);
@@ -152,4 +157,29 @@ BOOLEAN NtfsPatchUpdateSequence(
 	}
 
 	return TRUE;
+}
+
+VOID NtfsReadFileAttributes(
+	_In_ PNTFS_VOLUME NtfsVolume,
+	_In_ PNTFS_FILE_RECORD FileRecord)
+{
+	PNTFS_ATTRIBUTE attribute;
+	ULONG attributeOffset;
+
+	attributeOffset = FileRecord->AttributeOffset;
+	attribute = NtfsOffsetToPointer(FileRecord, FileRecord->AttributeOffset);
+
+	printf("Attributes for file %u\n", FileRecord->RecordNumber);
+
+	while (attribute->Type != ATTR_TYPE_END && ((attributeOffset + attribute->Size) < NtfsVolume->FileRecordSize))
+	{
+		printf("\tType: 0x%X, NonResident: %u\n", attribute->Type, attribute->NonResident);
+
+		attributeOffset += attribute->Size;
+		attribute = NtfsOffsetToPointer(attribute, attribute->Size);
+	}
+
+	printf("\n");
+
+	assert((attributeOffset + attribute->Size) < NtfsVolume->FileRecordSize);
 }

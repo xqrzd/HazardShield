@@ -57,6 +57,14 @@ void main()
 		NTFS_VOLUME ntfsVolume;
 		NtfsInitVolume(ReadSector, 512, volumeHandle, &ntfsVolume);
 
+		PNTFS_FILE_RECORD fileRecord = malloc(ntfsVolume.FileRecordSize);
+
+		NtfsReadFileRecord(&ntfsVolume, 0, fileRecord);
+
+		NtfsReadFileAttributes(&ntfsVolume, fileRecord);
+
+		free(fileRecord);
+
 		CloseHandle(volumeHandle);
 	}
 	else
