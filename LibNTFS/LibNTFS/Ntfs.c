@@ -19,31 +19,8 @@
 */
 
 #include "Ntfs.h"
-#include <stdio.h>
-
-#ifdef _DEBUG
 #include <assert.h>
-#endif
-
-PVOID FORCEINLINE NtfspAllocate(
-	_In_ SIZE_T Size)
-{
-#ifdef _DEBUG
-	return malloc(Size);
-#else
-	return HeapAlloc(GetProcessHeap(), HEAP_GENERATE_EXCEPTIONS, Size);
-#endif
-}
-
-VOID FORCEINLINE NtfspFree(
-	_In_ PVOID Buffer)
-{
-#ifdef _DEBUG
-	free(Buffer);
-#else
-	HeapFree(GetProcessHeap(), 0, Buffer);
-#endif
-}
+#include <stdio.h>
 
 BOOLEAN NtfsInitVolume(
 	_In_ PNTFS_READ_SECTOR NtfsReadSector,
@@ -53,7 +30,7 @@ BOOLEAN NtfsInitVolume(
 {
 	BOOLEAN success = FALSE;
 
-	PNTFS_BOOT_SECTOR bootSector = NtfspAllocate(BytesPerSector);
+	PNTFS_BOOT_SECTOR bootSector = NtfsAllocate(BytesPerSector);
 
 	NtfsVolume->NtfsReadSector = NtfsReadSector;
 	NtfsVolume->BytesPerSector = BytesPerSector;
@@ -82,7 +59,7 @@ BOOLEAN NtfsInitVolume(
 	else
 		printf("NtfsInitVolume: NtfsReadSector failed to read boot sector\n");
 
-	NtfspFree(bootSector);
+	NtfsFree(bootSector);
 
 	return success;
 }
@@ -152,7 +129,7 @@ BOOLEAN NtfsPatchUpdateSequence(
 		if (*Sector != usn)
 			return FALSE;
 
-		*Sector = usArray[i]; // Write back correct data
+		*Sector = usArray[i]; // Write back correct data.
 		Sector++;
 	}
 
@@ -161,10 +138,14 @@ BOOLEAN NtfsPatchUpdateSequence(
 
 VOID NtfsReadFileAttributes(
 	_In_ PNTFS_VOLUME NtfsVolume,
-	_In_ PNTFS_FILE_RECORD FileRecord)
+	_In_ PNTFS_FILE_RECORD FileRecord,
+	_In_ ULONG AttributeMask,
+	_Out_ PLIST_ENTRY ListHead)
 {
 	PNTFS_ATTRIBUTE attribute;
 	ULONG attributeOffset;
+
+	NtfsInitializeListHead(ListHead);
 
 	attributeOffset = FileRecord->AttributeOffset;
 	attribute = NtfsOffsetToPointer(FileRecord, FileRecord->AttributeOffset);
@@ -173,6 +154,25 @@ VOID NtfsReadFileAttributes(
 
 	while (attribute->Type != ATTR_TYPE_END && ((attributeOffset + attribute->Size) < NtfsVolume->FileRecordSize))
 	{
+		// Always process attribute lists, since they may contain relevant attributes.
+		if (attribute->Type == ATTR_TYPE_ATTRIBUTE_LIST)
+		{
+			// TODO: parse attribute list.
+		}
+		// Only read desired attributes.
+		else if (ATTR_MASK(attribute->Type) & AttributeMask)
+		{
+			// Allocate memory for the entry and the attribute data itself.
+			PNTFS_ATTRIBUTE_ENTRY attributeEntry = NtfsAllocate(sizeof(NTFS_ATTRIBUTE_ENTRY) + attribute->Size);
+
+			// Set the attribute to point towards the extra allocated space (after the structure)
+			attributeEntry->Attribute = NtfsOffsetToPointer(attributeEntry, sizeof(NTFS_ATTRIBUTE_ENTRY));
+			RtlCopyMemory(attributeEntry->Attribute, attribute, attribute->Size);
+
+			// Add attribute to linked list
+			NtfsInsertTailList(ListHead, &attributeEntry->ListEntry);
+		}
+
 		printf("\tType: 0x%X, NonResident: %u\n", attribute->Type, attribute->NonResident);
 
 		attributeOffset += attribute->Size;

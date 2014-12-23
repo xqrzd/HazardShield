@@ -121,11 +121,32 @@ typedef struct _NTFS_FILE_RECORD {
 #define ATTR_TYPE_EA_INFORMATION		0xD0
 #define ATTR_TYPE_EA					0xE0
 #define ATTR_TYPE_LOGGED_UTILITY_STREAM	0x100
-#define ATTR_TYPE_END					0xFFFFFFFF
+#define ATTR_TYPE_END					((ULONG)-1)
 
 #define ATTR_FLAG_COMPRESSED	0x0001
 #define ATTR_FLAG_ENCRYPTED		0x4000
 #define ATTR_FLAG_SPARSE		0x8000
+
+// Author: cyb70289
+#define ATTR_INDEX(Attribute)	(((Attribute)>>4)-1)	// Attribute Type to index, eg. 0x10->0, 0x30->2
+#define ATTR_MASK(Attribute)	(((ULONG)1)<<ATTR_INDEX(Attribute))	// Shift index to make bit flag
+
+#define ATTR_MASK_STANDARD_INFORMATION	ATTR_MASK(ATTR_TYPE_STANDARD_INFORMATION)
+#define ATTR_MASK_ATTRIBUTE_LIST		ATTR_MASK(ATTR_TYPE_ATTRIBUTE_LIST)
+#define ATTR_MASK_FILE_NAME				ATTR_MASK(ATTR_TYPE_FILE_NAME)
+#define ATTR_MASK_OBJECT_ID				ATTR_MASK(ATTR_TYPE_OBJECT_ID)
+#define ATTR_MASK_SECURITY_DESCRIPTOR	ATTR_MASK(ATTR_TYPE_SECURITY_DESCRIPTOR)
+#define ATTR_MASK_VOLUME_NAME			ATTR_MASK(ATTR_TYPE_VOLUME_NAME)
+#define ATTR_MASK_VOLUME_INFORMATION	ATTR_MASK(ATTR_TYPE_VOLUME_INFORMATION)
+#define ATTR_MASK_DATA					ATTR_MASK(ATTR_TYPE_DATA)
+#define ATTR_MASK_INDEX_ROOT			ATTR_MASK(ATTR_TYPE_INDEX_ROOT)
+#define ATTR_MASK_INDEX_ALLOCATION		ATTR_MASK(ATTR_TYPE_INDEX_ALLOCATION)
+#define ATTR_MASK_BITMAP				ATTR_MASK(ATTR_TYPE_BITMAP)
+#define ATTR_MASK_REPARSE_POINT			ATTR_MASK(ATTR_TYPE_REPARSE_POINT)
+#define ATTR_MASK_EA_INFORMATION		ATTR_MASK(ATTR_TYPE_EA_INFORMATION)
+#define ATTR_MASK_EA					ATTR_MASK(ATTR_TYPE_EA)
+#define ATTR_MASK_LOGGED_UTILITY_STREAM	ATTR_MASK(ATTR_TYPE_LOGGED_UTILITY_STREAM)
+#define ATTR_MASK_ALL					((ULONG)-1)
 
 typedef	struct _NTFS_ATTRIBUTE {
 	ULONG	Type;		// Attribute type
@@ -157,6 +178,11 @@ typedef struct _NTFS_NONRESIDENT_ATTRIBUTE {
 	ULONGLONG	InitializedSize;	// Initialized data size of the stream
 } NTFS_NONRESIDENT_ATTRIBUTE, *PNTFS_NONRESIDENT_ATTRIBUTE;
 
+typedef struct _NTFS_ATTRIBUTE_ENTRY {
+	PNTFS_ATTRIBUTE	Attribute;
+	LIST_ENTRY ListEntry;
+} NTFS_ATTRIBUTE_ENTRY, *PNTFS_ATTRIBUTE_ENTRY;
+
 typedef BOOLEAN NTFS_READ_SECTOR(
 	_In_ struct _NTFS_VOLUME* NtfsVolume,
 	_In_ ULONGLONG Sector,
@@ -165,8 +191,6 @@ typedef BOOLEAN NTFS_READ_SECTOR(
 	);
 
 typedef NTFS_READ_SECTOR *PNTFS_READ_SECTOR;
-
-#define NtfsOffsetToPointer(B,O)  ((PVOID)( ((PCHAR)(B)) + ((O))  ))
 
 // Represents an NTFS Volume
 typedef struct _NTFS_VOLUME {
@@ -202,8 +226,32 @@ BOOLEAN NtfsPatchUpdateSequence(
 
 VOID NtfsReadFileAttributes(
 	_In_ PNTFS_VOLUME NtfsVolume,
-	_In_ PNTFS_FILE_RECORD FileRecord
+	_In_ PNTFS_FILE_RECORD FileRecord,
+	_In_ ULONG AttributeMask,
+	_Out_ PLIST_ENTRY ListHead
 	);
+
+#define NtfsOffsetToPointer(B,O)  ((PVOID)( ((PCHAR)(B)) + ((O))  ))
+
+PVOID FORCEINLINE NtfsAllocate(
+	_In_ SIZE_T Size)
+{
+#ifdef _DEBUG
+	return malloc(Size);
+#else
+	return HeapAlloc(GetProcessHeap(), HEAP_GENERATE_EXCEPTIONS, Size);
+#endif
+}
+
+VOID FORCEINLINE NtfsFree(
+	_In_ PVOID Buffer)
+{
+#ifdef _DEBUG
+	free(Buffer);
+#else
+	HeapFree(GetProcessHeap(), 0, Buffer);
+#endif
+}
 
 FORCEINLINE ULONG NtfsClustersToBytes(
 	_In_ CHAR NumberOfClusters,
@@ -227,4 +275,32 @@ FORCEINLINE BOOLEAN NtfsIsVolumeValid(
 		&& BootSector->OemId[2] == 'F'
 		&& BootSector->OemId[3] == 'S'
 		&& BootSector->EndMarker == 0xAA55;
+}
+
+#define LIST_FOR_EACH_SAFE(Current, Next, Head) for (Current = (Head)->Flink, Next = Current->Flink; Current != (Head); Current = Next, Next = Current->Flink)
+
+FORCEINLINE VOID NtfsInitializeListHead(
+	_Out_ PLIST_ENTRY ListHead)
+{
+	ListHead->Flink = ListHead->Blink = ListHead;
+}
+
+FORCEINLINE VOID NtfsInsertTailList(
+	_Inout_ PLIST_ENTRY ListHead,
+	_Inout_ PLIST_ENTRY Entry)
+{
+	PLIST_ENTRY OldBlink;
+	OldBlink = ListHead->Blink;
+	Entry->Flink = ListHead;
+	Entry->Blink = OldBlink;
+	OldBlink->Flink = Entry;
+	ListHead->Blink = Entry;
+}
+
+#define NtfsFreeLinkedList(Head, Type, Field) { \
+	PLIST_ENTRY Current, Next; \
+	LIST_FOR_EACH_SAFE(Current, Next, Head) { \
+		Type* structure = CONTAINING_RECORD(Current, Type, Field); \
+		NtfsFree(structure); \
+	} \
 }
