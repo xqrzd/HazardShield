@@ -69,6 +69,8 @@ void main()
 		free(fileRecord);*/
 
 		CloseHandle(volumeHandle);
+
+		NtfsFreeVolume(&ntfsVolume);
 	}
 	else
 		printf("CreateFileW failed %d\n", GetLastError());

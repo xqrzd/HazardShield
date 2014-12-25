@@ -35,7 +35,6 @@ BOOLEAN NtfsInitVolume(
 	NtfsVolume->NtfsReadSector = NtfsReadSector;
 	NtfsVolume->BytesPerSector = BytesPerSector;
 	NtfsVolume->Context = Context;
-	NtfsInitializeListHead(&NtfsVolume->MftDataRuns);
 
 	if (NtfsReadSector(NtfsVolume, 0, 1, bootSector))
 	{
@@ -69,6 +68,20 @@ BOOLEAN NtfsInitVolume(
 
 				dataEntry = NtfsFindFirstAttribute(&attributes, ATTR_TYPE_DATA);
 
+				if (dataEntry)
+				{
+					if (dataEntry->Attribute->NonResident)
+					{
+						NtfsInitializeListHead(&NtfsVolume->MftDataRuns);
+
+						success = NtfsGetDataRuns(NtfsVolume, (PNTFS_NONRESIDENT_ATTRIBUTE)dataEntry->Attribute, &NtfsVolume->MftDataRuns);
+					}
+					else
+						printf("NtfsInitVolume: MFT data attribute is resident\n");
+				}
+				else
+					printf("NtfsInitVolume: Unable to find MFT data attribute\n");
+
 				NtfsFreeLinkedList(&attributes, NTFS_ATTRIBUTE_ENTRY, ListEntry);
 			}
 			else
@@ -90,6 +103,7 @@ BOOLEAN NtfsInitVolume(
 VOID NtfsFreeVolume(
 	_In_ PNTFS_VOLUME NtfsVolume)
 {
+	NtfsFreeLinkedList(&NtfsVolume->MftDataRuns, NTFS_DATA_RUN_ENTRY, ListEntry);
 }
 
 // Notes: FileRecord must be at least the size of NTFS_VOLUME.FileRecordSize
@@ -234,4 +248,110 @@ PNTFS_ATTRIBUTE_ENTRY NtfsFindNextAttribute(
 	_In_ ULONG AttributeType)
 {
 	return NULL;
+}
+
+// Notes: The caller must eventually call NtfsFreeLinkedList on ListHead
+BOOLEAN NtfsGetDataRuns(
+	_In_ PNTFS_VOLUME NtfsVolume,
+	_In_ PNTFS_NONRESIDENT_ATTRIBUTE NonResidentAttribute,
+	_Out_ PLIST_ENTRY ListHead)
+{
+	PUCHAR offset = NtfsOffsetToPointer(NonResidentAttribute, NonResidentAttribute->DataRunOffset);
+	PNTFS_LENGTH_OFFSET_BITFIELD lengthOffset = (PNTFS_LENGTH_OFFSET_BITFIELD)offset;
+
+	LONGLONG absoluteDataRunOffset = 0;	// Used to keep track of the absolute data run offset, since they are relative to the previous one
+	ULONGLONG totalLength = 0;
+
+	while (lengthOffset->Value)
+	{
+		PNTFS_DATA_RUN_ENTRY dataRunEntry;
+		ULONGLONG dataRunLength = 0; // Length of the current data run in clusters.
+		LONGLONG dataRunOffset = 0; // Offset of the current data run in clusters (this value is relative to the previous data run).
+
+		offset += sizeof(NTFS_LENGTH_OFFSET_BITFIELD);
+
+		if (lengthOffset->Bitfield.Length == 0 || lengthOffset->Bitfield.Length > 8 ||
+			lengthOffset->Bitfield.Offset > 8)
+		{
+			printf("NtfsGetDataRuns: length_offset bitfield is corrupted [Length: %u] [Offset: %u]\n", lengthOffset->Bitfield.Length, lengthOffset->Bitfield.Offset);
+			return FALSE;
+		}
+
+		// Read length of data run
+		RtlCopyMemory(&dataRunLength, offset, lengthOffset->Bitfield.Length);
+
+		offset += lengthOffset->Bitfield.Length;
+
+		if (lengthOffset->Bitfield.Offset) // Not sparse file
+		{
+			// Check sign bit
+			if (offset[lengthOffset->Bitfield.Offset - 1] & 0x80)
+				dataRunOffset = -1;
+
+			// Read location of data run (relative to the previous data run)
+			RtlCopyMemory(&dataRunOffset, offset, lengthOffset->Bitfield.Offset);
+
+			offset += lengthOffset->Bitfield.Offset;
+		}
+		else
+			printf("NtfsGetDataRuns: Found sparse file\n");
+
+		totalLength += dataRunLength;
+		absoluteDataRunOffset += dataRunOffset;
+
+		if (absoluteDataRunOffset < 0)
+		{
+			printf("NtfsGetDataRuns: totalDataOffset is corrupted: %lld\n", absoluteDataRunOffset);
+			return FALSE;
+		}
+
+		dataRunEntry = NtfsAllocate(sizeof(NTFS_DATA_RUN_ENTRY));
+
+		// Data runs are in clusters, convert them to sectors
+		dataRunEntry->SectorOffset = absoluteDataRunOffset * NtfsVolume->SectorsPerCluster;
+		dataRunEntry->LengthInSectors = dataRunLength * NtfsVolume->SectorsPerCluster;
+
+		printf("Data run [Sector: %llu] [Length: %llu, %llu MB]\n", dataRunEntry->SectorOffset, dataRunEntry->LengthInSectors, dataRunEntry->LengthInSectors / 2 / 1024);
+
+		NtfsInsertTailList(ListHead, &(dataRunEntry->ListEntry));
+
+		lengthOffset = (PNTFS_LENGTH_OFFSET_BITFIELD)offset;
+	}
+
+	if (NonResidentAttribute->AllocSize != (totalLength * NtfsVolume->SectorsPerCluster * NtfsVolume->BytesPerSector))
+		printf("NtfsGetDataRuns: Didn't read correct amount of data [Expected: %016llu] [Read: %016llu]\n", NonResidentAttribute->AllocSize, totalLength * NtfsVolume->SectorsPerCluster * NtfsVolume->BytesPerSector);
+
+	printf("\n");
+
+	return NonResidentAttribute->AllocSize == (totalLength * NtfsVolume->SectorsPerCluster * NtfsVolume->BytesPerSector);
+}
+
+// Notes: Buffer must be at least the size of the data runs
+BOOLEAN NtfsReadDataRuns(
+	_In_ PNTFS_VOLUME NtfsVolume,
+	_In_ PLIST_ENTRY DataRunsHead,
+	_Out_ PVOID Buffer)
+{
+	ULONGLONG position = 0;
+
+	PLIST_ENTRY current;
+	PLIST_ENTRY next;
+
+	LIST_FOR_EACH_SAFE(current, next, DataRunsHead)
+	{
+		PNTFS_DATA_RUN_ENTRY dataRunEntry = CONTAINING_RECORD(current, NTFS_DATA_RUN_ENTRY, ListEntry);
+
+		if (!NtfsVolume->NtfsReadSector(
+			NtfsVolume,
+			dataRunEntry->SectorOffset,
+			(ULONG)dataRunEntry->LengthInSectors,
+			(PUCHAR)Buffer + position))
+		{
+			return FALSE;
+		}
+
+		position += dataRunEntry->LengthInSectors * NtfsVolume->BytesPerSector;
+	}
+
+	return TRUE;
 }

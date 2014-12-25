@@ -183,6 +183,25 @@ typedef struct _NTFS_ATTRIBUTE_ENTRY {
 	LIST_ENTRY ListEntry;
 } NTFS_ATTRIBUTE_ENTRY, *PNTFS_ATTRIBUTE_ENTRY;
 
+// From NTFS Forensics (by Jason Medeiros)
+typedef struct _NTFS_LENGTH_OFFSET_BITFIELD {
+	union {
+		UCHAR Value;
+		struct
+		{
+			UCHAR Length : 4;
+			UCHAR Offset : 4;
+		} Bitfield;
+	};
+} NTFS_LENGTH_OFFSET_BITFIELD, *PNTFS_LENGTH_OFFSET_BITFIELD;
+
+typedef struct _NTFS_DATA_RUN_ENTRY {
+	ULONGLONG SectorOffset;
+	ULONGLONG LengthInSectors;
+	LIST_ENTRY ListEntry;
+} NTFS_DATA_RUN_ENTRY, *PNTFS_DATA_RUN_ENTRY;
+
+// Notes: If Sector is 0, only BytesPerSector and Context will be valid in NtfsVolume
 typedef BOOLEAN NTFS_READ_SECTOR(
 	_In_ struct _NTFS_VOLUME* NtfsVolume,
 	_In_ ULONGLONG Sector,
@@ -245,6 +264,18 @@ PNTFS_ATTRIBUTE_ENTRY NtfsFindNextAttribute(
 	_In_ PLIST_ENTRY ListHead,
 	_In_ PLIST_ENTRY StartEntry,
 	_In_ ULONG AttributeType
+	);
+
+BOOLEAN NtfsGetDataRuns(
+	_In_ PNTFS_VOLUME NtfsVolume,
+	_In_ PNTFS_NONRESIDENT_ATTRIBUTE NonResidentAttribute,
+	_Out_ PLIST_ENTRY ListHead
+	);
+
+BOOLEAN NtfsReadDataRuns(
+	_In_ PNTFS_VOLUME NtfsVolume,
+	_In_ PLIST_ENTRY DataRunsHead,
+	_Out_ PVOID Buffer
 	);
 
 #define NtfsOffsetToPointer(B,O)  ((PVOID)( ((PCHAR)(B)) + ((O))  ))
