@@ -57,7 +57,7 @@ void main()
 		NTFS_VOLUME ntfsVolume;
 		NtfsInitVolume(ReadSector, 512, volumeHandle, &ntfsVolume);
 
-		PNTFS_FILE_RECORD fileRecord = malloc(ntfsVolume.FileRecordSize);
+		/*PNTFS_FILE_RECORD fileRecord = malloc(ntfsVolume.FileRecordSize);
 		LIST_ENTRY listHead;
 
 		NtfsReadFileRecord(&ntfsVolume, 0, fileRecord);
@@ -66,7 +66,7 @@ void main()
 
 		NtfsFreeLinkedList(&listHead, NTFS_ATTRIBUTE_ENTRY, ListEntry);
 
-		free(fileRecord);
+		free(fileRecord);*/
 
 		CloseHandle(volumeHandle);
 	}

@@ -35,11 +35,14 @@ BOOLEAN NtfsInitVolume(
 	NtfsVolume->NtfsReadSector = NtfsReadSector;
 	NtfsVolume->BytesPerSector = BytesPerSector;
 	NtfsVolume->Context = Context;
+	NtfsInitializeListHead(&NtfsVolume->MftDataRuns);
 
 	if (NtfsReadSector(NtfsVolume, 0, 1, bootSector))
 	{
 		if (NtfsIsVolumeValid(bootSector))
 		{
+			PNTFS_FILE_RECORD mftFileRecord;
+
 			NtfsVolume->BytesPerSector = bootSector->BytesPerSector;
 			NtfsVolume->SectorsPerCluster = bootSector->SectorsPerCluster;
 			NtfsVolume->FileRecordSize = NtfsClustersToBytes(bootSector->ClustersPerFileRecord, bootSector->BytesPerSector, bootSector->SectorsPerCluster);
@@ -52,6 +55,26 @@ BOOLEAN NtfsInitVolume(
 			printf("\tFile record size: %u\n", NtfsVolume->FileRecordSize);
 			printf("\tIndex block size: %u\n", NtfsVolume->IndexBlockSize);
 			printf("\tMFT start sector: %llu\n\n", NtfsVolume->MftStartSector);
+
+			mftFileRecord = NtfsAllocate(NtfsVolume->FileRecordSize);
+
+			if (NtfsReadFileRecord(NtfsVolume, MFT_RECORD_MFT, mftFileRecord))
+			{
+				LIST_ENTRY attributes;
+				PNTFS_ATTRIBUTE_ENTRY dataEntry;
+
+				NtfsInitializeListHead(&attributes);
+
+				NtfsReadFileAttributes(NtfsVolume, mftFileRecord, ATTR_MASK_DATA, &attributes);
+
+				dataEntry = NtfsFindFirstAttribute(&attributes, ATTR_TYPE_DATA);
+
+				NtfsFreeLinkedList(&attributes, NTFS_ATTRIBUTE_ENTRY, ListEntry);
+			}
+			else
+				printf("NtfsInitVolume: Unable to read MFT file record\n");
+
+			NtfsFree(mftFileRecord);
 		}
 		else
 			printf("NtfsInitVolume: Volume isn't NTFS [OemId: %s] [EndMarker: %X]\n", bootSector->OemId, bootSector->EndMarker);
@@ -62,6 +85,11 @@ BOOLEAN NtfsInitVolume(
 	NtfsFree(bootSector);
 
 	return success;
+}
+
+VOID NtfsFreeVolume(
+	_In_ PNTFS_VOLUME NtfsVolume)
+{
 }
 
 // Notes: FileRecord must be at least the size of NTFS_VOLUME.FileRecordSize
@@ -145,8 +173,6 @@ VOID NtfsReadFileAttributes(
 	PNTFS_ATTRIBUTE attribute;
 	ULONG attributeOffset;
 
-	NtfsInitializeListHead(ListHead);
-
 	attributeOffset = FileRecord->AttributeOffset;
 	attribute = NtfsOffsetToPointer(FileRecord, FileRecord->AttributeOffset);
 
@@ -173,7 +199,7 @@ VOID NtfsReadFileAttributes(
 			NtfsInsertTailList(ListHead, &attributeEntry->ListEntry);
 		}
 
-		printf("\tType: 0x%X, NonResident: %u\n", attribute->Type, attribute->NonResident);
+		printf("\tType: 0x%X, NonResident: %u, Flags: %u\n", attribute->Type, attribute->NonResident, attribute->Flags);
 
 		attributeOffset += attribute->Size;
 		attribute = NtfsOffsetToPointer(attribute, attribute->Size);
@@ -182,4 +208,30 @@ VOID NtfsReadFileAttributes(
 	printf("\n");
 
 	assert((attributeOffset + attribute->Size) < NtfsVolume->FileRecordSize);
+}
+
+PNTFS_ATTRIBUTE_ENTRY NtfsFindFirstAttribute(
+	_In_ PLIST_ENTRY ListHead,
+	_In_ ULONG AttributeType)
+{
+	PLIST_ENTRY current;
+	PLIST_ENTRY next;
+
+	LIST_FOR_EACH_SAFE(current, next, ListHead)
+	{
+		PNTFS_ATTRIBUTE_ENTRY attributeEntry = CONTAINING_RECORD(current, NTFS_ATTRIBUTE_ENTRY, ListEntry);
+
+		if (attributeEntry->Attribute->Type == AttributeType)
+			return attributeEntry;
+	}
+
+	return NULL;
+}
+
+PNTFS_ATTRIBUTE_ENTRY NtfsFindNextAttribute(
+	_In_ PLIST_ENTRY ListHead,
+	_In_ PLIST_ENTRY StartEntry,
+	_In_ ULONG AttributeType)
+{
+	return NULL;
 }

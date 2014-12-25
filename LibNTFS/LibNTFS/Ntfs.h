@@ -200,6 +200,7 @@ typedef struct _NTFS_VOLUME {
 	ULONG	FileRecordSize;	// File record size in bytes
 	ULONG	IndexBlockSize;	// Index block size in bytes
 	ULONGLONG MftStartSector; // Relative to the volume, not an absolute disk sector.
+	LIST_ENTRY MftDataRuns;
 
 	PVOID Context;	// Can be used to store anything
 } NTFS_VOLUME, *PNTFS_VOLUME;
@@ -209,6 +210,10 @@ BOOLEAN NtfsInitVolume(
 	_In_ USHORT BytesPerSector,
 	_In_ PVOID Context,
 	_Out_ PNTFS_VOLUME Volume
+	);
+
+VOID NtfsFreeVolume(
+	_In_ PNTFS_VOLUME NtfsVolume
 	);
 
 BOOLEAN NtfsReadFileRecord(
@@ -229,6 +234,17 @@ VOID NtfsReadFileAttributes(
 	_In_ PNTFS_FILE_RECORD FileRecord,
 	_In_ ULONG AttributeMask,
 	_Out_ PLIST_ENTRY ListHead
+	);
+
+PNTFS_ATTRIBUTE_ENTRY NtfsFindFirstAttribute(
+	_In_ PLIST_ENTRY ListHead,
+	_In_ ULONG AttributeType
+	);
+
+PNTFS_ATTRIBUTE_ENTRY NtfsFindNextAttribute(
+	_In_ PLIST_ENTRY ListHead,
+	_In_ PLIST_ENTRY StartEntry,
+	_In_ ULONG AttributeType
 	);
 
 #define NtfsOffsetToPointer(B,O)  ((PVOID)( ((PCHAR)(B)) + ((O))  ))
