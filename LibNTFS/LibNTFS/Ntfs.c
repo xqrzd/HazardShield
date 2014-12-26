@@ -126,7 +126,23 @@ BOOLEAN NtfsReadFileRecord(
 	}
 	else
 	{
-		// TODO: walk through MFT data runs.
+		PLIST_ENTRY current;
+		PLIST_ENTRY next;
+
+		LIST_FOR_EACH_SAFE(current, next, &NtfsVolume->MftDataRuns)
+		{
+			PNTFS_DATA_RUN_ENTRY dataRunEntry = CONTAINING_RECORD(current, NTFS_DATA_RUN_ENTRY, ListEntry);
+
+			// Does this run contain the desired record?
+			if (relativeSector <= dataRunEntry->LengthInSectors)
+			{
+				startSector = dataRunEntry->SectorOffset;
+				found = TRUE;
+				break;
+			}
+			else
+				relativeSector -= dataRunEntry->LengthInSectors;
+		}
 	}
 
 	if (found)
@@ -134,9 +150,10 @@ BOOLEAN NtfsReadFileRecord(
 		// Read file record
 		if (NtfsVolume->NtfsReadSector(NtfsVolume, startSector + relativeSector, sectorCount, FileRecord))
 		{
-			if (FileRecord->Magic == FILE_RECORD_MAGIC /*&& NtfsFileExists(FileRecord)*/)
+			if (FileRecord->Magic == FILE_RECORD_MAGIC)
 			{
 				PUSHORT usnAddress = NtfsOffsetToPointer(FileRecord, FileRecord->UpdateSequenceOffset);
+
 				success = NtfsPatchUpdateSequence(NtfsVolume, (PUSHORT)FileRecord, sectorCount, usnAddress);
 
 				if (!success)
