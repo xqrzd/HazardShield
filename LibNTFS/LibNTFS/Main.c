@@ -57,23 +57,11 @@ void main()
 		NTFS_VOLUME ntfsVolume;
 		NtfsInitVolume(ReadSector, 512, volumeHandle, &ntfsVolume);
 
-		/*PNTFS_FILE_RECORD fileRecord = malloc(ntfsVolume.FileRecordSize);
-		LIST_ENTRY listHead;
-
-		NtfsReadFileRecord(&ntfsVolume, 0, fileRecord);
-
-		NtfsReadFileAttributes(&ntfsVolume, fileRecord, ATTR_MASK_ALL, &listHead);
-
-		NtfsFreeLinkedList(&listHead, NTFS_ATTRIBUTE_ENTRY, ListEntry);
-
-		free(fileRecord);*/
-
 		CloseHandle(volumeHandle);
-
 		NtfsFreeVolume(&ntfsVolume);
 	}
 	else
-		printf("CreateFileW failed %d\n", GetLastError());
+		printf("CreateFileW failed %u\n", GetLastError());
 
 #ifdef _DEBUG
 	_CrtDumpMemoryLeaks();

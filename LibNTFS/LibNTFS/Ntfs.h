@@ -178,6 +178,41 @@ typedef struct _NTFS_NONRESIDENT_ATTRIBUTE {
 	ULONGLONG	InitializedSize;	// Initialized data size of the stream
 } NTFS_NONRESIDENT_ATTRIBUTE, *PNTFS_NONRESIDENT_ATTRIBUTE;
 
+#define ATTR_FILENAME_FLAG_READONLY		0x00000001
+#define ATTR_FILENAME_FLAG_HIDDEN		0x00000002
+#define ATTR_FILENAME_FLAG_SYSTEM		0x00000004
+#define ATTR_FILENAME_FLAG_ARCHIVE		0x00000020
+#define ATTR_FILENAME_FLAG_DEVICE		0x00000040
+#define ATTR_FILENAME_FLAG_NORMAL		0x00000080
+#define ATTR_FILENAME_FLAG_TEMP			0x00000100
+#define ATTR_FILENAME_FLAG_SPARSE		0x00000200
+#define ATTR_FILENAME_FLAG_REPARSE		0x00000400
+#define ATTR_FILENAME_FLAG_COMPRESSED	0x00000800
+#define ATTR_FILENAME_FLAG_OFFLINE		0x00001000
+#define ATTR_FILENAME_FLAG_NCI			0x00002000	// Not content indexed
+#define ATTR_FILENAME_FLAG_ENCRYPTED	0x00004000
+#define ATTR_FILENAME_FLAG_DIRECTORY	0x10000000
+#define ATTR_FILENAME_FLAG_INDEXVIEW	0x20000000
+
+#define ATTR_FILENAME_NAMESPACE_POSIX	0x00
+#define ATTR_FILENAME_NAMESPACE_WIN32	0x01
+#define ATTR_FILENAME_NAMESPACE_DOS		0x02
+
+typedef struct _NTFS_FILENAME_ATTRIBUTE {
+	NTFS_FILE_REFERENCE	ParentRecord;	// File reference to the parent directory
+	ULONGLONG	CreationTime;
+	ULONGLONG	AlterTime;
+	ULONGLONG	MftChangeTime;
+	ULONGLONG	ReadTime;
+	ULONGLONG	AllocSize;		// Allocated size of the file
+	ULONGLONG	RealSize;		// Real size of the file
+	ULONG		Flags;
+	ULONG		ER;				// Used by EAs and Reparse
+	UCHAR		NameLength;		// Filename length WCHARs
+	UCHAR		NameSpace;
+	WCHAR		Name[1];		// Filename (not null terminated)
+} NTFS_FILENAME_ATTRIBUTE, *PNTFS_FILENAME_ATTRIBUTE;
+
 typedef struct _NTFS_ATTRIBUTE_ENTRY {
 	PNTFS_ATTRIBUTE	Attribute;
 	LIST_ENTRY ListEntry;
@@ -276,6 +311,10 @@ BOOLEAN NtfsReadDataRuns(
 	_In_ PNTFS_VOLUME NtfsVolume,
 	_In_ PLIST_ENTRY DataRunsHead,
 	_Out_ PVOID Buffer
+	);
+
+PVOID NtfsReadResidentAttributeData(
+	_In_ PNTFS_RESIDENT_ATTRIBUTE Attribute
 	);
 
 #define NtfsOffsetToPointer(B,O)  ((PVOID)( ((PCHAR)(B)) + ((O))  ))

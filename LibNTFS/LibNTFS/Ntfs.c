@@ -238,7 +238,7 @@ VOID NtfsReadFileAttributes(
 
 	printf("\n");
 
-	assert((attributeOffset + attribute->Size) < NtfsVolume->FileRecordSize);
+	//assert((attributeOffset + attribute->Size) < NtfsVolume->FileRecordSize);
 }
 
 PNTFS_ATTRIBUTE_ENTRY NtfsFindFirstAttribute(
@@ -371,4 +371,10 @@ BOOLEAN NtfsReadDataRuns(
 	}
 
 	return TRUE;
+}
+
+PVOID NtfsReadResidentAttributeData(
+	_In_ PNTFS_RESIDENT_ATTRIBUTE Attribute)
+{
+	return NtfsOffsetToPointer(Attribute, Attribute->DataOffset);
 }
