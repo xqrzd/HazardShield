@@ -301,7 +301,7 @@ PNTFS_ATTRIBUTE_ENTRY NtfsFindNextAttribute(
 	_In_ ULONG AttributeType
 	);
 
-BOOLEAN NtfsGetDataRuns(
+VOID NtfsGetDataRuns(
 	_In_ PNTFS_VOLUME NtfsVolume,
 	_In_ PNTFS_NONRESIDENT_ATTRIBUTE NonResidentAttribute,
 	_Out_ PLIST_ENTRY ListHead
@@ -315,6 +315,12 @@ BOOLEAN NtfsReadDataRuns(
 
 PVOID NtfsReadResidentAttributeData(
 	_In_ PNTFS_RESIDENT_ATTRIBUTE Attribute
+	);
+
+BOOLEAN NtfsReadNonResidentAttributeData(
+	_In_ PNTFS_VOLUME NtfsVolume,
+	_In_ PNTFS_NONRESIDENT_ATTRIBUTE Attribute,
+	_Out_ PVOID Buffer
 	);
 
 #define NtfsOffsetToPointer(B,O)  ((PVOID)( ((PCHAR)(B)) + ((O))  ))

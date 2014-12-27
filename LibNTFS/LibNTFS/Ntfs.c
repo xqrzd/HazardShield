@@ -74,7 +74,9 @@ BOOLEAN NtfsInitVolume(
 					{
 						NtfsInitializeListHead(&NtfsVolume->MftDataRuns);
 
-						success = NtfsGetDataRuns(NtfsVolume, (PNTFS_NONRESIDENT_ATTRIBUTE)dataEntry->Attribute, &NtfsVolume->MftDataRuns);
+						NtfsGetDataRuns(NtfsVolume, (PNTFS_NONRESIDENT_ATTRIBUTE)dataEntry->Attribute, &NtfsVolume->MftDataRuns);
+
+						success = TRUE;
 					}
 					else
 						printf("NtfsInitVolume: MFT data attribute is resident\n");
@@ -268,7 +270,7 @@ PNTFS_ATTRIBUTE_ENTRY NtfsFindNextAttribute(
 }
 
 // Notes: The caller must eventually call NtfsFreeLinkedList on ListHead
-BOOLEAN NtfsGetDataRuns(
+VOID NtfsGetDataRuns(
 	_In_ PNTFS_VOLUME NtfsVolume,
 	_In_ PNTFS_NONRESIDENT_ATTRIBUTE NonResidentAttribute,
 	_Out_ PLIST_ENTRY ListHead)
@@ -291,7 +293,7 @@ BOOLEAN NtfsGetDataRuns(
 			lengthOffset->Bitfield.Offset > 8)
 		{
 			printf("NtfsGetDataRuns: length_offset bitfield is corrupted [Length: %u] [Offset: %u]\n", lengthOffset->Bitfield.Length, lengthOffset->Bitfield.Offset);
-			return FALSE;
+			return;
 		}
 
 		// Read length of data run
@@ -319,7 +321,7 @@ BOOLEAN NtfsGetDataRuns(
 		if (absoluteDataRunOffset < 0)
 		{
 			printf("NtfsGetDataRuns: totalDataOffset is corrupted: %lld\n", absoluteDataRunOffset);
-			return FALSE;
+			return;
 		}
 
 		dataRunEntry = NtfsAllocate(sizeof(NTFS_DATA_RUN_ENTRY));
@@ -340,7 +342,7 @@ BOOLEAN NtfsGetDataRuns(
 
 	printf("\n");
 
-	return NonResidentAttribute->AllocSize == (totalLength * NtfsVolume->SectorsPerCluster * NtfsVolume->BytesPerSector);
+	assert(NonResidentAttribute->AllocSize == (totalLength * NtfsVolume->SectorsPerCluster * NtfsVolume->BytesPerSector));
 }
 
 // Notes: Buffer must be at least the size of the data runs
@@ -377,4 +379,22 @@ PVOID NtfsReadResidentAttributeData(
 	_In_ PNTFS_RESIDENT_ATTRIBUTE Attribute)
 {
 	return NtfsOffsetToPointer(Attribute, Attribute->DataOffset);
+}
+
+BOOLEAN NtfsReadNonResidentAttributeData(
+	_In_ PNTFS_VOLUME NtfsVolume,
+	_In_ PNTFS_NONRESIDENT_ATTRIBUTE Attribute,
+	_Out_ PVOID Buffer)
+{
+	BOOLEAN success = FALSE;
+	LIST_ENTRY dataRuns;
+
+	// Attribute isn't stored within the file record.
+	NtfsGetDataRuns(NtfsVolume, Attribute, &dataRuns);
+
+	success = NtfsReadDataRuns(NtfsVolume, &dataRuns, Buffer);
+
+	NtfsFreeLinkedList(&dataRuns, NTFS_DATA_RUN_ENTRY, ListEntry);
+
+	return success;
 }
