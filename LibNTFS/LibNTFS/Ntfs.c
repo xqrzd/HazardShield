@@ -332,7 +332,7 @@ VOID NtfsGetDataRuns(
 
 		printf("Data run [Sector: %llu] [Length: %llu, %llu MB]\n", dataRunEntry->SectorOffset, dataRunEntry->LengthInSectors, dataRunEntry->LengthInSectors / 2 / 1024);
 
-		NtfsInsertTailList(ListHead, &(dataRunEntry->ListEntry));
+		NtfsInsertTailList(ListHead, &dataRunEntry->ListEntry);
 
 		lengthOffset = (PNTFS_LENGTH_OFFSET_BITFIELD)offset;
 	}
@@ -388,6 +388,8 @@ BOOLEAN NtfsReadNonResidentAttributeData(
 {
 	BOOLEAN success = FALSE;
 	LIST_ENTRY dataRuns;
+
+	NtfsInitializeListHead(&dataRuns);
 
 	// Attribute isn't stored within the file record.
 	NtfsGetDataRuns(NtfsVolume, Attribute, &dataRuns);
