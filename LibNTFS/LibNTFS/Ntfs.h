@@ -178,6 +178,16 @@ typedef struct _NTFS_NONRESIDENT_ATTRIBUTE {
 	ULONGLONG	InitializedSize;	// Initialized data size of the stream
 } NTFS_NONRESIDENT_ATTRIBUTE, *PNTFS_NONRESIDENT_ATTRIBUTE;
 
+typedef struct _NTFS_ATTRIBUTE_LIST {
+	ULONG		Type;				// The attribute type
+	USHORT		Size;
+	UCHAR		NameLength;			// Name length in WCHARs
+	UCHAR		NameOffset;
+	ULONGLONG	StartVCN;			// Starting VCN, or zero if the attribute is resident
+	NTFS_FILE_REFERENCE	BaseReference;	// Base File Reference of the attribute
+	USHORT		Id;					// Attribute id
+} NTFS_ATTRIBUTE_LIST, *PNTFS_ATTRIBUTE_LIST;
+
 #define ATTR_FILENAME_FLAG_READONLY		0x00000001
 #define ATTR_FILENAME_FLAG_HIDDEN		0x00000002
 #define ATTR_FILENAME_FLAG_SYSTEM		0x00000004
@@ -290,6 +300,14 @@ VOID NtfsReadFileAttributes(
 	_Out_ PLIST_ENTRY ListHead
 	);
 
+VOID NtfsParseAttributeList(
+	_In_ PNTFS_VOLUME NtfsVolume,
+	_In_ PNTFS_ATTRIBUTE AttributeList,
+	_In_ PNTFS_FILE_RECORD FileRecord,
+	_In_ ULONG AttributeMask,
+	_Out_ PLIST_ENTRY ListHead
+	);
+
 PNTFS_ATTRIBUTE_ENTRY NtfsFindFirstAttribute(
 	_In_ PLIST_ENTRY ListHead,
 	_In_ ULONG AttributeType
@@ -321,6 +339,13 @@ BOOLEAN NtfsReadNonResidentAttributeData(
 	_In_ PNTFS_VOLUME NtfsVolume,
 	_In_ PNTFS_NONRESIDENT_ATTRIBUTE Attribute,
 	_Out_ PVOID Buffer
+	);
+
+BOOLEAN NtfsReadAttributeData(
+	_In_ PNTFS_VOLUME NtfsVolume,
+	_In_ PNTFS_ATTRIBUTE Attribute,
+	_Out_ PVOID* Buffer,
+	_Out_ PULONG BufferSize
 	);
 
 #define NtfsOffsetToPointer(B,O)  ((PVOID)( ((PCHAR)(B)) + ((O))  ))

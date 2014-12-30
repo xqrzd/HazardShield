@@ -206,17 +206,18 @@ VOID NtfsReadFileAttributes(
 	PNTFS_ATTRIBUTE attribute;
 	ULONG attributeOffset;
 
-	attributeOffset = FileRecord->AttributeOffset;
-	attribute = NtfsOffsetToPointer(FileRecord, FileRecord->AttributeOffset);
-
 	printf("Attributes for file %u\n", FileRecord->RecordNumber);
 
-	while (attribute->Type != ATTR_TYPE_END && ((attributeOffset + attribute->Size) < NtfsVolume->FileRecordSize))
+	for (attributeOffset = FileRecord->AttributeOffset, attribute = NtfsOffsetToPointer(FileRecord, attributeOffset);
+		((attributeOffset + attribute->Size) < NtfsVolume->FileRecordSize) && (attribute->Type != ATTR_TYPE_END);
+		attributeOffset += attribute->Size, attribute = NtfsOffsetToPointer(attribute, attribute->Size))
 	{
 		// Always process attribute lists, since they may contain relevant attributes.
 		if (attribute->Type == ATTR_TYPE_ATTRIBUTE_LIST)
 		{
-			// TODO: parse attribute list.
+			printf("Found attribute list in %u, %u\n", FileRecord->RecordNumber, attribute->NonResident);
+
+			NtfsParseAttributeList(NtfsVolume, attribute, FileRecord, AttributeMask, ListHead);
 		}
 		// Only read desired attributes.
 		else if (ATTR_MASK(attribute->Type) & AttributeMask)
@@ -232,15 +233,52 @@ VOID NtfsReadFileAttributes(
 			NtfsInsertTailList(ListHead, &attributeEntry->ListEntry);
 		}
 
-		printf("\tType: 0x%X, NonResident: %u, Flags: %u\n", attribute->Type, attribute->NonResident, attribute->Flags);
-
-		attributeOffset += attribute->Size;
-		attribute = NtfsOffsetToPointer(attribute, attribute->Size);
+		printf("\tType: 0x%X, NonResident: %u, Flags: %u, Id: %u\n", attribute->Type, attribute->NonResident, attribute->Flags, attribute->Id);
 	}
 
 	printf("\n");
+}
 
-	//assert((attributeOffset + attribute->Size) < NtfsVolume->FileRecordSize);
+// TODO: Don't add duplicate entries
+VOID NtfsParseAttributeList(
+	_In_ PNTFS_VOLUME NtfsVolume,
+	_In_ PNTFS_ATTRIBUTE AttributeList,
+	_In_ PNTFS_FILE_RECORD FileRecord,
+	_In_ ULONG AttributeMask,
+	_Out_ PLIST_ENTRY ListHead)
+{
+	PNTFS_ATTRIBUTE_LIST originalAttributeList;
+	ULONG bufferSize;
+
+	if (NtfsReadAttributeData(NtfsVolume, AttributeList, &originalAttributeList, &bufferSize))
+	{
+		PNTFS_ATTRIBUTE_LIST attributeList;
+		ULONG offset;
+
+		for (attributeList = originalAttributeList, offset = 0;
+			offset + attributeList->Size < AttributeList->Size;
+			offset += attributeList->Size, attributeList = NtfsOffsetToPointer(attributeList, attributeList->Size))
+		{
+			// Skip duplicate attributes.
+			if (attributeList->BaseReference.RecordNumber != FileRecord->RecordNumber)
+			{
+				// Only read desired attributes.
+				if (ATTR_MASK(attributeList->Type) & AttributeMask)
+				{
+					PNTFS_FILE_RECORD fileRecord = NtfsAllocate(NtfsVolume->FileRecordSize);
+
+					if (NtfsReadFileRecord(NtfsVolume, attributeList->BaseReference.RecordNumber, fileRecord))
+					{
+						NtfsReadFileAttributes(NtfsVolume, fileRecord, AttributeMask, ListHead);
+					}
+
+					NtfsFree(fileRecord);
+				}
+			}
+		}
+
+		NtfsFree(originalAttributeList);
+	}
 }
 
 PNTFS_ATTRIBUTE_ENTRY NtfsFindFirstAttribute(
@@ -397,6 +435,44 @@ BOOLEAN NtfsReadNonResidentAttributeData(
 	success = NtfsReadDataRuns(NtfsVolume, &dataRuns, Buffer);
 
 	NtfsFreeLinkedList(&dataRuns, NTFS_DATA_RUN_ENTRY, ListEntry);
+
+	return success;
+}
+
+BOOLEAN NtfsReadAttributeData(
+	_In_ PNTFS_VOLUME NtfsVolume,
+	_In_ PNTFS_ATTRIBUTE Attribute,
+	_Out_ PVOID* Buffer,
+	_Out_ PULONG BufferSize)
+{
+	BOOLEAN success = FALSE;
+
+	if (Attribute->NonResident)
+	{
+		PNTFS_NONRESIDENT_ATTRIBUTE nonResidentAttribute = (PNTFS_NONRESIDENT_ATTRIBUTE)Attribute;
+		PVOID nonResidentData = NtfsAllocate((SIZE_T)nonResidentAttribute->AllocSize);
+
+		success = NtfsReadNonResidentAttributeData(NtfsVolume, nonResidentAttribute, nonResidentData);
+
+		if (success)
+		{
+			*Buffer = nonResidentData;
+			*BufferSize = (ULONG)nonResidentAttribute->RealSize;
+		}
+		else
+			NtfsFree(nonResidentAttribute);
+	}
+	else
+	{
+		PNTFS_RESIDENT_ATTRIBUTE residentAttribute = (PNTFS_RESIDENT_ATTRIBUTE)Attribute;
+		PVOID residentData = NtfsAllocate(residentAttribute->DataSize);
+
+		RtlCopyMemory(residentData, NtfsReadResidentAttributeData(residentAttribute), residentAttribute->DataSize);
+
+		*Buffer = residentData;
+		*BufferSize = residentAttribute->DataSize;
+		success = TRUE;
+	}
 
 	return success;
 }
