@@ -72,14 +72,9 @@ typedef struct _NTFS_BOOT_SECTOR {
 #pragma pack(pop)
 
 typedef struct _NTFS_FILE_REFERENCE {
-	union {
-		ULONGLONG FileReference;
-		struct
-		{
-			ULONGLONG RecordNumber : 48;
-			ULONGLONG RecordSequence : 16;
-		};
-	};
+	ULONG RecordNumber;
+	USHORT HighRecordNumber;	// Not used?
+	USHORT SequenceNumber;
 } NTFS_FILE_REFERENCE, *PNTFS_FILE_REFERENCE;
 
 #define	FILE_RECORD_MAGIC		'ELIF'
