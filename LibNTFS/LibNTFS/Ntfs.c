@@ -158,7 +158,9 @@ BOOLEAN NtfsReadFileRecord(
 
 				success = NtfsPatchUpdateSequence(NtfsVolume, (PUSHORT)FileRecord, sectorCount, usnAddress);
 
-				if (!success)
+				if (success)
+					assert(FileRecord->BaseReference.HighRecordNumber == 0);
+				else
 					printf("NtfsReadFileRecord: NtfsPatchUpdateSequence failed for record %u\n", RecordNumber);
 			}
 			else
@@ -206,7 +208,7 @@ VOID NtfsReadFileAttributes(
 	PNTFS_ATTRIBUTE attribute;
 	ULONG attributeOffset;
 
-	printf("Attributes for file %u\n", FileRecord->RecordNumber);
+	//printf("Attributes for file %u\n", FileRecord->RecordNumber);
 
 	for (attributeOffset = FileRecord->AttributeOffset, attribute = NtfsOffsetToPointer(FileRecord, attributeOffset);
 		((attributeOffset + attribute->Size) < NtfsVolume->FileRecordSize) && (attribute->Type != ATTR_TYPE_END);
@@ -233,10 +235,37 @@ VOID NtfsReadFileAttributes(
 			NtfsInsertTailList(ListHead, &attributeEntry->ListEntry);
 		}
 
-		printf("\tType: 0x%X, NonResident: %u, Flags: %u, Id: %u\n", attribute->Type, attribute->NonResident, attribute->Flags, attribute->Id);
+		//printf("\tType: 0x%X, NonResident: %u, Flags: %u, Id: %u\n", attribute->Type, attribute->NonResident, attribute->Flags, attribute->Id);
 	}
 
-	printf("\n");
+	//printf("\n");
+}
+
+BOOLEAN NtfspIsDuplicate(
+	_In_ ULONG RecordNumber,
+	_In_ PLIST_ENTRY ListHead)
+{
+	PLIST_ENTRY current;
+	PLIST_ENTRY next;
+
+	LIST_FOR_EACH_SAFE(current, next, ListHead)
+	{
+		if (CONTAINING_RECORD(current, NTFS_FILE_RECORD_ENTRY, ListEntry)->RecordNumber == RecordNumber)
+			return TRUE;
+	}
+
+	return FALSE;
+}
+
+VOID NtfspAddDuplicate(
+	_In_ ULONG RecordNumber,
+	_In_ PLIST_ENTRY ListHead)
+{
+	PNTFS_FILE_RECORD_ENTRY entry = NtfsAllocate(sizeof(NTFS_FILE_RECORD_ENTRY));
+
+	entry->RecordNumber = RecordNumber;
+
+	NtfsInsertTailList(ListHead, &entry->ListEntry);
 }
 
 // TODO: Don't add duplicate entries
@@ -252,30 +281,38 @@ VOID NtfsParseAttributeList(
 
 	if (NtfsReadAttributeData(NtfsVolume, AttributeList, &originalAttributeList, &bufferSize))
 	{
+		LIST_ENTRY duplicates;
 		PNTFS_ATTRIBUTE_LIST attributeList;
 		ULONG offset;
+
+		NtfsInitializeListHead(&duplicates);
 
 		for (attributeList = originalAttributeList, offset = 0;
 			offset + attributeList->Size < AttributeList->Size;
 			offset += attributeList->Size, attributeList = NtfsOffsetToPointer(attributeList, attributeList->Size))
 		{
-			// Skip duplicate attributes.
-			if (attributeList->BaseReference.RecordNumber != FileRecord->RecordNumber)
+			assert(attributeList->BaseReference.HighRecordNumber == 0);
+
+			// Skip contained attributes, and only read desired attributes.
+			if (attributeList->BaseReference.RecordNumber != FileRecord->RecordNumber &&
+				(ATTR_MASK(attributeList->Type) & AttributeMask))
 			{
-				// Only read desired attributes.
-				if (ATTR_MASK(attributeList->Type) & AttributeMask)
+				// Hack-fix for skipping duplicate file records.
+				if (!NtfspIsDuplicate(attributeList->BaseReference.RecordNumber, &duplicates))
 				{
 					PNTFS_FILE_RECORD fileRecord = NtfsAllocate(NtfsVolume->FileRecordSize);
 
 					if (NtfsReadFileRecord(NtfsVolume, attributeList->BaseReference.RecordNumber, fileRecord))
-					{
 						NtfsReadFileAttributes(NtfsVolume, fileRecord, AttributeMask, ListHead);
-					}
+
+					NtfspAddDuplicate(attributeList->BaseReference.RecordNumber, &duplicates);
 
 					NtfsFree(fileRecord);
 				}
 			}
 		}
+
+		NtfsFreeLinkedList(&duplicates, NTFS_FILE_RECORD_ENTRY, ListEntry);
 
 		NtfsFree(originalAttributeList);
 	}
@@ -368,7 +405,7 @@ VOID NtfsGetDataRuns(
 		dataRunEntry->SectorOffset = absoluteDataRunOffset * NtfsVolume->SectorsPerCluster;
 		dataRunEntry->LengthInSectors = dataRunLength * NtfsVolume->SectorsPerCluster;
 
-		printf("Data run [Sector: %llu] [Length: %llu, %llu MB]\n", dataRunEntry->SectorOffset, dataRunEntry->LengthInSectors, dataRunEntry->LengthInSectors / 2 / 1024);
+		//printf("Data run [Sector: %llu] [Length: %llu, %llu MB]\n", dataRunEntry->SectorOffset, dataRunEntry->LengthInSectors, dataRunEntry->LengthInSectors / 2 / 1024);
 
 		NtfsInsertTailList(ListHead, &dataRunEntry->ListEntry);
 
@@ -378,7 +415,7 @@ VOID NtfsGetDataRuns(
 	if (NonResidentAttribute->AllocSize != (totalLength * NtfsVolume->SectorsPerCluster * NtfsVolume->BytesPerSector))
 		printf("NtfsGetDataRuns: Didn't read correct amount of data [Expected: %016llu] [Read: %016llu]\n", NonResidentAttribute->AllocSize, totalLength * NtfsVolume->SectorsPerCluster * NtfsVolume->BytesPerSector);
 
-	printf("\n");
+	//printf("\n");
 
 	assert(NonResidentAttribute->AllocSize == (totalLength * NtfsVolume->SectorsPerCluster * NtfsVolume->BytesPerSector));
 }

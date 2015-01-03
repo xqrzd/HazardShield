@@ -241,6 +241,11 @@ typedef struct _NTFS_DATA_RUN_ENTRY {
 	LIST_ENTRY ListEntry;
 } NTFS_DATA_RUN_ENTRY, *PNTFS_DATA_RUN_ENTRY;
 
+typedef struct _NTFS_FILE_RECORD_ENTRY {
+	ULONG RecordNumber;
+	LIST_ENTRY ListEntry;
+} NTFS_FILE_RECORD_ENTRY, *PNTFS_FILE_RECORD_ENTRY;
+
 // Notes: If Sector is 0, only BytesPerSector and Context will be valid in NtfsVolume
 typedef BOOLEAN NTFS_READ_SECTOR(
 	_In_ struct _NTFS_VOLUME* NtfsVolume,
