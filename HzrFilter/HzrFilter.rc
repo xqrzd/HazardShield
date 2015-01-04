@@ -14,8 +14,8 @@ LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 2,3,0,2421
- PRODUCTVERSION 2,3,0,2421
+ FILEVERSION 3,0,0,29
+ PRODUCTVERSION 3,0,0,29
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x9L
@@ -32,13 +32,13 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "Orbitech"
             VALUE "FileDescription", "Hazard Shield Filter Driver"
-            VALUE "FileVersion", "2.3.0.2421"
+            VALUE "FileVersion", "3.0.0.29"
             VALUE "InternalName", "HzrFilter"
             VALUE "LegalCopyright", "Copyright (C) Orbitech 2015"
             VALUE "LegalTrademarks", "License: GNU GPL, Version 2"
             VALUE "OriginalFilename", "HzrFilter.sys"
             VALUE "ProductName", "Hazard Shield"
-            VALUE "ProductVersion", "2.3.0.2421"
+            VALUE "ProductVersion", "3.0.0.29"
         END
     END
     BLOCK "VarFileInfo"

@@ -24,10 +24,10 @@
     <ClCompile Include="Logger.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Service.c">
-      <Filter>Header Files</Filter>
-    </ClCompile>
     <ClCompile Include="Utility.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Service.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -44,10 +44,10 @@
     <ClInclude Include="Logger.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Service.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
     <ClInclude Include="Utility.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Service.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
