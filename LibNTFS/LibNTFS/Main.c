@@ -49,13 +49,36 @@ BOOLEAN ReadSector(
 	return result;
 }
 
+VOID IndexCallback(
+	_In_ struct _NTFS_VOLUME* NtfsVolume,
+	_In_ PNTFS_INDEX_ENTRY IndexEntry)
+{
+	if (IndexEntry->FileNameOffset &&
+		IndexEntry->FileName.NameLength &&
+		IndexEntry->FileName.NameSpace != ATTR_FILENAME_NAMESPACE_DOS)
+	{
+		WCHAR filePath[MAX_PATH];
+
+		RtlCopyMemory(filePath, IndexEntry->FileName.Name, IndexEntry->FileName.NameLength * sizeof(WCHAR));
+		filePath[IndexEntry->FileName.NameLength] = L'\0';
+
+		wprintf(L"%u\t %s\n", IndexEntry->FileReference.RecordNumber, filePath);
+
+		/*if (IndexEntry->FileName.Flags & ATTR_FILENAME_FLAG_DIRECTORY)
+			if (IndexEntry->FileReference.RecordNumber != MFT_RECORD_ROOT)
+				NtfsEnumSubFiles(NtfsVolume, IndexEntry->FileReference.RecordNumber);*/
+	}
+}
+
 void main()
 {
 	HANDLE volumeHandle = CreateFileW(L"\\\\.\\C:", GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 	if (volumeHandle != INVALID_HANDLE_VALUE)
 	{
 		NTFS_VOLUME ntfsVolume;
-		NtfsInitVolume(ReadSector, 512, volumeHandle, &ntfsVolume);
+		NtfsInitVolume(ReadSector, IndexCallback, 512, volumeHandle, &ntfsVolume);
+
+		NtfsEnumSubFiles(&ntfsVolume, MFT_RECORD_ROOT);
 
 		CloseHandle(volumeHandle);
 		NtfsFreeVolume(&ntfsVolume);

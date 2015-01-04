@@ -246,6 +246,58 @@ typedef struct _NTFS_FILE_RECORD_ENTRY {
 	LIST_ENTRY ListEntry;
 } NTFS_FILE_RECORD_ENTRY, *PNTFS_FILE_RECORD_ENTRY;
 
+#define INDEX_HEADER_FLAGS_SMALL 0x00	// Fits in Index Root
+#define INDEX_HEADER_FLAGS_LARGE 0x01	// Index Allocation needed
+
+typedef struct _NTFS_INDEX_HEADER {
+	ULONG	EntryOffset;	// Offset to first Index Entry, relative to this address.
+	ULONG	TotalEntrySize;	// Total size of the index entries
+	ULONG	AllocEntrySize;	// Allocated size of index entries
+	UCHAR	Flags;
+	UCHAR	Padding[3];
+} NTFS_INDEX_HEADER, *PNTFS_INDEX_HEADER;
+
+typedef struct _NTFS_INDEX_ROOT_ATTRIBUTE {
+	ULONG		Type;				// Attribute type (ATTR_TYPE_FILE_NAME: Directory, 0: Index View)
+	ULONG		CollationRule;
+	ULONG		Size;				// Size of Index Allocation Entry in bytes
+	UCHAR		IndexRecordSize;	// In clusters
+	UCHAR		Padding[3];
+	NTFS_INDEX_HEADER IndexHeader;
+} NTFS_INDEX_ROOT_ATTRIBUTE, *PNTFS_INDEX_ROOT_ATTRIBUTE;
+
+#define INDEX_ENTRY_FLAG_SUBNODE	0x01	// This entry contains a sub-node
+#define INDEX_ENTRY_FLAG_LAST		0x02	// The index entry does not represent a file but it can point to a sub - node
+
+typedef struct _NTFS_INDEX_ENTRY {
+	NTFS_FILE_REFERENCE	FileReference;	// MFT Reference of the file
+	USHORT	Size;						// Size of index entry
+	USHORT	FileNameOffset;
+	UCHAR	Flags;
+	UCHAR	Padding[3];
+	NTFS_FILENAME_ATTRIBUTE FileName;
+	// VCN of index allocation with sub-nodes [Offset = Base + Size - 8]
+	// VCN only exists if Flags & INDEX_ENTRY_FLAG_SUBNODE
+} NTFS_INDEX_ENTRY, *PNTFS_INDEX_ENTRY;
+
+#define INDEX_BLOCK_MAGIC	'XDNI'
+
+typedef struct _NTFS_INDEX_BLOCK {
+	ULONG		Magic;				// "INDX"
+	USHORT		UpdateSequenceOffset;
+	USHORT		UpdateSequenceSize;	// Size in words of the Update Sequence Number & Array
+	ULONGLONG	LSN;				// $LogFile sequence number
+	ULONGLONG	VCN;				// VCN of this INDX buffer in the Index Allocation
+	NTFS_INDEX_HEADER IndexHeader;
+} NTFS_INDEX_BLOCK, *PNTFS_INDEX_BLOCK;
+
+typedef VOID NTFS_INDEX_ENTRY_CALLBACK(
+	_In_ struct _NTFS_VOLUME* NtfsVolume,
+	_In_ PNTFS_INDEX_ENTRY IndexEntry
+	);
+
+typedef NTFS_INDEX_ENTRY_CALLBACK *PNTFS_INDEX_ENTRY_CALLBACK;
+
 // Notes: If Sector is 0, only BytesPerSector and Context will be valid in NtfsVolume
 typedef BOOLEAN NTFS_READ_SECTOR(
 	_In_ struct _NTFS_VOLUME* NtfsVolume,
@@ -259,6 +311,7 @@ typedef NTFS_READ_SECTOR *PNTFS_READ_SECTOR;
 // Represents an NTFS Volume
 typedef struct _NTFS_VOLUME {
 	PNTFS_READ_SECTOR NtfsReadSector;
+	PNTFS_INDEX_ENTRY_CALLBACK IndexEntryCallback;
 	USHORT	BytesPerSector;
 	UCHAR	SectorsPerCluster;
 	ULONG	FileRecordSize;	// File record size in bytes
@@ -271,6 +324,7 @@ typedef struct _NTFS_VOLUME {
 
 BOOLEAN NtfsInitVolume(
 	_In_ PNTFS_READ_SECTOR NtfsReadSector,
+	_In_ PNTFS_INDEX_ENTRY_CALLBACK IndexEntryCallback,
 	_In_ USHORT BytesPerSector,
 	_In_ PVOID Context,
 	_Out_ PNTFS_VOLUME Volume
@@ -348,7 +402,31 @@ BOOLEAN NtfsReadAttributeData(
 	_Out_ PULONG BufferSize
 	);
 
-#define NtfsOffsetToPointer(B,O)  ((PVOID)( ((PCHAR)(B)) + ((O))  ))
+VOID NtfsWalkIndexEntries(
+	_In_ PNTFS_VOLUME NtfsVolume,
+	_In_ PNTFS_INDEX_ENTRY IndexEntry,
+	_In_ ULONG TotalEntrySize,
+	_In_ PVOID IndexAllocation
+	);
+
+BOOLEAN NtfsGetIndexAllocationEntries(
+	_In_ PNTFS_VOLUME NtfsVolume,
+	_In_ ULONGLONG VCN,
+	_In_ PVOID IndexAllocation
+	);
+
+BOOLEAN NtfsGetIndexRootEntries(
+	_In_ PNTFS_VOLUME NtfsVolume,
+	_In_ PNTFS_INDEX_ROOT_ATTRIBUTE IndexRoot,
+	_In_ PVOID IndexAllocation
+	);
+
+BOOLEAN NtfsEnumSubFiles(
+	_In_ PNTFS_VOLUME NtfsVolume,
+	_In_ ULONG RecordNumber
+	);
+
+#define NtfsOffsetToPointer(Base, Offset)	((PVOID)(((PCHAR)(Base)) + ((Offset))))
 
 PVOID FORCEINLINE NtfsAllocate(
 	_In_ SIZE_T Size)

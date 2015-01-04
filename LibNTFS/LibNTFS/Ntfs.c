@@ -24,6 +24,7 @@
 
 BOOLEAN NtfsInitVolume(
 	_In_ PNTFS_READ_SECTOR NtfsReadSector,
+	_In_ PNTFS_INDEX_ENTRY_CALLBACK IndexEntryCallback,
 	_In_ USHORT BytesPerSector,
 	_In_ PVOID Context,
 	_Out_ PNTFS_VOLUME NtfsVolume)
@@ -33,6 +34,7 @@ BOOLEAN NtfsInitVolume(
 	PNTFS_BOOT_SECTOR bootSector = NtfsAllocate(BytesPerSector);
 
 	NtfsVolume->NtfsReadSector = NtfsReadSector;
+	NtfsVolume->IndexEntryCallback = IndexEntryCallback;
 	NtfsVolume->BytesPerSector = BytesPerSector;
 	NtfsVolume->Context = Context;
 
@@ -217,7 +219,7 @@ VOID NtfsReadFileAttributes(
 		// Always process attribute lists, since they may contain relevant attributes.
 		if (attribute->Type == ATTR_TYPE_ATTRIBUTE_LIST)
 		{
-			printf("Found attribute list in %u, %u\n", FileRecord->RecordNumber, attribute->NonResident);
+			//printf("Found attribute list in %u, %u\n", FileRecord->RecordNumber, attribute->NonResident);
 
 			NtfsParseAttributeList(NtfsVolume, attribute, FileRecord, AttributeMask, ListHead);
 		}
@@ -510,6 +512,149 @@ BOOLEAN NtfsReadAttributeData(
 		*BufferSize = residentAttribute->DataSize;
 		success = TRUE;
 	}
+
+	return success;
+}
+
+VOID NtfsWalkIndexEntries(
+	_In_ PNTFS_VOLUME NtfsVolume,
+	_In_ PNTFS_INDEX_ENTRY IndexEntry,
+	_In_ ULONG TotalEntrySize,
+	_In_ PVOID IndexAllocation)
+{
+	PNTFS_INDEX_ENTRY indexEntry = IndexEntry;
+	ULONG total = indexEntry->Size;
+
+	while (total <= TotalEntrySize)
+	{
+		if (indexEntry->Flags & INDEX_ENTRY_FLAG_SUBNODE)
+		{
+			// Sub-node VCN is the last member in a variable size structure (why?)
+			PULONGLONG subNodeVcn = NtfsOffsetToPointer(indexEntry, indexEntry->Size - sizeof(ULONGLONG));
+
+			//printf("\nSub-node VCN: %llu\n", *subNodeVcn);
+			NtfsGetIndexAllocationEntries(NtfsVolume, *subNodeVcn, IndexAllocation);
+		}
+
+		NtfsVolume->IndexEntryCallback(NtfsVolume, indexEntry);
+
+		if (indexEntry->Flags & INDEX_ENTRY_FLAG_LAST)
+			break;
+
+		indexEntry = NtfsOffsetToPointer(indexEntry, indexEntry->Size);
+		total += indexEntry->Size;
+	}
+}
+
+BOOLEAN NtfsGetIndexAllocationEntries(
+	_In_ PNTFS_VOLUME NtfsVolume,
+	_In_ ULONGLONG VCN,
+	_In_ PVOID IndexAllocation)
+{
+	ULONG byteOffset = (ULONG)VCN * NtfsVolume->SectorsPerCluster * NtfsVolume->BytesPerSector;
+	PNTFS_INDEX_BLOCK indexBlock = NtfsOffsetToPointer(IndexAllocation, byteOffset);
+	PUSHORT usnAddress = NtfsOffsetToPointer(indexBlock, indexBlock->UpdateSequenceOffset);
+
+	if (NtfsPatchUpdateSequence(NtfsVolume, (PUSHORT)indexBlock, NtfsVolume->IndexBlockSize / NtfsVolume->BytesPerSector, usnAddress))
+	{
+		PNTFS_INDEX_ENTRY indexEntry = NtfsOffsetToPointer(&indexBlock->IndexHeader, indexBlock->IndexHeader.EntryOffset);
+
+		assert(indexBlock->Magic == INDEX_BLOCK_MAGIC);
+		assert(indexBlock->VCN == VCN);
+
+		NtfsWalkIndexEntries(NtfsVolume, indexEntry, indexBlock->IndexHeader.TotalEntrySize, IndexAllocation);
+
+		return TRUE;
+	}
+	else
+	{
+		printf("NtfsGetIndexAllocationEntries: NtfsPatchUpdateSequence failed [VCN: %llu]\n", VCN);
+		return FALSE;
+	}
+}
+
+BOOLEAN NtfsGetIndexRootEntries(
+	_In_ PNTFS_VOLUME NtfsVolume,
+	_In_ PNTFS_INDEX_ROOT_ATTRIBUTE IndexRoot,
+	_In_ PVOID IndexAllocation)
+{
+	PNTFS_INDEX_ENTRY indexEntry;
+
+	if (IndexRoot->Type != ATTR_TYPE_FILE_NAME)
+	{
+		printf("NtfsReadIndexRootEntries: Unsupported index root type %X\n", IndexRoot->Type);
+		return FALSE;
+	}
+
+	indexEntry = NtfsOffsetToPointer(&IndexRoot->IndexHeader, IndexRoot->IndexHeader.EntryOffset);
+
+	NtfsWalkIndexEntries(NtfsVolume, indexEntry, IndexRoot->IndexHeader.TotalEntrySize, IndexAllocation);
+
+	return TRUE;
+}
+
+BOOLEAN NtfsEnumSubFiles(
+	_In_ PNTFS_VOLUME NtfsVolume,
+	_In_ ULONG RecordNumber)
+{
+	BOOLEAN success = FALSE;
+	PNTFS_FILE_RECORD fileRecord = NtfsAllocate(NtfsVolume->FileRecordSize);
+
+	if (NtfsReadFileRecord(NtfsVolume, RecordNumber, fileRecord))
+	{
+		if (NtfsFileExists(fileRecord) && NtfsIsDirectory(fileRecord))
+		{
+			LIST_ENTRY attributes;
+			PNTFS_ATTRIBUTE_ENTRY indexRootEntry;
+
+			NtfsInitializeListHead(&attributes);
+
+			NtfsReadFileAttributes(NtfsVolume, fileRecord, ATTR_MASK_INDEX_ROOT | ATTR_MASK_INDEX_ALLOCATION, &attributes);
+
+			indexRootEntry = NtfsFindFirstAttribute(&attributes, ATTR_TYPE_INDEX_ROOT);
+
+			if (indexRootEntry /*&& !indexRootEntry->Attribute->NonResident*/)
+			{
+				PNTFS_INDEX_ROOT_ATTRIBUTE indexRootAttribute = NtfsReadResidentAttributeData((PNTFS_RESIDENT_ATTRIBUTE)indexRootEntry->Attribute);
+
+				PNTFS_ATTRIBUTE_ENTRY indexAllocationEntry = NtfsFindFirstAttribute(&attributes, ATTR_TYPE_INDEX_ALLOCATION);
+				PVOID indexAllocationData = NULL;
+
+				assert(!indexRootEntry->Attribute->NonResident);
+
+				if (indexRootAttribute->IndexHeader.Flags & INDEX_HEADER_FLAGS_LARGE)
+					assert(indexAllocationEntry);
+
+				// Index allocation is optional
+				if (indexAllocationEntry)
+				{
+					PNTFS_NONRESIDENT_ATTRIBUTE indexAllocation = (PNTFS_NONRESIDENT_ATTRIBUTE)indexAllocationEntry->Attribute;
+
+					assert(indexAllocationEntry->Attribute->NonResident);
+					assert(indexAllocation->AllocSize == indexAllocation->RealSize);
+
+					indexAllocationData = NtfsAllocate((SIZE_T)indexAllocation->AllocSize);
+
+					NtfsReadNonResidentAttributeData(NtfsVolume, indexAllocation, indexAllocationData);
+				}
+
+				success = NtfsGetIndexRootEntries(NtfsVolume, indexRootAttribute, indexAllocationData);
+
+				if (indexAllocationData)
+					NtfsFree(indexAllocationData);
+			}
+			else
+				printf("NtfsEnumSubFiles: Unable to find valid index root\n");
+
+			NtfsFreeLinkedList(&attributes, NTFS_ATTRIBUTE_ENTRY, ListEntry);
+		}
+		else
+			printf("NtfsEnumSubFiles: Invalid file record [Record: %u] [Flags: %X]\n", RecordNumber, fileRecord->Flags);
+	}
+	else
+		printf("NtfsEnumSubFiles: Unable to read file record %u\n", RecordNumber);
+
+	NtfsFree(fileRecord);
 
 	return success;
 }
