@@ -24,6 +24,7 @@
 #include <fltKernel.h>
 #include "Context.h"
 #include "Handle.h"
+#include "Protect.h"
 #include "Service.h"
 #include "Utility.h"
 

@@ -195,7 +195,10 @@ NTSTATUS DriverEntry(
 
 				if (NT_SUCCESS(status))
 				{
-					HndInitialize(&FilterData.HandleSystem);
+					status = HzrRegisterProtector();
+
+					if (NT_SUCCESS(status))
+						HndInitialize(&FilterData.HandleSystem);
 				}
 			}
 
@@ -217,6 +220,7 @@ NTSTATUS HzrFilterUnload(
 
 	FltCloseCommunicationPort(FilterData.ServerPort);
 	FltUnregisterFilter(FilterData.Filter);
+	HzrUnRegisterProtector();
 	HndFree(&FilterData.HandleSystem);
 
 	return STATUS_SUCCESS;
@@ -649,6 +653,7 @@ NTSTATUS HzrFilterScanStream(
 		else
 		{
 			// Redo this.
+			// Hack-fix relies on STREAM_FLAG_INFECTED == 1
 			Response->Flags = BooleanFlagOn(streamContext->Flags, STREAM_FLAG_INFECTED);
 		}
 
