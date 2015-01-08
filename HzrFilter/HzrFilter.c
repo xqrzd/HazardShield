@@ -241,6 +241,8 @@ NTSTATUS HzrFilterPortConnect(
 	FilterData.ClientProcess = IoGetCurrentProcess();
 	FilterData.ClientPort = ClientPort;
 
+	HzrAddProtectedProcess(FilterData.ClientProcess, (ACCESS_MASK)-1);
+
 	return STATUS_SUCCESS;
 }
 
@@ -307,6 +309,20 @@ NTSTATUS HzrFilterClientMessage(
 			}
 
 			*ReturnOutputBufferLength = bufferInfo->BufferSize;
+		}
+	}
+	else if (command == DRV_CMD_PROTECT_PROCESS)
+	{
+		PSERVICE_REQUEST_PROTECT_PROCESS request = (PSERVICE_REQUEST_PROTECT_PROCESS)capturedInput;
+		PEPROCESS process;
+
+		status = PsLookupProcessByProcessId((HANDLE)request->ProcessId, &process);
+
+		if (NT_SUCCESS(status))
+		{
+			HzrAddProtectedProcess(process, request->AccessBitsToClear);
+
+			ObDereferenceObject(process);
 		}
 	}
 

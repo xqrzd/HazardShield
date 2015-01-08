@@ -23,6 +23,7 @@
 #include <fltUser.h> // Relies on Windows.h
 
 #define DRV_CMD_GET_BUFFER 1
+#define DRV_CMD_PROTECT_PROCESS 2
 
 #define OP_SCAN_FILE 1
 #define OP_REG_VALUE_CHANGED 2
@@ -42,6 +43,12 @@ typedef struct _SERVICE_REQUEST_BUFFER {
 	ULONG Command;
 	ULONG Handle;
 } SERVICE_REQUEST_BUFFER, *PSERVICE_REQUEST_BUFFER;
+
+typedef struct _SERVICE_REQUEST_PROTECT_PROCESS {
+	ULONG Command;
+	ULONG ProcessId;
+	ACCESS_MASK AccessBitsToClear;
+} SERVICE_REQUEST_PROTECT_PROCESS, *PSERVICE_REQUEST_PROTECT_PROCESS;
 
 typedef struct _SERVICE_RESPONSE {
 	FILTER_REPLY_HEADER ReplyHeader;
@@ -232,4 +239,25 @@ VOID DrvStartEventMonitor(
 		HANDLE threadHandle = CreateThread(NULL, 0, DrvpEventHandler, DriverInstance, 0, NULL);
 		CloseHandle(threadHandle);
 	}
+}
+
+BOOLEAN DrvProtectProcess(
+	_In_ PDRIVER_INSTANCE DriverInstance,
+	_In_ ULONG ProcessId,
+	_In_ ACCESS_MASK AccessBitsToClear)
+{
+	DWORD bytesReturned;
+	SERVICE_REQUEST_PROTECT_PROCESS serviceRequest;
+
+	serviceRequest.Command = DRV_CMD_PROTECT_PROCESS;
+	serviceRequest.ProcessId = ProcessId;
+	serviceRequest.AccessBitsToClear = AccessBitsToClear;
+
+	return FilterSendMessage(
+		DriverInstance->CommunicationPort,
+		&serviceRequest,
+		sizeof(serviceRequest),
+		NULL,
+		0,
+		&bytesReturned) == S_OK;
 }

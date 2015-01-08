@@ -61,3 +61,9 @@ BOOLEAN DrvConnect(
 VOID DrvStartEventMonitor(
 	_In_ PDRIVER_INSTANCE DriverInstance
 	);
+
+BOOLEAN DrvProtectProcess(
+	_In_ PDRIVER_INSTANCE DriverInstance,
+	_In_ ULONG ProcessId,
+	_In_ ACCESS_MASK AccessBitsToClear
+	);

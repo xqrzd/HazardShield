@@ -28,7 +28,6 @@
 #include "Service.h"
 #include "Utility.h"
 
-#define DRV_CMD_GET_BUFFER 1
 #define MAX_FILE_SCAN_SIZE 8388608 // 8 MB
 
 DRIVER_INITIALIZE DriverEntry;

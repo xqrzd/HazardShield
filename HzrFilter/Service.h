@@ -24,6 +24,9 @@
 #include <fltKernel.h>
 #include "Handle.h"
 
+#define DRV_CMD_GET_BUFFER 1
+#define DRV_CMD_PROTECT_PROCESS 2
+
 #define OP_SCAN_FILE 1
 #define OP_REG_VALUE_CHANGED 2
 
@@ -68,6 +71,12 @@ typedef struct _SERVICE_REQUEST_BUFFER {
 	ULONG Command;
 	ULONG Handle;
 } SERVICE_REQUEST_BUFFER, *PSERVICE_REQUEST_BUFFER;
+
+typedef struct _SERVICE_REQUEST_PROTECT_PROCESS {
+	ULONG Command;
+	ULONG ProcessId;
+	ACCESS_MASK AccessBitsToClear;
+} SERVICE_REQUEST_PROTECT_PROCESS, *PSERVICE_REQUEST_PROTECT_PROCESS;
 
 NTSTATUS SvcScanFile(
 	_In_ PHANDLE_SYSTEM HandleSystem,
