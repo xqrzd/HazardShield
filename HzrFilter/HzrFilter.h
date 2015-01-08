@@ -30,6 +30,9 @@
 
 #define MAX_FILE_SCAN_SIZE 8388608 // 8 MB
 
+ULONG PsGetCurrentProcessSessionId(
+	);
+
 DRIVER_INITIALIZE DriverEntry;
 NTSTATUS DriverEntry(
 	_In_ PDRIVER_OBJECT DriverObject,

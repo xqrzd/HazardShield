@@ -238,6 +238,10 @@ NTSTATUS HzrFilterPortConnect(
 	UNREFERENCED_PARAMETER(SizeOfContext);
 	UNREFERENCED_PARAMETER(ConnectionCookie);
 
+	// Only allow SYSTEM processes to connect.
+	if (PsGetCurrentProcessSessionId() != 0)
+		return STATUS_ACCESS_DENIED;
+
 	FilterData.ClientProcess = IoGetCurrentProcess();
 	FilterData.ClientPort = ClientPort;
 
