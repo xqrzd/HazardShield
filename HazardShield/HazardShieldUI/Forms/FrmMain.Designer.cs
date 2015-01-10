@@ -39,6 +39,16 @@
             this.TabBtnMainScanner = new ComponentFactory.Krypton.Toolkit.KryptonCheckButton();
             this.TabControlMain = new HazardShieldUI.Forms.HiddenTabControl();
             this.TabMainScanner = new System.Windows.Forms.TabPage();
+            this.TabControlScanner = new HazardShieldUI.Forms.HiddenTabControl();
+            this.TabScannerMain = new System.Windows.Forms.TabPage();
+            this.PanelScannerMain = new ComponentFactory.Krypton.Toolkit.KryptonPanel();
+            this.TabScannerCustom = new System.Windows.Forms.TabPage();
+            this.PanelScannerCustom = new ComponentFactory.Krypton.Toolkit.KryptonPanel();
+            this.TabScannerProgress = new System.Windows.Forms.TabPage();
+            this.PanelScannerProgress = new ComponentFactory.Krypton.Toolkit.KryptonPanel();
+            this.TabScannerResults = new System.Windows.Forms.TabPage();
+            this.PanelScannerResults = new ComponentFactory.Krypton.Toolkit.KryptonPanel();
+            this.HeaderScanner = new ComponentFactory.Krypton.Toolkit.KryptonHeader();
             this.TabMainUpdates = new System.Windows.Forms.TabPage();
             this.TabMainProtection = new System.Windows.Forms.TabPage();
             this.TabMainSettings = new System.Windows.Forms.TabPage();
@@ -49,6 +59,16 @@
             ((System.ComponentModel.ISupportInitialize)(this.PanelMainTab)).BeginInit();
             this.PanelMainTab.SuspendLayout();
             this.TabControlMain.SuspendLayout();
+            this.TabMainScanner.SuspendLayout();
+            this.TabControlScanner.SuspendLayout();
+            this.TabScannerMain.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.PanelScannerMain)).BeginInit();
+            this.TabScannerCustom.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.PanelScannerCustom)).BeginInit();
+            this.TabScannerProgress.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.PanelScannerProgress)).BeginInit();
+            this.TabScannerResults.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.PanelScannerResults)).BeginInit();
             this.SuspendLayout();
             // 
             // PanelMainTab
@@ -67,13 +87,14 @@
             this.PanelMainTab.MinimumSize = new System.Drawing.Size(140, 0);
             this.PanelMainTab.Name = "PanelMainTab";
             this.PanelMainTab.Padding = new System.Windows.Forms.Padding(0, 0, 12, 0);
-            this.PanelMainTab.Size = new System.Drawing.Size(167, 671);
+            this.PanelMainTab.PanelBackStyle = ComponentFactory.Krypton.Toolkit.PaletteBackStyle.PanelAlternate;
+            this.PanelMainTab.Size = new System.Drawing.Size(167, 416);
             this.PanelMainTab.TabIndex = 0;
             // 
             // TabBtnMainAbout
             // 
             this.TabBtnMainAbout.AutoSize = true;
-            this.TabBtnMainAbout.Location = new System.Drawing.Point(12, 348);
+            this.TabBtnMainAbout.Location = new System.Drawing.Point(12, 362);
             this.TabBtnMainAbout.MinimumSize = new System.Drawing.Size(140, 0);
             this.TabBtnMainAbout.Name = "TabBtnMainAbout";
             this.TabBtnMainAbout.Size = new System.Drawing.Size(140, 40);
@@ -85,7 +106,7 @@
             // TabBtnMainReserved
             // 
             this.TabBtnMainReserved.AutoSize = true;
-            this.TabBtnMainReserved.Location = new System.Drawing.Point(12, 300);
+            this.TabBtnMainReserved.Location = new System.Drawing.Point(12, 312);
             this.TabBtnMainReserved.MinimumSize = new System.Drawing.Size(140, 0);
             this.TabBtnMainReserved.Name = "TabBtnMainReserved";
             this.TabBtnMainReserved.Size = new System.Drawing.Size(140, 40);
@@ -97,7 +118,7 @@
             // TabBtnMainTools
             // 
             this.TabBtnMainTools.AutoSize = true;
-            this.TabBtnMainTools.Location = new System.Drawing.Point(12, 252);
+            this.TabBtnMainTools.Location = new System.Drawing.Point(12, 262);
             this.TabBtnMainTools.MinimumSize = new System.Drawing.Size(140, 0);
             this.TabBtnMainTools.Name = "TabBtnMainTools";
             this.TabBtnMainTools.Size = new System.Drawing.Size(140, 40);
@@ -109,7 +130,7 @@
             // TabBtnMainQuarantine
             // 
             this.TabBtnMainQuarantine.AutoSize = true;
-            this.TabBtnMainQuarantine.Location = new System.Drawing.Point(12, 204);
+            this.TabBtnMainQuarantine.Location = new System.Drawing.Point(12, 212);
             this.TabBtnMainQuarantine.MinimumSize = new System.Drawing.Size(140, 0);
             this.TabBtnMainQuarantine.Name = "TabBtnMainQuarantine";
             this.TabBtnMainQuarantine.Size = new System.Drawing.Size(140, 40);
@@ -121,7 +142,7 @@
             // TabBtnMainSettings
             // 
             this.TabBtnMainSettings.AutoSize = true;
-            this.TabBtnMainSettings.Location = new System.Drawing.Point(12, 156);
+            this.TabBtnMainSettings.Location = new System.Drawing.Point(12, 162);
             this.TabBtnMainSettings.MinimumSize = new System.Drawing.Size(140, 0);
             this.TabBtnMainSettings.Name = "TabBtnMainSettings";
             this.TabBtnMainSettings.Size = new System.Drawing.Size(140, 40);
@@ -133,7 +154,7 @@
             // TabBtnMainProtection
             // 
             this.TabBtnMainProtection.AutoSize = true;
-            this.TabBtnMainProtection.Location = new System.Drawing.Point(12, 108);
+            this.TabBtnMainProtection.Location = new System.Drawing.Point(12, 112);
             this.TabBtnMainProtection.MinimumSize = new System.Drawing.Size(140, 0);
             this.TabBtnMainProtection.Name = "TabBtnMainProtection";
             this.TabBtnMainProtection.Size = new System.Drawing.Size(140, 40);
@@ -145,7 +166,7 @@
             // TabBtnMainUpdates
             // 
             this.TabBtnMainUpdates.AutoSize = true;
-            this.TabBtnMainUpdates.Location = new System.Drawing.Point(12, 60);
+            this.TabBtnMainUpdates.Location = new System.Drawing.Point(12, 62);
             this.TabBtnMainUpdates.MinimumSize = new System.Drawing.Size(140, 0);
             this.TabBtnMainUpdates.Name = "TabBtnMainUpdates";
             this.TabBtnMainUpdates.Size = new System.Drawing.Size(140, 40);
@@ -181,70 +202,165 @@
             this.TabControlMain.Location = new System.Drawing.Point(167, 0);
             this.TabControlMain.Name = "TabControlMain";
             this.TabControlMain.SelectedIndex = 0;
-            this.TabControlMain.Size = new System.Drawing.Size(954, 671);
+            this.TabControlMain.Size = new System.Drawing.Size(667, 416);
             this.TabControlMain.TabIndex = 1;
             // 
             // TabMainScanner
             // 
+            this.TabMainScanner.Controls.Add(this.TabControlScanner);
+            this.TabMainScanner.Controls.Add(this.HeaderScanner);
             this.TabMainScanner.Location = new System.Drawing.Point(4, 4);
             this.TabMainScanner.Name = "TabMainScanner";
-            this.TabMainScanner.Size = new System.Drawing.Size(946, 645);
+            this.TabMainScanner.Size = new System.Drawing.Size(659, 390);
             this.TabMainScanner.TabIndex = 0;
             this.TabMainScanner.UseVisualStyleBackColor = true;
             // 
+            // TabControlScanner
+            // 
+            this.TabControlScanner.Alignment = System.Windows.Forms.TabAlignment.Bottom;
+            this.TabControlScanner.Controls.Add(this.TabScannerMain);
+            this.TabControlScanner.Controls.Add(this.TabScannerCustom);
+            this.TabControlScanner.Controls.Add(this.TabScannerProgress);
+            this.TabControlScanner.Controls.Add(this.TabScannerResults);
+            this.TabControlScanner.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.TabControlScanner.Location = new System.Drawing.Point(0, 52);
+            this.TabControlScanner.Name = "TabControlScanner";
+            this.TabControlScanner.SelectedIndex = 0;
+            this.TabControlScanner.Size = new System.Drawing.Size(659, 338);
+            this.TabControlScanner.TabIndex = 1;
+            // 
+            // TabScannerMain
+            // 
+            this.TabScannerMain.Controls.Add(this.PanelScannerMain);
+            this.TabScannerMain.Location = new System.Drawing.Point(4, 4);
+            this.TabScannerMain.Name = "TabScannerMain";
+            this.TabScannerMain.Size = new System.Drawing.Size(651, 312);
+            this.TabScannerMain.TabIndex = 0;
+            this.TabScannerMain.UseVisualStyleBackColor = true;
+            // 
+            // PanelScannerMain
+            // 
+            this.PanelScannerMain.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.PanelScannerMain.Location = new System.Drawing.Point(0, 0);
+            this.PanelScannerMain.Name = "PanelScannerMain";
+            this.PanelScannerMain.Size = new System.Drawing.Size(651, 312);
+            this.PanelScannerMain.TabIndex = 0;
+            // 
+            // TabScannerCustom
+            // 
+            this.TabScannerCustom.Controls.Add(this.PanelScannerCustom);
+            this.TabScannerCustom.Location = new System.Drawing.Point(4, 4);
+            this.TabScannerCustom.Name = "TabScannerCustom";
+            this.TabScannerCustom.Size = new System.Drawing.Size(651, 307);
+            this.TabScannerCustom.TabIndex = 1;
+            this.TabScannerCustom.UseVisualStyleBackColor = true;
+            // 
+            // PanelScannerCustom
+            // 
+            this.PanelScannerCustom.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.PanelScannerCustom.Location = new System.Drawing.Point(0, 0);
+            this.PanelScannerCustom.Name = "PanelScannerCustom";
+            this.PanelScannerCustom.Size = new System.Drawing.Size(651, 307);
+            this.PanelScannerCustom.TabIndex = 0;
+            // 
+            // TabScannerProgress
+            // 
+            this.TabScannerProgress.Controls.Add(this.PanelScannerProgress);
+            this.TabScannerProgress.Location = new System.Drawing.Point(4, 4);
+            this.TabScannerProgress.Name = "TabScannerProgress";
+            this.TabScannerProgress.Size = new System.Drawing.Size(651, 307);
+            this.TabScannerProgress.TabIndex = 2;
+            this.TabScannerProgress.UseVisualStyleBackColor = true;
+            // 
+            // PanelScannerProgress
+            // 
+            this.PanelScannerProgress.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.PanelScannerProgress.Location = new System.Drawing.Point(0, 0);
+            this.PanelScannerProgress.Name = "PanelScannerProgress";
+            this.PanelScannerProgress.Size = new System.Drawing.Size(651, 307);
+            this.PanelScannerProgress.TabIndex = 0;
+            // 
+            // TabScannerResults
+            // 
+            this.TabScannerResults.Controls.Add(this.PanelScannerResults);
+            this.TabScannerResults.Location = new System.Drawing.Point(4, 4);
+            this.TabScannerResults.Name = "TabScannerResults";
+            this.TabScannerResults.Size = new System.Drawing.Size(651, 307);
+            this.TabScannerResults.TabIndex = 3;
+            this.TabScannerResults.UseVisualStyleBackColor = true;
+            // 
+            // PanelScannerResults
+            // 
+            this.PanelScannerResults.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.PanelScannerResults.Location = new System.Drawing.Point(0, 0);
+            this.PanelScannerResults.Name = "PanelScannerResults";
+            this.PanelScannerResults.Size = new System.Drawing.Size(651, 307);
+            this.PanelScannerResults.TabIndex = 0;
+            // 
+            // HeaderScanner
+            // 
+            this.HeaderScanner.Dock = System.Windows.Forms.DockStyle.Top;
+            this.HeaderScanner.Location = new System.Drawing.Point(0, 0);
+            this.HeaderScanner.Name = "HeaderScanner";
+            this.HeaderScanner.Size = new System.Drawing.Size(659, 52);
+            this.HeaderScanner.TabIndex = 0;
+            this.HeaderScanner.Values.Description = "Scan your computer for spyware and other unwanted software";
+            this.HeaderScanner.Values.Heading = "Scanner";
+            this.HeaderScanner.Values.Image = global::HazardShieldUI.Properties.Resources.scanner;
+            // 
             // TabMainUpdates
             // 
-            this.TabMainUpdates.Location = new System.Drawing.Point(0, 0);
+            this.TabMainUpdates.Location = new System.Drawing.Point(4, 4);
             this.TabMainUpdates.Name = "TabMainUpdates";
-            this.TabMainUpdates.Size = new System.Drawing.Size(954, 671);
+            this.TabMainUpdates.Size = new System.Drawing.Size(659, 385);
             this.TabMainUpdates.TabIndex = 1;
             this.TabMainUpdates.UseVisualStyleBackColor = true;
             // 
             // TabMainProtection
             // 
-            this.TabMainProtection.Location = new System.Drawing.Point(0, 0);
+            this.TabMainProtection.Location = new System.Drawing.Point(4, 4);
             this.TabMainProtection.Name = "TabMainProtection";
-            this.TabMainProtection.Size = new System.Drawing.Size(954, 671);
+            this.TabMainProtection.Size = new System.Drawing.Size(659, 385);
             this.TabMainProtection.TabIndex = 2;
             this.TabMainProtection.UseVisualStyleBackColor = true;
             // 
             // TabMainSettings
             // 
-            this.TabMainSettings.Location = new System.Drawing.Point(0, 0);
+            this.TabMainSettings.Location = new System.Drawing.Point(4, 4);
             this.TabMainSettings.Name = "TabMainSettings";
-            this.TabMainSettings.Size = new System.Drawing.Size(954, 671);
+            this.TabMainSettings.Size = new System.Drawing.Size(659, 385);
             this.TabMainSettings.TabIndex = 3;
             this.TabMainSettings.UseVisualStyleBackColor = true;
             // 
             // TabMainQuarantine
             // 
-            this.TabMainQuarantine.Location = new System.Drawing.Point(0, 0);
+            this.TabMainQuarantine.Location = new System.Drawing.Point(4, 4);
             this.TabMainQuarantine.Name = "TabMainQuarantine";
-            this.TabMainQuarantine.Size = new System.Drawing.Size(954, 671);
+            this.TabMainQuarantine.Size = new System.Drawing.Size(659, 385);
             this.TabMainQuarantine.TabIndex = 4;
             this.TabMainQuarantine.UseVisualStyleBackColor = true;
             // 
             // TabMainTools
             // 
-            this.TabMainTools.Location = new System.Drawing.Point(0, 0);
+            this.TabMainTools.Location = new System.Drawing.Point(4, 4);
             this.TabMainTools.Name = "TabMainTools";
-            this.TabMainTools.Size = new System.Drawing.Size(954, 671);
+            this.TabMainTools.Size = new System.Drawing.Size(659, 385);
             this.TabMainTools.TabIndex = 5;
             this.TabMainTools.UseVisualStyleBackColor = true;
             // 
             // TabMainReserved
             // 
-            this.TabMainReserved.Location = new System.Drawing.Point(0, 0);
+            this.TabMainReserved.Location = new System.Drawing.Point(4, 4);
             this.TabMainReserved.Name = "TabMainReserved";
-            this.TabMainReserved.Size = new System.Drawing.Size(954, 671);
+            this.TabMainReserved.Size = new System.Drawing.Size(659, 385);
             this.TabMainReserved.TabIndex = 6;
             this.TabMainReserved.UseVisualStyleBackColor = true;
             // 
             // TabMainAbout
             // 
-            this.TabMainAbout.Location = new System.Drawing.Point(0, 0);
+            this.TabMainAbout.Location = new System.Drawing.Point(4, 4);
             this.TabMainAbout.Name = "TabMainAbout";
-            this.TabMainAbout.Size = new System.Drawing.Size(954, 671);
+            this.TabMainAbout.Size = new System.Drawing.Size(659, 385);
             this.TabMainAbout.TabIndex = 7;
             this.TabMainAbout.UseVisualStyleBackColor = true;
             // 
@@ -252,7 +368,7 @@
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(1121, 671);
+            this.ClientSize = new System.Drawing.Size(834, 416);
             this.Controls.Add(this.TabControlMain);
             this.Controls.Add(this.PanelMainTab);
             this.Name = "FrmMain";
@@ -262,6 +378,17 @@
             this.PanelMainTab.ResumeLayout(false);
             this.PanelMainTab.PerformLayout();
             this.TabControlMain.ResumeLayout(false);
+            this.TabMainScanner.ResumeLayout(false);
+            this.TabMainScanner.PerformLayout();
+            this.TabControlScanner.ResumeLayout(false);
+            this.TabScannerMain.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize)(this.PanelScannerMain)).EndInit();
+            this.TabScannerCustom.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize)(this.PanelScannerCustom)).EndInit();
+            this.TabScannerProgress.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize)(this.PanelScannerProgress)).EndInit();
+            this.TabScannerResults.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize)(this.PanelScannerResults)).EndInit();
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -287,6 +414,16 @@
         private System.Windows.Forms.TabPage TabMainTools;
         private System.Windows.Forms.TabPage TabMainReserved;
         private System.Windows.Forms.TabPage TabMainAbout;
+        private ComponentFactory.Krypton.Toolkit.KryptonHeader HeaderScanner;
+        private HiddenTabControl TabControlScanner;
+        private System.Windows.Forms.TabPage TabScannerMain;
+        private System.Windows.Forms.TabPage TabScannerCustom;
+        private System.Windows.Forms.TabPage TabScannerProgress;
+        private System.Windows.Forms.TabPage TabScannerResults;
+        private ComponentFactory.Krypton.Toolkit.KryptonPanel PanelScannerMain;
+        private ComponentFactory.Krypton.Toolkit.KryptonPanel PanelScannerCustom;
+        private ComponentFactory.Krypton.Toolkit.KryptonPanel PanelScannerProgress;
+        private ComponentFactory.Krypton.Toolkit.KryptonPanel PanelScannerResults;
 
 
 

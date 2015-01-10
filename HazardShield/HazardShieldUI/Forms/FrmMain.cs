@@ -38,6 +38,9 @@ namespace HazardShieldUI.Forms
             InitializeComponent();
 
             //this.DoubleBuffered = true;
+            TabBtnMainScanner.Checked = true;
+            TabControlMain.HideTabs = true;
+            TabControlScanner.HideTabs = true;
         }
 
         void ChangeMainTab(KryptonCheckButton button, TabPage tab)
