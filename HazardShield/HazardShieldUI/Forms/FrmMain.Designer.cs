@@ -29,97 +29,132 @@
         private void InitializeComponent()
         {
             this.PanelMainTab = new ComponentFactory.Krypton.Toolkit.KryptonPanel();
-            this.kryptonCheckButton1 = new ComponentFactory.Krypton.Toolkit.KryptonCheckButton();
-            this.kryptonCheckButton2 = new ComponentFactory.Krypton.Toolkit.KryptonCheckButton();
-            this.kryptonCheckButton3 = new ComponentFactory.Krypton.Toolkit.KryptonCheckButton();
-            this.kryptonCheckButton4 = new ComponentFactory.Krypton.Toolkit.KryptonCheckButton();
-            this.kryptonCheckButton5 = new ComponentFactory.Krypton.Toolkit.KryptonCheckButton();
-            this.kryptonCheckButton6 = new ComponentFactory.Krypton.Toolkit.KryptonCheckButton();
-            this.kryptonCheckButton7 = new ComponentFactory.Krypton.Toolkit.KryptonCheckButton();
-            this.kryptonCheckButton8 = new ComponentFactory.Krypton.Toolkit.KryptonCheckButton();
+            this.TabBtnMainAbout = new ComponentFactory.Krypton.Toolkit.KryptonCheckButton();
+            this.TabBtnMainReserved = new ComponentFactory.Krypton.Toolkit.KryptonCheckButton();
+            this.TabBtnMainTools = new ComponentFactory.Krypton.Toolkit.KryptonCheckButton();
+            this.TabBtnMainQuarantine = new ComponentFactory.Krypton.Toolkit.KryptonCheckButton();
+            this.TabBtnMainSettings = new ComponentFactory.Krypton.Toolkit.KryptonCheckButton();
+            this.TabBtnMainProtection = new ComponentFactory.Krypton.Toolkit.KryptonCheckButton();
+            this.TabBtnMainUpdates = new ComponentFactory.Krypton.Toolkit.KryptonCheckButton();
+            this.TabBtnMainScanner = new ComponentFactory.Krypton.Toolkit.KryptonCheckButton();
             ((System.ComponentModel.ISupportInitialize)(this.PanelMainTab)).BeginInit();
             this.PanelMainTab.SuspendLayout();
             this.SuspendLayout();
             // 
             // PanelMainTab
             // 
-            this.PanelMainTab.Controls.Add(this.kryptonCheckButton8);
-            this.PanelMainTab.Controls.Add(this.kryptonCheckButton7);
-            this.PanelMainTab.Controls.Add(this.kryptonCheckButton6);
-            this.PanelMainTab.Controls.Add(this.kryptonCheckButton5);
-            this.PanelMainTab.Controls.Add(this.kryptonCheckButton4);
-            this.PanelMainTab.Controls.Add(this.kryptonCheckButton3);
-            this.PanelMainTab.Controls.Add(this.kryptonCheckButton2);
-            this.PanelMainTab.Controls.Add(this.kryptonCheckButton1);
+            this.PanelMainTab.AutoSize = true;
+            this.PanelMainTab.Controls.Add(this.TabBtnMainAbout);
+            this.PanelMainTab.Controls.Add(this.TabBtnMainReserved);
+            this.PanelMainTab.Controls.Add(this.TabBtnMainTools);
+            this.PanelMainTab.Controls.Add(this.TabBtnMainQuarantine);
+            this.PanelMainTab.Controls.Add(this.TabBtnMainSettings);
+            this.PanelMainTab.Controls.Add(this.TabBtnMainProtection);
+            this.PanelMainTab.Controls.Add(this.TabBtnMainUpdates);
+            this.PanelMainTab.Controls.Add(this.TabBtnMainScanner);
             this.PanelMainTab.Dock = System.Windows.Forms.DockStyle.Left;
             this.PanelMainTab.Location = new System.Drawing.Point(0, 0);
+            this.PanelMainTab.MinimumSize = new System.Drawing.Size(140, 0);
             this.PanelMainTab.Name = "PanelMainTab";
-            this.PanelMainTab.Size = new System.Drawing.Size(165, 671);
+            this.PanelMainTab.Padding = new System.Windows.Forms.Padding(0, 0, 12, 0);
+            this.PanelMainTab.Size = new System.Drawing.Size(167, 671);
             this.PanelMainTab.TabIndex = 0;
             // 
-            // kryptonCheckButton1
+            // TabBtnMainAbout
             // 
-            this.kryptonCheckButton1.Location = new System.Drawing.Point(12, 12);
-            this.kryptonCheckButton1.Name = "kryptonCheckButton1";
-            this.kryptonCheckButton1.Size = new System.Drawing.Size(140, 40);
-            this.kryptonCheckButton1.TabIndex = 0;
-            this.kryptonCheckButton1.Values.Text = "kryptonCheckButton1";
+            this.TabBtnMainAbout.AutoSize = true;
+            this.TabBtnMainAbout.Location = new System.Drawing.Point(12, 348);
+            this.TabBtnMainAbout.MinimumSize = new System.Drawing.Size(140, 0);
+            this.TabBtnMainAbout.Name = "TabBtnMainAbout";
+            this.TabBtnMainAbout.Size = new System.Drawing.Size(140, 40);
+            this.TabBtnMainAbout.TabIndex = 7;
+            this.TabBtnMainAbout.Values.Text = "About";
+            this.TabBtnMainAbout.SizeChanged += new System.EventHandler(this.TabBtnMainAbout_SizeChanged);
+            this.TabBtnMainAbout.Click += new System.EventHandler(this.TabBtnMainAbout_Click);
             // 
-            // kryptonCheckButton2
+            // TabBtnMainReserved
             // 
-            this.kryptonCheckButton2.Location = new System.Drawing.Point(12, 60);
-            this.kryptonCheckButton2.Name = "kryptonCheckButton2";
-            this.kryptonCheckButton2.Size = new System.Drawing.Size(140, 40);
-            this.kryptonCheckButton2.TabIndex = 1;
-            this.kryptonCheckButton2.Values.Text = "kryptonCheckButton2";
+            this.TabBtnMainReserved.AutoSize = true;
+            this.TabBtnMainReserved.Location = new System.Drawing.Point(12, 300);
+            this.TabBtnMainReserved.MinimumSize = new System.Drawing.Size(140, 0);
+            this.TabBtnMainReserved.Name = "TabBtnMainReserved";
+            this.TabBtnMainReserved.Size = new System.Drawing.Size(140, 40);
+            this.TabBtnMainReserved.TabIndex = 6;
+            this.TabBtnMainReserved.Values.Text = "Reserved";
+            this.TabBtnMainReserved.SizeChanged += new System.EventHandler(this.TabBtnMainReserved_SizeChanged);
+            this.TabBtnMainReserved.Click += new System.EventHandler(this.TabBtnMainReserved_Click);
             // 
-            // kryptonCheckButton3
+            // TabBtnMainTools
             // 
-            this.kryptonCheckButton3.Location = new System.Drawing.Point(12, 108);
-            this.kryptonCheckButton3.Name = "kryptonCheckButton3";
-            this.kryptonCheckButton3.Size = new System.Drawing.Size(140, 40);
-            this.kryptonCheckButton3.TabIndex = 2;
-            this.kryptonCheckButton3.Values.Text = "kryptonCheckButton3";
+            this.TabBtnMainTools.AutoSize = true;
+            this.TabBtnMainTools.Location = new System.Drawing.Point(12, 252);
+            this.TabBtnMainTools.MinimumSize = new System.Drawing.Size(140, 0);
+            this.TabBtnMainTools.Name = "TabBtnMainTools";
+            this.TabBtnMainTools.Size = new System.Drawing.Size(140, 40);
+            this.TabBtnMainTools.TabIndex = 5;
+            this.TabBtnMainTools.Values.Text = "Tools";
+            this.TabBtnMainTools.SizeChanged += new System.EventHandler(this.TabBtnMainTools_SizeChanged);
+            this.TabBtnMainTools.Click += new System.EventHandler(this.TabBtnMainTools_Click);
             // 
-            // kryptonCheckButton4
+            // TabBtnMainQuarantine
             // 
-            this.kryptonCheckButton4.Location = new System.Drawing.Point(12, 156);
-            this.kryptonCheckButton4.Name = "kryptonCheckButton4";
-            this.kryptonCheckButton4.Size = new System.Drawing.Size(140, 40);
-            this.kryptonCheckButton4.TabIndex = 3;
-            this.kryptonCheckButton4.Values.Text = "kryptonCheckButton4";
+            this.TabBtnMainQuarantine.AutoSize = true;
+            this.TabBtnMainQuarantine.Location = new System.Drawing.Point(12, 204);
+            this.TabBtnMainQuarantine.MinimumSize = new System.Drawing.Size(140, 0);
+            this.TabBtnMainQuarantine.Name = "TabBtnMainQuarantine";
+            this.TabBtnMainQuarantine.Size = new System.Drawing.Size(140, 40);
+            this.TabBtnMainQuarantine.TabIndex = 4;
+            this.TabBtnMainQuarantine.Values.Text = "Quarantine";
+            this.TabBtnMainQuarantine.SizeChanged += new System.EventHandler(this.TabBtnMainQuarantine_SizeChanged);
+            this.TabBtnMainQuarantine.Click += new System.EventHandler(this.TabBtnMainQuarantine_Click);
             // 
-            // kryptonCheckButton5
+            // TabBtnMainSettings
             // 
-            this.kryptonCheckButton5.Location = new System.Drawing.Point(12, 204);
-            this.kryptonCheckButton5.Name = "kryptonCheckButton5";
-            this.kryptonCheckButton5.Size = new System.Drawing.Size(140, 40);
-            this.kryptonCheckButton5.TabIndex = 4;
-            this.kryptonCheckButton5.Values.Text = "kryptonCheckButton5";
+            this.TabBtnMainSettings.AutoSize = true;
+            this.TabBtnMainSettings.Location = new System.Drawing.Point(12, 156);
+            this.TabBtnMainSettings.MinimumSize = new System.Drawing.Size(140, 0);
+            this.TabBtnMainSettings.Name = "TabBtnMainSettings";
+            this.TabBtnMainSettings.Size = new System.Drawing.Size(140, 40);
+            this.TabBtnMainSettings.TabIndex = 3;
+            this.TabBtnMainSettings.Values.Text = "Settings";
+            this.TabBtnMainSettings.SizeChanged += new System.EventHandler(this.TabBtnMainSettings_SizeChanged);
+            this.TabBtnMainSettings.Click += new System.EventHandler(this.TabBtnMainSettings_Click);
             // 
-            // kryptonCheckButton6
+            // TabBtnMainProtection
             // 
-            this.kryptonCheckButton6.Location = new System.Drawing.Point(12, 252);
-            this.kryptonCheckButton6.Name = "kryptonCheckButton6";
-            this.kryptonCheckButton6.Size = new System.Drawing.Size(140, 40);
-            this.kryptonCheckButton6.TabIndex = 5;
-            this.kryptonCheckButton6.Values.Text = "kryptonCheckButton6";
+            this.TabBtnMainProtection.AutoSize = true;
+            this.TabBtnMainProtection.Location = new System.Drawing.Point(12, 108);
+            this.TabBtnMainProtection.MinimumSize = new System.Drawing.Size(140, 0);
+            this.TabBtnMainProtection.Name = "TabBtnMainProtection";
+            this.TabBtnMainProtection.Size = new System.Drawing.Size(140, 40);
+            this.TabBtnMainProtection.TabIndex = 2;
+            this.TabBtnMainProtection.Values.Text = "Protection";
+            this.TabBtnMainProtection.SizeChanged += new System.EventHandler(this.TabBtnMainProtection_SizeChanged);
+            this.TabBtnMainProtection.Click += new System.EventHandler(this.TabBtnMainProtection_Click);
             // 
-            // kryptonCheckButton7
+            // TabBtnMainUpdates
             // 
-            this.kryptonCheckButton7.Location = new System.Drawing.Point(12, 300);
-            this.kryptonCheckButton7.Name = "kryptonCheckButton7";
-            this.kryptonCheckButton7.Size = new System.Drawing.Size(140, 40);
-            this.kryptonCheckButton7.TabIndex = 6;
-            this.kryptonCheckButton7.Values.Text = "kryptonCheckButton7";
+            this.TabBtnMainUpdates.AutoSize = true;
+            this.TabBtnMainUpdates.Location = new System.Drawing.Point(12, 60);
+            this.TabBtnMainUpdates.MinimumSize = new System.Drawing.Size(140, 0);
+            this.TabBtnMainUpdates.Name = "TabBtnMainUpdates";
+            this.TabBtnMainUpdates.Size = new System.Drawing.Size(140, 40);
+            this.TabBtnMainUpdates.TabIndex = 1;
+            this.TabBtnMainUpdates.Values.Text = "Updates";
+            this.TabBtnMainUpdates.SizeChanged += new System.EventHandler(this.TabBtnMainUpdates_SizeChanged);
+            this.TabBtnMainUpdates.Click += new System.EventHandler(this.TabBtnMainUpdates_Click);
             // 
-            // kryptonCheckButton8
+            // TabBtnMainScanner
             // 
-            this.kryptonCheckButton8.Location = new System.Drawing.Point(12, 348);
-            this.kryptonCheckButton8.Name = "kryptonCheckButton8";
-            this.kryptonCheckButton8.Size = new System.Drawing.Size(140, 40);
-            this.kryptonCheckButton8.TabIndex = 7;
-            this.kryptonCheckButton8.Values.Text = "kryptonCheckButton8";
+            this.TabBtnMainScanner.AutoSize = true;
+            this.TabBtnMainScanner.Location = new System.Drawing.Point(12, 12);
+            this.TabBtnMainScanner.MinimumSize = new System.Drawing.Size(140, 0);
+            this.TabBtnMainScanner.Name = "TabBtnMainScanner";
+            this.TabBtnMainScanner.Size = new System.Drawing.Size(140, 40);
+            this.TabBtnMainScanner.TabIndex = 0;
+            this.TabBtnMainScanner.Values.Text = "Scanner";
+            this.TabBtnMainScanner.SizeChanged += new System.EventHandler(this.TabBtnMainScanner_SizeChanged);
+            this.TabBtnMainScanner.Click += new System.EventHandler(this.TabBtnMainScanner_Click);
             // 
             // FrmMain
             // 
@@ -128,24 +163,27 @@
             this.ClientSize = new System.Drawing.Size(1121, 671);
             this.Controls.Add(this.PanelMainTab);
             this.Name = "FrmMain";
-            this.Text = "FrmMain";
+            this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
+            this.Text = "Hazard Shield 3 Beta";
             ((System.ComponentModel.ISupportInitialize)(this.PanelMainTab)).EndInit();
             this.PanelMainTab.ResumeLayout(false);
+            this.PanelMainTab.PerformLayout();
             this.ResumeLayout(false);
+            this.PerformLayout();
 
         }
 
         #endregion
 
         private ComponentFactory.Krypton.Toolkit.KryptonPanel PanelMainTab;
-        private ComponentFactory.Krypton.Toolkit.KryptonCheckButton kryptonCheckButton8;
-        private ComponentFactory.Krypton.Toolkit.KryptonCheckButton kryptonCheckButton7;
-        private ComponentFactory.Krypton.Toolkit.KryptonCheckButton kryptonCheckButton6;
-        private ComponentFactory.Krypton.Toolkit.KryptonCheckButton kryptonCheckButton5;
-        private ComponentFactory.Krypton.Toolkit.KryptonCheckButton kryptonCheckButton4;
-        private ComponentFactory.Krypton.Toolkit.KryptonCheckButton kryptonCheckButton3;
-        private ComponentFactory.Krypton.Toolkit.KryptonCheckButton kryptonCheckButton2;
-        private ComponentFactory.Krypton.Toolkit.KryptonCheckButton kryptonCheckButton1;
+        private ComponentFactory.Krypton.Toolkit.KryptonCheckButton TabBtnMainAbout;
+        private ComponentFactory.Krypton.Toolkit.KryptonCheckButton TabBtnMainReserved;
+        private ComponentFactory.Krypton.Toolkit.KryptonCheckButton TabBtnMainTools;
+        private ComponentFactory.Krypton.Toolkit.KryptonCheckButton TabBtnMainQuarantine;
+        private ComponentFactory.Krypton.Toolkit.KryptonCheckButton TabBtnMainSettings;
+        private ComponentFactory.Krypton.Toolkit.KryptonCheckButton TabBtnMainProtection;
+        private ComponentFactory.Krypton.Toolkit.KryptonCheckButton TabBtnMainUpdates;
+        private ComponentFactory.Krypton.Toolkit.KryptonCheckButton TabBtnMainScanner;
 
 
 

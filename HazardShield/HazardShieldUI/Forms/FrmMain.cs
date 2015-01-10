@@ -18,6 +18,7 @@
 *  MA 02110-1301, USA.
 */
 
+using ComponentFactory.Krypton.Toolkit;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -35,6 +36,118 @@ namespace HazardShieldUI.Forms
         public FrmMain()
         {
             InitializeComponent();
+        }
+
+        void ChangeMainTab(KryptonCheckButton button)
+        {
+            PanelMainTab.SuspendLayout();
+            SuspendLayout();
+
+            TabBtnMainScanner.Checked = false;
+            TabBtnMainUpdates.Checked = false;
+            TabBtnMainProtection.Checked = false;
+            TabBtnMainSettings.Checked = false;
+            TabBtnMainQuarantine.Checked = false;
+            TabBtnMainTools.Checked = false;
+            TabBtnMainReserved.Checked = false;
+            TabBtnMainAbout.Checked = false;
+
+            button.Checked = true;
+
+            PanelMainTab.ResumeLayout();
+            ResumeLayout();
+        }
+
+        void ChangeMainTabSize(KryptonCheckButton button)
+        {
+            TabBtnMainScanner.Size = button.Size;
+            TabBtnMainUpdates.Size = button.Size;
+            TabBtnMainProtection.Size = button.Size;
+            TabBtnMainSettings.Size = button.Size;
+            TabBtnMainQuarantine.Size = button.Size;
+            TabBtnMainTools.Size = button.Size;
+            TabBtnMainReserved.Size = button.Size;
+            TabBtnMainAbout.Size = button.Size;
+        }
+
+        private void TabBtnMainScanner_Click(object sender, EventArgs e)
+        {
+            ChangeMainTab((KryptonCheckButton)sender);
+        }
+
+        private void TabBtnMainUpdates_Click(object sender, EventArgs e)
+        {
+            ChangeMainTab((KryptonCheckButton)sender);
+        }
+
+        private void TabBtnMainProtection_Click(object sender, EventArgs e)
+        {
+            ChangeMainTab((KryptonCheckButton)sender);
+        }
+
+        private void TabBtnMainSettings_Click(object sender, EventArgs e)
+        {
+            ChangeMainTab((KryptonCheckButton)sender);
+        }
+
+        private void TabBtnMainQuarantine_Click(object sender, EventArgs e)
+        {
+            ChangeMainTab((KryptonCheckButton)sender);
+        }
+
+        private void TabBtnMainTools_Click(object sender, EventArgs e)
+        {
+            ChangeMainTab((KryptonCheckButton)sender);
+        }
+
+        private void TabBtnMainReserved_Click(object sender, EventArgs e)
+        {
+            ChangeMainTab((KryptonCheckButton)sender);
+        }
+
+        private void TabBtnMainAbout_Click(object sender, EventArgs e)
+        {
+            ChangeMainTab((KryptonCheckButton)sender);
+        }
+
+        private void TabBtnMainScanner_SizeChanged(object sender, EventArgs e)
+        {
+            ChangeMainTabSize((KryptonCheckButton)sender);
+        }
+
+        private void TabBtnMainUpdates_SizeChanged(object sender, EventArgs e)
+        {
+            ChangeMainTabSize((KryptonCheckButton)sender);
+        }
+
+        private void TabBtnMainProtection_SizeChanged(object sender, EventArgs e)
+        {
+            ChangeMainTabSize((KryptonCheckButton)sender);
+        }
+
+        private void TabBtnMainSettings_SizeChanged(object sender, EventArgs e)
+        {
+            ChangeMainTabSize((KryptonCheckButton)sender);
+        }
+
+        private void TabBtnMainQuarantine_SizeChanged(object sender, EventArgs e)
+        {
+            ChangeMainTabSize((KryptonCheckButton)sender);
+        }
+
+        private void TabBtnMainTools_SizeChanged(object sender, EventArgs e)
+        {
+            ChangeMainTabSize((KryptonCheckButton)sender);
+        }
+
+        private void TabBtnMainReserved_SizeChanged(object sender, EventArgs e)
+        {
+            ChangeMainTabSize((KryptonCheckButton)sender);
+        }
+
+        private void TabBtnMainAbout_SizeChanged(object sender, EventArgs e)
+        {
+            ChangeMainTabSize((KryptonCheckButton)sender);
         }
 
     }
