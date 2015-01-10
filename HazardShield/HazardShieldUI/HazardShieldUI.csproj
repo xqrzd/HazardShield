@@ -112,7 +112,9 @@
       <Name>HazardShield</Name>
     </ProjectReference>
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <None Include="Resources\updates.png" />
+  </ItemGroup>
   <ItemGroup>
     <None Include="Resources\scanner.png" />
   </ItemGroup>

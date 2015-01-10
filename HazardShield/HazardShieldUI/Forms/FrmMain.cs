@@ -37,10 +37,18 @@ namespace HazardShieldUI.Forms
         {
             InitializeComponent();
 
-            //this.DoubleBuffered = true;
             TabBtnMainScanner.Checked = true;
             TabControlMain.HideTabs = true;
             TabControlScanner.HideTabs = true;
+
+            Color c = KryptonManager.CurrentGlobalPalette.GetBackColor1(PaletteBackStyle.PanelClient, PaletteState.Normal);
+
+            TabScannerMain.BackColor = c;
+            TabScannerCustom.BackColor = c;
+            TabScannerProgress.BackColor = c;
+            TabScannerResults.BackColor = c;
+
+            TabMainUpdates.BackColor = c;
         }
 
         void ChangeMainTab(KryptonCheckButton button, TabPage tab)
@@ -64,6 +72,7 @@ namespace HazardShieldUI.Forms
 
         void ChangeMainTabSize(KryptonCheckButton button)
         {
+            // TODO: disable callback
             TabBtnMainScanner.Size = button.Size;
             TabBtnMainUpdates.Size = button.Size;
             TabBtnMainProtection.Size = button.Size;
