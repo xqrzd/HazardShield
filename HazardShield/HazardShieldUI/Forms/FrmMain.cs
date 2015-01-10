@@ -36,11 +36,12 @@ namespace HazardShieldUI.Forms
         public FrmMain()
         {
             InitializeComponent();
+
+            //this.DoubleBuffered = true;
         }
 
-        void ChangeMainTab(KryptonCheckButton button)
+        void ChangeMainTab(KryptonCheckButton button, TabPage tab)
         {
-            PanelMainTab.SuspendLayout();
             SuspendLayout();
 
             TabBtnMainScanner.Checked = false;
@@ -53,8 +54,8 @@ namespace HazardShieldUI.Forms
             TabBtnMainAbout.Checked = false;
 
             button.Checked = true;
+            TabControlMain.SelectedTab = tab;
 
-            PanelMainTab.ResumeLayout();
             ResumeLayout();
         }
 
@@ -72,42 +73,42 @@ namespace HazardShieldUI.Forms
 
         private void TabBtnMainScanner_Click(object sender, EventArgs e)
         {
-            ChangeMainTab((KryptonCheckButton)sender);
+            ChangeMainTab((KryptonCheckButton)sender, TabMainScanner);
         }
 
         private void TabBtnMainUpdates_Click(object sender, EventArgs e)
         {
-            ChangeMainTab((KryptonCheckButton)sender);
+            ChangeMainTab((KryptonCheckButton)sender, TabMainUpdates);
         }
 
         private void TabBtnMainProtection_Click(object sender, EventArgs e)
         {
-            ChangeMainTab((KryptonCheckButton)sender);
+            ChangeMainTab((KryptonCheckButton)sender, TabMainProtection);
         }
 
         private void TabBtnMainSettings_Click(object sender, EventArgs e)
         {
-            ChangeMainTab((KryptonCheckButton)sender);
+            ChangeMainTab((KryptonCheckButton)sender, TabMainSettings);
         }
 
         private void TabBtnMainQuarantine_Click(object sender, EventArgs e)
         {
-            ChangeMainTab((KryptonCheckButton)sender);
+            ChangeMainTab((KryptonCheckButton)sender, TabMainQuarantine);
         }
 
         private void TabBtnMainTools_Click(object sender, EventArgs e)
         {
-            ChangeMainTab((KryptonCheckButton)sender);
+            ChangeMainTab((KryptonCheckButton)sender, TabMainTools);
         }
 
         private void TabBtnMainReserved_Click(object sender, EventArgs e)
         {
-            ChangeMainTab((KryptonCheckButton)sender);
+            ChangeMainTab((KryptonCheckButton)sender, TabMainReserved);
         }
 
         private void TabBtnMainAbout_Click(object sender, EventArgs e)
         {
-            ChangeMainTab((KryptonCheckButton)sender);
+            ChangeMainTab((KryptonCheckButton)sender, TabMainAbout);
         }
 
         private void TabBtnMainScanner_SizeChanged(object sender, EventArgs e)
