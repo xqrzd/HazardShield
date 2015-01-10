@@ -48,17 +48,29 @@
             this.TabMainUpdates = new System.Windows.Forms.TabPage();
             this.HeaderUpdates = new ComponentFactory.Krypton.Toolkit.KryptonHeader();
             this.TabMainProtection = new System.Windows.Forms.TabPage();
+            this.HeaderProtection = new ComponentFactory.Krypton.Toolkit.KryptonHeader();
             this.TabMainSettings = new System.Windows.Forms.TabPage();
+            this.HeaderSettings = new ComponentFactory.Krypton.Toolkit.KryptonHeader();
             this.TabMainQuarantine = new System.Windows.Forms.TabPage();
+            this.HeaderQuarantine = new ComponentFactory.Krypton.Toolkit.KryptonHeader();
             this.TabMainTools = new System.Windows.Forms.TabPage();
+            this.HeaderTools = new ComponentFactory.Krypton.Toolkit.KryptonHeader();
             this.TabMainReserved = new System.Windows.Forms.TabPage();
+            this.HeaderReserved = new ComponentFactory.Krypton.Toolkit.KryptonHeader();
             this.TabMainAbout = new System.Windows.Forms.TabPage();
+            this.HeaderAbout = new ComponentFactory.Krypton.Toolkit.KryptonHeader();
             ((System.ComponentModel.ISupportInitialize)(this.PanelMainTab)).BeginInit();
             this.PanelMainTab.SuspendLayout();
             this.TabControlMain.SuspendLayout();
             this.TabMainScanner.SuspendLayout();
             this.TabControlScanner.SuspendLayout();
             this.TabMainUpdates.SuspendLayout();
+            this.TabMainProtection.SuspendLayout();
+            this.TabMainSettings.SuspendLayout();
+            this.TabMainQuarantine.SuspendLayout();
+            this.TabMainTools.SuspendLayout();
+            this.TabMainReserved.SuspendLayout();
+            this.TabMainAbout.SuspendLayout();
             this.SuspendLayout();
             // 
             // PanelMainTab
@@ -89,7 +101,6 @@
             this.TabBtnMainAbout.Name = "TabBtnMainAbout";
             this.TabBtnMainAbout.Size = new System.Drawing.Size(140, 40);
             this.TabBtnMainAbout.TabIndex = 7;
-            this.TabBtnMainAbout.Values.Text = "About";
             this.TabBtnMainAbout.SizeChanged += new System.EventHandler(this.TabBtnMainAbout_SizeChanged);
             this.TabBtnMainAbout.Click += new System.EventHandler(this.TabBtnMainAbout_Click);
             // 
@@ -101,7 +112,6 @@
             this.TabBtnMainReserved.Name = "TabBtnMainReserved";
             this.TabBtnMainReserved.Size = new System.Drawing.Size(140, 40);
             this.TabBtnMainReserved.TabIndex = 6;
-            this.TabBtnMainReserved.Values.Text = "Reserved";
             this.TabBtnMainReserved.SizeChanged += new System.EventHandler(this.TabBtnMainReserved_SizeChanged);
             this.TabBtnMainReserved.Click += new System.EventHandler(this.TabBtnMainReserved_Click);
             // 
@@ -113,7 +123,6 @@
             this.TabBtnMainTools.Name = "TabBtnMainTools";
             this.TabBtnMainTools.Size = new System.Drawing.Size(140, 40);
             this.TabBtnMainTools.TabIndex = 5;
-            this.TabBtnMainTools.Values.Text = "Tools";
             this.TabBtnMainTools.SizeChanged += new System.EventHandler(this.TabBtnMainTools_SizeChanged);
             this.TabBtnMainTools.Click += new System.EventHandler(this.TabBtnMainTools_Click);
             // 
@@ -125,7 +134,6 @@
             this.TabBtnMainQuarantine.Name = "TabBtnMainQuarantine";
             this.TabBtnMainQuarantine.Size = new System.Drawing.Size(140, 40);
             this.TabBtnMainQuarantine.TabIndex = 4;
-            this.TabBtnMainQuarantine.Values.Text = "Quarantine";
             this.TabBtnMainQuarantine.SizeChanged += new System.EventHandler(this.TabBtnMainQuarantine_SizeChanged);
             this.TabBtnMainQuarantine.Click += new System.EventHandler(this.TabBtnMainQuarantine_Click);
             // 
@@ -137,7 +145,6 @@
             this.TabBtnMainSettings.Name = "TabBtnMainSettings";
             this.TabBtnMainSettings.Size = new System.Drawing.Size(140, 40);
             this.TabBtnMainSettings.TabIndex = 3;
-            this.TabBtnMainSettings.Values.Text = "Settings";
             this.TabBtnMainSettings.SizeChanged += new System.EventHandler(this.TabBtnMainSettings_SizeChanged);
             this.TabBtnMainSettings.Click += new System.EventHandler(this.TabBtnMainSettings_Click);
             // 
@@ -149,7 +156,6 @@
             this.TabBtnMainProtection.Name = "TabBtnMainProtection";
             this.TabBtnMainProtection.Size = new System.Drawing.Size(140, 40);
             this.TabBtnMainProtection.TabIndex = 2;
-            this.TabBtnMainProtection.Values.Text = "Protection";
             this.TabBtnMainProtection.SizeChanged += new System.EventHandler(this.TabBtnMainProtection_SizeChanged);
             this.TabBtnMainProtection.Click += new System.EventHandler(this.TabBtnMainProtection_Click);
             // 
@@ -161,7 +167,6 @@
             this.TabBtnMainUpdates.Name = "TabBtnMainUpdates";
             this.TabBtnMainUpdates.Size = new System.Drawing.Size(140, 40);
             this.TabBtnMainUpdates.TabIndex = 1;
-            this.TabBtnMainUpdates.Values.Text = "Updates";
             this.TabBtnMainUpdates.SizeChanged += new System.EventHandler(this.TabBtnMainUpdates_SizeChanged);
             this.TabBtnMainUpdates.Click += new System.EventHandler(this.TabBtnMainUpdates_Click);
             // 
@@ -173,7 +178,6 @@
             this.TabBtnMainScanner.Name = "TabBtnMainScanner";
             this.TabBtnMainScanner.Size = new System.Drawing.Size(140, 40);
             this.TabBtnMainScanner.TabIndex = 0;
-            this.TabBtnMainScanner.Values.Text = "Scanner";
             this.TabBtnMainScanner.SizeChanged += new System.EventHandler(this.TabBtnMainScanner_SizeChanged);
             this.TabBtnMainScanner.Click += new System.EventHandler(this.TabBtnMainScanner_Click);
             // 
@@ -258,8 +262,6 @@
             this.HeaderScanner.Name = "HeaderScanner";
             this.HeaderScanner.Size = new System.Drawing.Size(659, 52);
             this.HeaderScanner.TabIndex = 0;
-            this.HeaderScanner.Values.Description = "Scan your computer for spyware and other unwanted software";
-            this.HeaderScanner.Values.Heading = "Scanner";
             this.HeaderScanner.Values.Image = global::HazardShieldUI.Properties.Resources.scanner;
             // 
             // TabMainUpdates
@@ -278,57 +280,115 @@
             this.HeaderUpdates.Name = "HeaderUpdates";
             this.HeaderUpdates.Size = new System.Drawing.Size(659, 52);
             this.HeaderUpdates.TabIndex = 0;
-            this.HeaderUpdates.Values.Description = "Check for program and database updates";
-            this.HeaderUpdates.Values.Heading = "Updates";
             this.HeaderUpdates.Values.Image = global::HazardShieldUI.Properties.Resources.updates;
             // 
             // TabMainProtection
             // 
+            this.TabMainProtection.Controls.Add(this.HeaderProtection);
             this.TabMainProtection.Location = new System.Drawing.Point(4, 4);
             this.TabMainProtection.Name = "TabMainProtection";
             this.TabMainProtection.Size = new System.Drawing.Size(659, 390);
             this.TabMainProtection.TabIndex = 2;
             this.TabMainProtection.UseVisualStyleBackColor = true;
             // 
+            // HeaderProtection
+            // 
+            this.HeaderProtection.Dock = System.Windows.Forms.DockStyle.Top;
+            this.HeaderProtection.Location = new System.Drawing.Point(0, 0);
+            this.HeaderProtection.Name = "HeaderProtection";
+            this.HeaderProtection.Size = new System.Drawing.Size(659, 52);
+            this.HeaderProtection.TabIndex = 0;
+            this.HeaderProtection.Values.Image = global::HazardShieldUI.Properties.Resources.realtime;
+            // 
             // TabMainSettings
             // 
+            this.TabMainSettings.Controls.Add(this.HeaderSettings);
             this.TabMainSettings.Location = new System.Drawing.Point(4, 4);
             this.TabMainSettings.Name = "TabMainSettings";
             this.TabMainSettings.Size = new System.Drawing.Size(659, 390);
             this.TabMainSettings.TabIndex = 3;
             this.TabMainSettings.UseVisualStyleBackColor = true;
             // 
+            // HeaderSettings
+            // 
+            this.HeaderSettings.Dock = System.Windows.Forms.DockStyle.Top;
+            this.HeaderSettings.Location = new System.Drawing.Point(0, 0);
+            this.HeaderSettings.Name = "HeaderSettings";
+            this.HeaderSettings.Size = new System.Drawing.Size(659, 52);
+            this.HeaderSettings.TabIndex = 0;
+            this.HeaderSettings.Values.Image = global::HazardShieldUI.Properties.Resources.settings;
+            // 
             // TabMainQuarantine
             // 
+            this.TabMainQuarantine.Controls.Add(this.HeaderQuarantine);
             this.TabMainQuarantine.Location = new System.Drawing.Point(4, 4);
             this.TabMainQuarantine.Name = "TabMainQuarantine";
             this.TabMainQuarantine.Size = new System.Drawing.Size(659, 390);
             this.TabMainQuarantine.TabIndex = 4;
             this.TabMainQuarantine.UseVisualStyleBackColor = true;
             // 
+            // HeaderQuarantine
+            // 
+            this.HeaderQuarantine.Dock = System.Windows.Forms.DockStyle.Top;
+            this.HeaderQuarantine.Location = new System.Drawing.Point(0, 0);
+            this.HeaderQuarantine.Name = "HeaderQuarantine";
+            this.HeaderQuarantine.Size = new System.Drawing.Size(659, 52);
+            this.HeaderQuarantine.TabIndex = 0;
+            this.HeaderQuarantine.Values.Image = global::HazardShieldUI.Properties.Resources.quarantine;
+            // 
             // TabMainTools
             // 
+            this.TabMainTools.Controls.Add(this.HeaderTools);
             this.TabMainTools.Location = new System.Drawing.Point(4, 4);
             this.TabMainTools.Name = "TabMainTools";
             this.TabMainTools.Size = new System.Drawing.Size(659, 390);
             this.TabMainTools.TabIndex = 5;
             this.TabMainTools.UseVisualStyleBackColor = true;
             // 
+            // HeaderTools
+            // 
+            this.HeaderTools.Dock = System.Windows.Forms.DockStyle.Top;
+            this.HeaderTools.Location = new System.Drawing.Point(0, 0);
+            this.HeaderTools.Name = "HeaderTools";
+            this.HeaderTools.Size = new System.Drawing.Size(659, 52);
+            this.HeaderTools.TabIndex = 0;
+            this.HeaderTools.Values.Image = global::HazardShieldUI.Properties.Resources.tools;
+            // 
             // TabMainReserved
             // 
+            this.TabMainReserved.Controls.Add(this.HeaderReserved);
             this.TabMainReserved.Location = new System.Drawing.Point(4, 4);
             this.TabMainReserved.Name = "TabMainReserved";
             this.TabMainReserved.Size = new System.Drawing.Size(659, 390);
             this.TabMainReserved.TabIndex = 6;
             this.TabMainReserved.UseVisualStyleBackColor = true;
             // 
+            // HeaderReserved
+            // 
+            this.HeaderReserved.Dock = System.Windows.Forms.DockStyle.Top;
+            this.HeaderReserved.Location = new System.Drawing.Point(0, 0);
+            this.HeaderReserved.Name = "HeaderReserved";
+            this.HeaderReserved.Size = new System.Drawing.Size(659, 31);
+            this.HeaderReserved.TabIndex = 0;
+            this.HeaderReserved.Values.Image = null;
+            // 
             // TabMainAbout
             // 
+            this.TabMainAbout.Controls.Add(this.HeaderAbout);
             this.TabMainAbout.Location = new System.Drawing.Point(4, 4);
             this.TabMainAbout.Name = "TabMainAbout";
             this.TabMainAbout.Size = new System.Drawing.Size(659, 390);
             this.TabMainAbout.TabIndex = 7;
             this.TabMainAbout.UseVisualStyleBackColor = true;
+            // 
+            // HeaderAbout
+            // 
+            this.HeaderAbout.Dock = System.Windows.Forms.DockStyle.Top;
+            this.HeaderAbout.Location = new System.Drawing.Point(0, 0);
+            this.HeaderAbout.Name = "HeaderAbout";
+            this.HeaderAbout.Size = new System.Drawing.Size(659, 52);
+            this.HeaderAbout.TabIndex = 0;
+            this.HeaderAbout.Values.Image = global::HazardShieldUI.Properties.Resources.logo_48;
             // 
             // FrmMain
             // 
@@ -349,6 +409,18 @@
             this.TabControlScanner.ResumeLayout(false);
             this.TabMainUpdates.ResumeLayout(false);
             this.TabMainUpdates.PerformLayout();
+            this.TabMainProtection.ResumeLayout(false);
+            this.TabMainProtection.PerformLayout();
+            this.TabMainSettings.ResumeLayout(false);
+            this.TabMainSettings.PerformLayout();
+            this.TabMainQuarantine.ResumeLayout(false);
+            this.TabMainQuarantine.PerformLayout();
+            this.TabMainTools.ResumeLayout(false);
+            this.TabMainTools.PerformLayout();
+            this.TabMainReserved.ResumeLayout(false);
+            this.TabMainReserved.PerformLayout();
+            this.TabMainAbout.ResumeLayout(false);
+            this.TabMainAbout.PerformLayout();
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -381,6 +453,12 @@
         private System.Windows.Forms.TabPage TabScannerProgress;
         private System.Windows.Forms.TabPage TabScannerResults;
         private ComponentFactory.Krypton.Toolkit.KryptonHeader HeaderUpdates;
+        private ComponentFactory.Krypton.Toolkit.KryptonHeader HeaderProtection;
+        private ComponentFactory.Krypton.Toolkit.KryptonHeader HeaderSettings;
+        private ComponentFactory.Krypton.Toolkit.KryptonHeader HeaderQuarantine;
+        private ComponentFactory.Krypton.Toolkit.KryptonHeader HeaderTools;
+        private ComponentFactory.Krypton.Toolkit.KryptonHeader HeaderReserved;
+        private ComponentFactory.Krypton.Toolkit.KryptonHeader HeaderAbout;
 
 
 

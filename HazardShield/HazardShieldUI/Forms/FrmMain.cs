@@ -33,10 +33,13 @@ namespace HazardShieldUI.Forms
 {
     public partial class FrmMain : Form
     {
+        Language CurrentLanguage;
+
         public FrmMain()
         {
             InitializeComponent();
 
+            Icon = Properties.Resources.icon;
             TabBtnMainScanner.Checked = true;
             TabControlMain.HideTabs = true;
             TabControlScanner.HideTabs = true;
@@ -49,6 +52,43 @@ namespace HazardShieldUI.Forms
             TabScannerResults.BackColor = c;
 
             TabMainUpdates.BackColor = c;
+
+            CurrentLanguage = new Language();
+            CurrentLanguage.LoadLanguage(RuntimeInfo.HzrLanguagePath + "\\English.txt");
+            SetControlsText(this);
+        }
+
+        void SetControlsText(Control control, ToolTip toolTip = null)
+        {
+            foreach (Control c in control.Controls)
+            {
+                SetControlsText(c, toolTip);
+
+                string name = c.Name;
+
+                if (!string.IsNullOrEmpty(name))
+                {
+                    // KryptonHeader has 2 values, heading and description.
+                    if (c is KryptonHeader)
+                    {
+                        KryptonHeader header = (KryptonHeader)c;
+
+                        header.Values.Heading = CurrentLanguage.GetText(name);
+                        header.Values.Description = CurrentLanguage.GetText(string.Format("{0}_Desc", name));
+                    }
+                    else
+                    {
+                        c.Text = CurrentLanguage.GetText(name);
+
+                        if (toolTip != null)
+                        {
+                            string toolTipText = CurrentLanguage.GetText(string.Format("{0}_TT", name), true);
+                            if (toolTipText != string.Empty)
+                                toolTip.SetToolTip(c, toolTipText);
+                        }
+                    }
+                }
+            }
         }
 
         void ChangeMainTab(KryptonCheckButton button, TabPage tab)
