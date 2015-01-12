@@ -46,6 +46,8 @@
             this.TabScannerResults = new System.Windows.Forms.TabPage();
             this.HeaderScanner = new ComponentFactory.Krypton.Toolkit.KryptonHeader();
             this.TabMainUpdates = new System.Windows.Forms.TabPage();
+            this.BtnUpdatesDownload = new ComponentFactory.Krypton.Toolkit.KryptonButton();
+            this.BtnUpdatesCheck = new ComponentFactory.Krypton.Toolkit.KryptonButton();
             this.HeaderUpdates = new ComponentFactory.Krypton.Toolkit.KryptonHeader();
             this.TabMainProtection = new System.Windows.Forms.TabPage();
             this.HeaderProtection = new ComponentFactory.Krypton.Toolkit.KryptonHeader();
@@ -266,12 +268,30 @@
             // 
             // TabMainUpdates
             // 
+            this.TabMainUpdates.Controls.Add(this.BtnUpdatesDownload);
+            this.TabMainUpdates.Controls.Add(this.BtnUpdatesCheck);
             this.TabMainUpdates.Controls.Add(this.HeaderUpdates);
             this.TabMainUpdates.Location = new System.Drawing.Point(4, 4);
             this.TabMainUpdates.Name = "TabMainUpdates";
             this.TabMainUpdates.Size = new System.Drawing.Size(659, 390);
             this.TabMainUpdates.TabIndex = 1;
             this.TabMainUpdates.UseVisualStyleBackColor = true;
+            // 
+            // BtnUpdatesDownload
+            // 
+            this.BtnUpdatesDownload.Location = new System.Drawing.Point(190, 63);
+            this.BtnUpdatesDownload.Name = "BtnUpdatesDownload";
+            this.BtnUpdatesDownload.Size = new System.Drawing.Size(170, 40);
+            this.BtnUpdatesDownload.TabIndex = 2;
+            // 
+            // BtnUpdatesCheck
+            // 
+            this.BtnUpdatesCheck.AutoSize = true;
+            this.BtnUpdatesCheck.Location = new System.Drawing.Point(12, 63);
+            this.BtnUpdatesCheck.Name = "BtnUpdatesCheck";
+            this.BtnUpdatesCheck.Size = new System.Drawing.Size(170, 40);
+            this.BtnUpdatesCheck.TabIndex = 1;
+            this.BtnUpdatesCheck.SizeChanged += new System.EventHandler(this.BtnUpdatesCheck_SizeChanged);
             // 
             // HeaderUpdates
             // 
@@ -459,6 +479,8 @@
         private ComponentFactory.Krypton.Toolkit.KryptonHeader HeaderTools;
         private ComponentFactory.Krypton.Toolkit.KryptonHeader HeaderReserved;
         private ComponentFactory.Krypton.Toolkit.KryptonHeader HeaderAbout;
+        private ComponentFactory.Krypton.Toolkit.KryptonButton BtnUpdatesCheck;
+        private ComponentFactory.Krypton.Toolkit.KryptonButton BtnUpdatesDownload;
 
 
 

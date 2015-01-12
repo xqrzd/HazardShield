@@ -104,8 +104,9 @@ namespace HazardShieldUI.Forms
             TabBtnMainReserved.Checked = false;
             TabBtnMainAbout.Checked = false;
 
-            button.Checked = true;
             TabControlMain.SelectedTab = tab;
+            button.Checked = true;
+            button.Focus();
 
             ResumeLayout();
         }
@@ -201,6 +202,11 @@ namespace HazardShieldUI.Forms
         private void TabBtnMainAbout_SizeChanged(object sender, EventArgs e)
         {
             ChangeMainTabSize((KryptonCheckButton)sender);
+        }
+
+        private void BtnUpdatesCheck_SizeChanged(object sender, EventArgs e)
+        {
+            BtnUpdatesDownload.Location = new Point(BtnUpdatesCheck.Location.X + BtnUpdatesCheck.Size.Width + 8, BtnUpdatesCheck.Location.Y);
         }
 
     }
