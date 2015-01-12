@@ -46,8 +46,16 @@
             this.TabScannerResults = new System.Windows.Forms.TabPage();
             this.HeaderScanner = new ComponentFactory.Krypton.Toolkit.KryptonHeader();
             this.TabMainUpdates = new System.Windows.Forms.TabPage();
-            this.BtnUpdatesDownload = new ComponentFactory.Krypton.Toolkit.KryptonButton();
-            this.BtnUpdatesCheck = new ComponentFactory.Krypton.Toolkit.KryptonButton();
+            this.LblUpdateClamAVVer = new ComponentFactory.Krypton.Toolkit.KryptonWrapLabel();
+            this.LblUpdateDatabaseVer = new ComponentFactory.Krypton.Toolkit.KryptonWrapLabel();
+            this.LblUpdateProgramVer = new ComponentFactory.Krypton.Toolkit.KryptonWrapLabel();
+            this.kryptonBorderEdge1 = new ComponentFactory.Krypton.Toolkit.KryptonBorderEdge();
+            this.LblUpdateVersion = new ComponentFactory.Krypton.Toolkit.KryptonWrapLabel();
+            this.LblUpdateClamAV = new ComponentFactory.Krypton.Toolkit.KryptonWrapLabel();
+            this.LblUpdateDatabase = new ComponentFactory.Krypton.Toolkit.KryptonWrapLabel();
+            this.LblUpdateProgram = new ComponentFactory.Krypton.Toolkit.KryptonWrapLabel();
+            this.BtnUpdateDownload = new ComponentFactory.Krypton.Toolkit.KryptonButton();
+            this.BtnUpdateCheck = new ComponentFactory.Krypton.Toolkit.KryptonButton();
             this.HeaderUpdates = new ComponentFactory.Krypton.Toolkit.KryptonHeader();
             this.TabMainProtection = new System.Windows.Forms.TabPage();
             this.HeaderProtection = new ComponentFactory.Krypton.Toolkit.KryptonHeader();
@@ -268,8 +276,16 @@
             // 
             // TabMainUpdates
             // 
-            this.TabMainUpdates.Controls.Add(this.BtnUpdatesDownload);
-            this.TabMainUpdates.Controls.Add(this.BtnUpdatesCheck);
+            this.TabMainUpdates.Controls.Add(this.LblUpdateClamAVVer);
+            this.TabMainUpdates.Controls.Add(this.LblUpdateDatabaseVer);
+            this.TabMainUpdates.Controls.Add(this.LblUpdateProgramVer);
+            this.TabMainUpdates.Controls.Add(this.kryptonBorderEdge1);
+            this.TabMainUpdates.Controls.Add(this.LblUpdateVersion);
+            this.TabMainUpdates.Controls.Add(this.LblUpdateClamAV);
+            this.TabMainUpdates.Controls.Add(this.LblUpdateDatabase);
+            this.TabMainUpdates.Controls.Add(this.LblUpdateProgram);
+            this.TabMainUpdates.Controls.Add(this.BtnUpdateDownload);
+            this.TabMainUpdates.Controls.Add(this.BtnUpdateCheck);
             this.TabMainUpdates.Controls.Add(this.HeaderUpdates);
             this.TabMainUpdates.Location = new System.Drawing.Point(4, 4);
             this.TabMainUpdates.Name = "TabMainUpdates";
@@ -277,21 +293,91 @@
             this.TabMainUpdates.TabIndex = 1;
             this.TabMainUpdates.UseVisualStyleBackColor = true;
             // 
-            // BtnUpdatesDownload
+            // LblUpdateClamAVVer
             // 
-            this.BtnUpdatesDownload.Location = new System.Drawing.Point(190, 63);
-            this.BtnUpdatesDownload.Name = "BtnUpdatesDownload";
-            this.BtnUpdatesDownload.Size = new System.Drawing.Size(170, 40);
-            this.BtnUpdatesDownload.TabIndex = 2;
+            this.LblUpdateClamAVVer.Font = new System.Drawing.Font("Segoe UI", 9F);
+            this.LblUpdateClamAVVer.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(30)))), ((int)(((byte)(57)))), ((int)(((byte)(91)))));
+            this.LblUpdateClamAVVer.Location = new System.Drawing.Point(126, 210);
+            this.LblUpdateClamAVVer.Name = "LblUpdateClamAVVer";
+            this.LblUpdateClamAVVer.Size = new System.Drawing.Size(110, 15);
+            this.LblUpdateClamAVVer.Text = "kryptonWrapLabel3";
             // 
-            // BtnUpdatesCheck
+            // LblUpdateDatabaseVer
             // 
-            this.BtnUpdatesCheck.AutoSize = true;
-            this.BtnUpdatesCheck.Location = new System.Drawing.Point(12, 63);
-            this.BtnUpdatesCheck.Name = "BtnUpdatesCheck";
-            this.BtnUpdatesCheck.Size = new System.Drawing.Size(170, 40);
-            this.BtnUpdatesCheck.TabIndex = 1;
-            this.BtnUpdatesCheck.SizeChanged += new System.EventHandler(this.BtnUpdatesCheck_SizeChanged);
+            this.LblUpdateDatabaseVer.Font = new System.Drawing.Font("Segoe UI", 9F);
+            this.LblUpdateDatabaseVer.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(30)))), ((int)(((byte)(57)))), ((int)(((byte)(91)))));
+            this.LblUpdateDatabaseVer.Location = new System.Drawing.Point(126, 166);
+            this.LblUpdateDatabaseVer.Name = "LblUpdateDatabaseVer";
+            this.LblUpdateDatabaseVer.Size = new System.Drawing.Size(110, 15);
+            this.LblUpdateDatabaseVer.Text = "kryptonWrapLabel2";
+            // 
+            // LblUpdateProgramVer
+            // 
+            this.LblUpdateProgramVer.Font = new System.Drawing.Font("Segoe UI", 9F);
+            this.LblUpdateProgramVer.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(30)))), ((int)(((byte)(57)))), ((int)(((byte)(91)))));
+            this.LblUpdateProgramVer.Location = new System.Drawing.Point(126, 144);
+            this.LblUpdateProgramVer.Name = "LblUpdateProgramVer";
+            this.LblUpdateProgramVer.Size = new System.Drawing.Size(110, 15);
+            this.LblUpdateProgramVer.Text = "kryptonWrapLabel1";
+            // 
+            // kryptonBorderEdge1
+            // 
+            this.kryptonBorderEdge1.Location = new System.Drawing.Point(130, 132);
+            this.kryptonBorderEdge1.Name = "kryptonBorderEdge1";
+            this.kryptonBorderEdge1.Size = new System.Drawing.Size(200, 1);
+            this.kryptonBorderEdge1.Text = "kryptonBorderEdge1";
+            // 
+            // LblUpdateVersion
+            // 
+            this.LblUpdateVersion.Font = new System.Drawing.Font("Segoe UI", 9F);
+            this.LblUpdateVersion.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(30)))), ((int)(((byte)(57)))), ((int)(((byte)(91)))));
+            this.LblUpdateVersion.Location = new System.Drawing.Point(126, 114);
+            this.LblUpdateVersion.Name = "LblUpdateVersion";
+            this.LblUpdateVersion.Size = new System.Drawing.Size(110, 15);
+            this.LblUpdateVersion.Text = "kryptonWrapLabel1";
+            // 
+            // LblUpdateClamAV
+            // 
+            this.LblUpdateClamAV.Font = new System.Drawing.Font("Segoe UI", 9F);
+            this.LblUpdateClamAV.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(30)))), ((int)(((byte)(57)))), ((int)(((byte)(91)))));
+            this.LblUpdateClamAV.Location = new System.Drawing.Point(12, 210);
+            this.LblUpdateClamAV.Name = "LblUpdateClamAV";
+            this.LblUpdateClamAV.Size = new System.Drawing.Size(110, 15);
+            this.LblUpdateClamAV.Text = "kryptonWrapLabel3";
+            // 
+            // LblUpdateDatabase
+            // 
+            this.LblUpdateDatabase.Font = new System.Drawing.Font("Segoe UI", 9F);
+            this.LblUpdateDatabase.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(30)))), ((int)(((byte)(57)))), ((int)(((byte)(91)))));
+            this.LblUpdateDatabase.Location = new System.Drawing.Point(12, 166);
+            this.LblUpdateDatabase.Name = "LblUpdateDatabase";
+            this.LblUpdateDatabase.Size = new System.Drawing.Size(110, 15);
+            this.LblUpdateDatabase.Text = "kryptonWrapLabel2";
+            // 
+            // LblUpdateProgram
+            // 
+            this.LblUpdateProgram.Font = new System.Drawing.Font("Segoe UI", 9F);
+            this.LblUpdateProgram.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(30)))), ((int)(((byte)(57)))), ((int)(((byte)(91)))));
+            this.LblUpdateProgram.Location = new System.Drawing.Point(12, 144);
+            this.LblUpdateProgram.Name = "LblUpdateProgram";
+            this.LblUpdateProgram.Size = new System.Drawing.Size(110, 15);
+            this.LblUpdateProgram.Text = "kryptonWrapLabel1";
+            // 
+            // BtnUpdateDownload
+            // 
+            this.BtnUpdateDownload.Location = new System.Drawing.Point(190, 63);
+            this.BtnUpdateDownload.Name = "BtnUpdateDownload";
+            this.BtnUpdateDownload.Size = new System.Drawing.Size(170, 40);
+            this.BtnUpdateDownload.TabIndex = 2;
+            // 
+            // BtnUpdateCheck
+            // 
+            this.BtnUpdateCheck.AutoSize = true;
+            this.BtnUpdateCheck.Location = new System.Drawing.Point(12, 63);
+            this.BtnUpdateCheck.Name = "BtnUpdateCheck";
+            this.BtnUpdateCheck.Size = new System.Drawing.Size(170, 40);
+            this.BtnUpdateCheck.TabIndex = 1;
+            this.BtnUpdateCheck.SizeChanged += new System.EventHandler(this.BtnUpdatesCheck_SizeChanged);
             // 
             // HeaderUpdates
             // 
@@ -480,8 +566,16 @@
         private ComponentFactory.Krypton.Toolkit.KryptonHeader HeaderTools;
         private ComponentFactory.Krypton.Toolkit.KryptonHeader HeaderReserved;
         private ComponentFactory.Krypton.Toolkit.KryptonHeader HeaderAbout;
-        private ComponentFactory.Krypton.Toolkit.KryptonButton BtnUpdatesCheck;
-        private ComponentFactory.Krypton.Toolkit.KryptonButton BtnUpdatesDownload;
+        private ComponentFactory.Krypton.Toolkit.KryptonButton BtnUpdateCheck;
+        private ComponentFactory.Krypton.Toolkit.KryptonButton BtnUpdateDownload;
+        private ComponentFactory.Krypton.Toolkit.KryptonWrapLabel LblUpdateProgram;
+        private ComponentFactory.Krypton.Toolkit.KryptonWrapLabel LblUpdateDatabase;
+        private ComponentFactory.Krypton.Toolkit.KryptonWrapLabel LblUpdateClamAV;
+        private ComponentFactory.Krypton.Toolkit.KryptonWrapLabel LblUpdateVersion;
+        private ComponentFactory.Krypton.Toolkit.KryptonBorderEdge kryptonBorderEdge1;
+        private ComponentFactory.Krypton.Toolkit.KryptonWrapLabel LblUpdateClamAVVer;
+        private ComponentFactory.Krypton.Toolkit.KryptonWrapLabel LblUpdateDatabaseVer;
+        private ComponentFactory.Krypton.Toolkit.KryptonWrapLabel LblUpdateProgramVer;
 
 
 

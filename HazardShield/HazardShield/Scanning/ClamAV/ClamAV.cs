@@ -35,6 +35,9 @@ namespace HazardShield.Scanning.ClamAV
         [DllImport(CLAMAV_DLL, CallingConvention = CallingConvention.Cdecl)]
         static extern cl_error_t cl_init(uint initoptions);
 
+        [DllImport(CLAMAV_DLL, CallingConvention = CallingConvention.Cdecl)]
+        static extern IntPtr cl_retver();
+
 
         // Engine functions
         [DllImport(CLAMAV_DLL, CallingConvention = CallingConvention.Cdecl)]
@@ -74,9 +77,6 @@ namespace HazardShield.Scanning.ClamAV
         [DllImport(CLAMAV_DLL, CallingConvention = CallingConvention.Cdecl)]
         static extern void cl_cvdfree(IntPtr cvd);
 
-        [DllImport(CLAMAV_DLL, CallingConvention = CallingConvention.Cdecl)]
-        static extern IntPtr cl_retver();
-
 
         // Custom data scanning
         [DllImport(CLAMAV_DLL, CallingConvention = CallingConvention.Cdecl)]
@@ -91,6 +91,8 @@ namespace HazardShield.Scanning.ClamAV
         IntPtr Engine;
 
         public uint SignatureCount { get; private set; }
+
+        public static string Version { get { return Marshal.PtrToStringAnsi(cl_retver()); } }
 
         static ClamAV()
         {

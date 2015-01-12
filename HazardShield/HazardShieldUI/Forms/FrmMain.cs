@@ -60,6 +60,14 @@ namespace HazardShieldUI.Forms
 
             UiProtector = new GuiProtector();
             UiProtector.StartProtection();
+            SetUpdateText();
+        }
+
+        void SetUpdateText()
+        {
+            LblUpdateProgramVer.Text = Application.ProductVersion;
+            LblUpdateDatabaseVer.Text = "0";
+            LblUpdateClamAVVer.Text = HazardShield.Scanning.ClamAV.ClamAV.Version;
         }
 
         void SetControlsText(Control control, ToolTip toolTip = null)
@@ -210,7 +218,7 @@ namespace HazardShieldUI.Forms
 
         private void BtnUpdatesCheck_SizeChanged(object sender, EventArgs e)
         {
-            BtnUpdatesDownload.Location = new Point(BtnUpdatesCheck.Location.X + BtnUpdatesCheck.Size.Width + 8, BtnUpdatesCheck.Location.Y);
+            BtnUpdateDownload.Location = new Point(BtnUpdateCheck.Location.X + BtnUpdateCheck.Size.Width + 8, BtnUpdateCheck.Location.Y);
         }
 
         private void FrmMain_FormClosed(object sender, FormClosedEventArgs e)
