@@ -22,6 +22,9 @@ namespace HazardShieldUI.Forms
 
                 m_HideTabs = value;
 
+                if (value)
+                    this.Multiline = true;
+
                 this.UpdateStyles();
             }
         }

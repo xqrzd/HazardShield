@@ -34,6 +34,9 @@ namespace HazardShieldUI
         /// </summary>
         Dictionary<string, string> Text;
 
+        /// <summary>
+        /// Constructor for Language.
+        /// </summary>
         public Language()
         {
             Text = new Dictionary<string, string>();
