@@ -34,6 +34,7 @@ namespace HazardShieldUI.Forms
     public partial class FrmMain : Form
     {
         Language CurrentLanguage;
+        GuiProtector UiProtector;
 
         public FrmMain()
         {
@@ -56,6 +57,9 @@ namespace HazardShieldUI.Forms
             CurrentLanguage = new Language();
             CurrentLanguage.LoadLanguage(RuntimeInfo.HzrLanguagePath + "\\English.txt");
             SetControlsText(this);
+
+            UiProtector = new GuiProtector();
+            UiProtector.StartProtection();
         }
 
         void SetControlsText(Control control, ToolTip toolTip = null)
@@ -207,6 +211,11 @@ namespace HazardShieldUI.Forms
         private void BtnUpdatesCheck_SizeChanged(object sender, EventArgs e)
         {
             BtnUpdatesDownload.Location = new Point(BtnUpdatesCheck.Location.X + BtnUpdatesCheck.Size.Width + 8, BtnUpdatesCheck.Location.Y);
+        }
+
+        private void FrmMain_FormClosed(object sender, FormClosedEventArgs e)
+        {
+            UiProtector.DisableProtection();
         }
 
     }

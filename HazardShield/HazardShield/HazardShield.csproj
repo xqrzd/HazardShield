@@ -63,6 +63,7 @@
     <Compile Include="Scanning\ClamAV\Structures.cs" />
     <Compile Include="Updates\ClamAV\ClamUpdater.cs" />
     <Compile Include="Updates\ClamAV\EventArgs.cs" />
+    <Compile Include="Win32\WinApi.cs" />
   </ItemGroup>
   <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

@@ -81,6 +81,7 @@
     <Compile Include="Forms\HiddenTabControl.cs">
       <SubType>Component</SubType>
     </Compile>
+    <Compile Include="GuiProtector.cs" />
     <Compile Include="Language.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
