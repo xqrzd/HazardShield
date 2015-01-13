@@ -41,6 +41,12 @@
             this.TabMainScanner = new System.Windows.Forms.TabPage();
             this.TabControlScanner = new HazardShieldUI.Forms.HiddenTabControl();
             this.TabScannerMain = new System.Windows.Forms.TabPage();
+            this.kryptonBorderEdge2 = new ComponentFactory.Krypton.Toolkit.KryptonBorderEdge();
+            this.LblScannerOverview = new ComponentFactory.Krypton.Toolkit.KryptonWrapLabel();
+            this.GrpScanner = new ComponentFactory.Krypton.Toolkit.KryptonGroupBox();
+            this.RadScannerCustom = new ComponentFactory.Krypton.Toolkit.KryptonRadioButton();
+            this.RadScannerSmart = new ComponentFactory.Krypton.Toolkit.KryptonRadioButton();
+            this.BtnScannerScan = new ComponentFactory.Krypton.Toolkit.KryptonButton();
             this.TabScannerCustom = new System.Windows.Forms.TabPage();
             this.TabScannerProgress = new System.Windows.Forms.TabPage();
             this.TabScannerResults = new System.Windows.Forms.TabPage();
@@ -74,6 +80,11 @@
             this.TabControlMain.SuspendLayout();
             this.TabMainScanner.SuspendLayout();
             this.TabControlScanner.SuspendLayout();
+            this.TabScannerMain.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.GrpScanner)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.GrpScanner.Panel)).BeginInit();
+            this.GrpScanner.Panel.SuspendLayout();
+            this.GrpScanner.SuspendLayout();
             this.TabMainUpdates.SuspendLayout();
             this.TabMainProtection.SuspendLayout();
             this.TabMainSettings.SuspendLayout();
@@ -235,11 +246,73 @@
             // 
             // TabScannerMain
             // 
+            this.TabScannerMain.Controls.Add(this.kryptonBorderEdge2);
+            this.TabScannerMain.Controls.Add(this.LblScannerOverview);
+            this.TabScannerMain.Controls.Add(this.GrpScanner);
             this.TabScannerMain.Location = new System.Drawing.Point(4, 4);
             this.TabScannerMain.Name = "TabScannerMain";
+            this.TabScannerMain.Padding = new System.Windows.Forms.Padding(0, 20, 30, 0);
             this.TabScannerMain.Size = new System.Drawing.Size(651, 312);
             this.TabScannerMain.TabIndex = 0;
             this.TabScannerMain.UseVisualStyleBackColor = true;
+            // 
+            // kryptonBorderEdge2
+            // 
+            this.kryptonBorderEdge2.Location = new System.Drawing.Point(19, 42);
+            this.kryptonBorderEdge2.Name = "kryptonBorderEdge2";
+            this.kryptonBorderEdge2.Size = new System.Drawing.Size(300, 1);
+            this.kryptonBorderEdge2.Text = "kryptonBorderEdge2";
+            // 
+            // LblScannerOverview
+            // 
+            this.LblScannerOverview.Font = new System.Drawing.Font("Segoe UI", 9F);
+            this.LblScannerOverview.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(30)))), ((int)(((byte)(57)))), ((int)(((byte)(91)))));
+            this.LblScannerOverview.Location = new System.Drawing.Point(15, 23);
+            this.LblScannerOverview.Name = "LblScannerOverview";
+            this.LblScannerOverview.Size = new System.Drawing.Size(110, 15);
+            this.LblScannerOverview.Text = "kryptonWrapLabel1";
+            // 
+            // GrpScanner
+            // 
+            this.GrpScanner.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.GrpScanner.AutoSize = true;
+            this.GrpScanner.Location = new System.Drawing.Point(401, 20);
+            this.GrpScanner.Name = "GrpScanner";
+            // 
+            // GrpScanner.Panel
+            // 
+            this.GrpScanner.Panel.Controls.Add(this.RadScannerCustom);
+            this.GrpScanner.Panel.Controls.Add(this.RadScannerSmart);
+            this.GrpScanner.Panel.Controls.Add(this.BtnScannerScan);
+            this.GrpScanner.Panel.Padding = new System.Windows.Forms.Padding(20, 0, 20, 20);
+            this.GrpScanner.Size = new System.Drawing.Size(220, 159);
+            this.GrpScanner.TabIndex = 0;
+            this.GrpScanner.Text = "Caption";
+            // 
+            // RadScannerCustom
+            // 
+            this.RadScannerCustom.Location = new System.Drawing.Point(23, 36);
+            this.RadScannerCustom.Name = "RadScannerCustom";
+            this.RadScannerCustom.Size = new System.Drawing.Size(139, 20);
+            this.RadScannerCustom.TabIndex = 2;
+            this.RadScannerCustom.Values.Text = "kryptonRadioButton2";
+            // 
+            // RadScannerSmart
+            // 
+            this.RadScannerSmart.Location = new System.Drawing.Point(23, 10);
+            this.RadScannerSmart.Name = "RadScannerSmart";
+            this.RadScannerSmart.Size = new System.Drawing.Size(139, 20);
+            this.RadScannerSmart.TabIndex = 1;
+            this.RadScannerSmart.Values.Text = "kryptonRadioButton1";
+            // 
+            // BtnScannerScan
+            // 
+            this.BtnScannerScan.AutoSize = true;
+            this.BtnScannerScan.Location = new System.Drawing.Point(23, 73);
+            this.BtnScannerScan.Name = "BtnScannerScan";
+            this.BtnScannerScan.Size = new System.Drawing.Size(170, 37);
+            this.BtnScannerScan.TabIndex = 0;
+            this.BtnScannerScan.Values.Text = "kryptonButton1";
             // 
             // TabScannerCustom
             // 
@@ -514,6 +587,13 @@
             this.TabMainScanner.ResumeLayout(false);
             this.TabMainScanner.PerformLayout();
             this.TabControlScanner.ResumeLayout(false);
+            this.TabScannerMain.ResumeLayout(false);
+            this.TabScannerMain.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.GrpScanner.Panel)).EndInit();
+            this.GrpScanner.Panel.ResumeLayout(false);
+            this.GrpScanner.Panel.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.GrpScanner)).EndInit();
+            this.GrpScanner.ResumeLayout(false);
             this.TabMainUpdates.ResumeLayout(false);
             this.TabMainUpdates.PerformLayout();
             this.TabMainProtection.ResumeLayout(false);
@@ -576,6 +656,12 @@
         private ComponentFactory.Krypton.Toolkit.KryptonWrapLabel LblUpdateClamAVVer;
         private ComponentFactory.Krypton.Toolkit.KryptonWrapLabel LblUpdateDatabaseVer;
         private ComponentFactory.Krypton.Toolkit.KryptonWrapLabel LblUpdateProgramVer;
+        private ComponentFactory.Krypton.Toolkit.KryptonGroupBox GrpScanner;
+        private ComponentFactory.Krypton.Toolkit.KryptonButton BtnScannerScan;
+        private ComponentFactory.Krypton.Toolkit.KryptonRadioButton RadScannerSmart;
+        private ComponentFactory.Krypton.Toolkit.KryptonRadioButton RadScannerCustom;
+        private ComponentFactory.Krypton.Toolkit.KryptonWrapLabel LblScannerOverview;
+        private ComponentFactory.Krypton.Toolkit.KryptonBorderEdge kryptonBorderEdge2;
 
 
 

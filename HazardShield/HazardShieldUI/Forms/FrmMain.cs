@@ -61,6 +61,8 @@ namespace HazardShieldUI.Forms
             UiProtector = new GuiProtector();
             UiProtector.StartProtection();
             SetUpdateText();
+            Utils.MakeKryptonTextBold(BtnScannerScan);
+            RadScannerSmart.Checked = true;
         }
 
         void SetUpdateText()
