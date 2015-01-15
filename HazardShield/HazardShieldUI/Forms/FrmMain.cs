@@ -69,7 +69,7 @@ namespace HazardShieldUI.Forms
         {
             LblUpdateProgramVer.Text = Application.ProductVersion;
             LblUpdateDatabaseVer.Text = "0";
-            LblUpdateClamAVVer.Text = HazardShield.Scanning.ClamAV.ClamAV.Version;
+            //LblUpdateClamAVVer.Text = HazardShield.Scanning.ClamAV.ClamAV.Version;
         }
 
         void SetControlsText(Control control, ToolTip toolTip = null)
