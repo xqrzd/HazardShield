@@ -26,6 +26,25 @@
 #include <crtdbg.h>
 #endif
 
+VOID StreamRead(
+	_In_ struct _NTFS_VOLUME* NtfsVolume,
+	_In_ PNTFS_ATTRIBUTE Attribute,
+	_In_ PVOID Buffer,
+	_In_ ULONG BufferSize)
+{
+	/*printf("Data: %s\n", Buffer);
+
+	if (Attribute->NameOffset && Attribute->NameLength)
+	{
+		WCHAR streamName[MAX_PATH];
+
+		RtlCopyMemory(streamName, NtfsOffsetToPointer(Attribute, Attribute->NameOffset), Attribute->NameLength * sizeof(WCHAR));
+		streamName[Attribute->NameLength] = L'\0';
+
+		wprintf(L"Name: %s\n", streamName);
+	}*/
+}
+
 BOOLEAN ReadSector(
 	_In_ struct _NTFS_VOLUME* NtfsVolume,
 	_In_ ULONGLONG Sector,
@@ -55,11 +74,17 @@ VOID IndexCallback(
 		WCHAR filePath[MAX_PATH];
 		RtlCopyMemory(filePath, IndexEntry->FileName.Name, IndexEntry->FileName.NameLength * sizeof(WCHAR));
 		filePath[IndexEntry->FileName.NameLength] = L'\0';
-		wprintf(L"%u\t %s\n", IndexEntry->FileReference.RecordNumber, filePath);
+		
 		if (IndexEntry->FileReference.RecordNumber == 2022)
 			NtfsEnumSubFiles(NtfsVolume, IndexEntry->FileReference.RecordNumber);
 		if (IndexEntry->FileReference.RecordNumber == 3838)
 			NtfsEnumSubFiles(NtfsVolume, IndexEntry->FileReference.RecordNumber);
+
+		if (IndexEntry->FileName.RealSize <= 8388608 && IndexEntry->FileReference.RecordNumber > 17)
+		{
+			wprintf(L"%u\t %s\n", IndexEntry->FileReference.RecordNumber, filePath);
+			NtfsReadFileDataStreams(NtfsVolume, IndexEntry->FileReference.RecordNumber);
+		}
 	}
 }
 
@@ -69,7 +94,7 @@ void main()
 	if (volumeHandle != INVALID_HANDLE_VALUE)
 	{
 		NTFS_VOLUME ntfsVolume;
-		NtfsInitVolume(ReadSector, IndexCallback, 512, volumeHandle, &ntfsVolume);
+		NtfsInitVolume(ReadSector, IndexCallback, StreamRead, 512, volumeHandle, &ntfsVolume);
 		NtfsEnumSubFiles(&ntfsVolume, MFT_RECORD_ROOT);
 		CloseHandle(volumeHandle);
 		NtfsFreeVolume(&ntfsVolume);

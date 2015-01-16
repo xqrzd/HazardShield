@@ -291,27 +291,31 @@ typedef struct _NTFS_INDEX_BLOCK {
 	NTFS_INDEX_HEADER IndexHeader;
 } NTFS_INDEX_BLOCK, *PNTFS_INDEX_BLOCK;
 
-typedef VOID NTFS_INDEX_ENTRY_CALLBACK(
+typedef VOID (*PNTFS_INDEX_ENTRY_CALLBACK)(
 	_In_ struct _NTFS_VOLUME* NtfsVolume,
 	_In_ PNTFS_INDEX_ENTRY IndexEntry
 	);
 
-typedef NTFS_INDEX_ENTRY_CALLBACK *PNTFS_INDEX_ENTRY_CALLBACK;
+typedef VOID (*PNTFS_STREAM_CALLBACK)(
+	_In_ struct _NTFS_VOLUME* NtfsVolume,
+	_In_ PNTFS_ATTRIBUTE Attribute,
+	_In_ PVOID Buffer,
+	_In_ ULONG BufferSize
+	);
 
 // Notes: If Sector is 0, only BytesPerSector and Context will be valid in NtfsVolume
-typedef BOOLEAN NTFS_READ_SECTOR(
+typedef BOOLEAN (*PNTFS_READ_SECTOR)(
 	_In_ struct _NTFS_VOLUME* NtfsVolume,
 	_In_ ULONGLONG Sector,
 	_In_ ULONG SectorCount,
 	_Out_ PVOID Buffer
 	);
 
-typedef NTFS_READ_SECTOR *PNTFS_READ_SECTOR;
-
 // Represents an NTFS Volume
 typedef struct _NTFS_VOLUME {
 	PNTFS_READ_SECTOR NtfsReadSector;
 	PNTFS_INDEX_ENTRY_CALLBACK IndexEntryCallback;
+	PNTFS_STREAM_CALLBACK StreamCallback;
 	USHORT	BytesPerSector;
 	UCHAR	SectorsPerCluster;
 	ULONG	FileRecordSize;	// File record size in bytes
@@ -325,6 +329,7 @@ typedef struct _NTFS_VOLUME {
 __declspec(dllexport) BOOLEAN NtfsInitVolume(
 	_In_ PNTFS_READ_SECTOR NtfsReadSector,
 	_In_ PNTFS_INDEX_ENTRY_CALLBACK IndexEntryCallback,
+	_In_ PNTFS_STREAM_CALLBACK StreamCallback,
 	_In_ USHORT BytesPerSector,
 	_In_ PVOID Context,
 	_Out_ PNTFS_VOLUME Volume
@@ -422,6 +427,11 @@ __declspec(dllexport) BOOLEAN NtfsGetIndexRootEntries(
 	);
 
 __declspec(dllexport) BOOLEAN NtfsEnumSubFiles(
+	_In_ PNTFS_VOLUME NtfsVolume,
+	_In_ ULONG RecordNumber
+	);
+
+__declspec(dllexport) BOOLEAN NtfsReadFileDataStreams(
 	_In_ PNTFS_VOLUME NtfsVolume,
 	_In_ ULONG RecordNumber
 	);

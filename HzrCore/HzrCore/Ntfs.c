@@ -25,6 +25,7 @@
 BOOLEAN NtfsInitVolume(
 	_In_ PNTFS_READ_SECTOR NtfsReadSector,
 	_In_ PNTFS_INDEX_ENTRY_CALLBACK IndexEntryCallback,
+	_In_ PNTFS_STREAM_CALLBACK StreamCallback,
 	_In_ USHORT BytesPerSector,
 	_In_ PVOID Context,
 	_Out_ PNTFS_VOLUME NtfsVolume)
@@ -35,6 +36,7 @@ BOOLEAN NtfsInitVolume(
 
 	NtfsVolume->NtfsReadSector = NtfsReadSector;
 	NtfsVolume->IndexEntryCallback = IndexEntryCallback;
+	NtfsVolume->StreamCallback = StreamCallback;
 	NtfsVolume->BytesPerSector = BytesPerSector;
 	NtfsVolume->Context = Context;
 
@@ -657,4 +659,44 @@ BOOLEAN NtfsEnumSubFiles(
 	NtfsFree(fileRecord);
 
 	return success;
+}
+
+BOOLEAN NtfsReadFileDataStreams(
+	_In_ PNTFS_VOLUME NtfsVolume,
+	_In_ ULONG RecordNumber)
+{
+	PNTFS_FILE_RECORD fileRecord = NtfsAllocate(NtfsVolume->FileRecordSize);
+
+	if (NtfsReadFileRecord(NtfsVolume, RecordNumber, fileRecord))
+	{
+		LIST_ENTRY dataAttributes;
+		PLIST_ENTRY current;
+		PLIST_ENTRY next;
+
+		NtfsInitializeListHead(&dataAttributes);
+
+		NtfsReadFileAttributes(NtfsVolume, fileRecord, ATTR_MASK_DATA, &dataAttributes);
+
+		LIST_FOR_EACH_SAFE(current, next, &dataAttributes)
+		{
+			PNTFS_ATTRIBUTE attribute = CONTAINING_RECORD(current, NTFS_ATTRIBUTE_ENTRY, ListEntry)->Attribute;
+			PVOID buffer;
+			ULONG bufferSize;
+
+			if (NtfsReadAttributeData(NtfsVolume, attribute, &buffer, &bufferSize))
+			{
+				NtfsVolume->StreamCallback(NtfsVolume, attribute, buffer, bufferSize);
+
+				NtfsFree(buffer);
+			}
+		}
+
+		NtfsFreeLinkedList(&dataAttributes, NTFS_ATTRIBUTE_ENTRY, ListEntry);
+	}
+	else
+		printf("NtfsReadDataStreams: Unable to read file record %u\n", RecordNumber);
+
+	NtfsFree(fileRecord);
+
+	return FALSE;
 }
