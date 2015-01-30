@@ -21,6 +21,9 @@
 #include "Logger.h"
 #include <stdio.h>
 
+#define LOG_FILE L"%AllUsersProfile%\\Hazard Shield\\rts_log.txt"
+#define LOG_MAX_ENTRY_SIZE 1024
+
 BOOLEAN LogMessageA(
 	_In_ CONST PCHAR Format,
 	...)
