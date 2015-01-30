@@ -24,8 +24,6 @@
 
 BOOLEAN NtfsInitVolume(
 	_In_ PNTFS_READ_SECTOR NtfsReadSector,
-	_In_ PNTFS_INDEX_ENTRY_CALLBACK IndexEntryCallback,
-	_In_ PNTFS_STREAM_CALLBACK StreamCallback,
 	_In_ USHORT BytesPerSector,
 	_In_ PVOID Context,
 	_Out_ PNTFS_VOLUME NtfsVolume)
@@ -35,8 +33,6 @@ BOOLEAN NtfsInitVolume(
 	PNTFS_BOOT_SECTOR bootSector = NtfsAllocate(BytesPerSector);
 
 	NtfsVolume->NtfsReadSector = NtfsReadSector;
-	NtfsVolume->IndexEntryCallback = IndexEntryCallback;
-	NtfsVolume->StreamCallback = StreamCallback;
 	NtfsVolume->BytesPerSector = BytesPerSector;
 	NtfsVolume->Context = Context;
 
@@ -522,7 +518,9 @@ VOID NtfsWalkIndexEntries(
 	_In_ PNTFS_VOLUME NtfsVolume,
 	_In_ PNTFS_INDEX_ENTRY IndexEntry,
 	_In_ ULONG TotalEntrySize,
-	_In_ PVOID IndexAllocation)
+	_In_ PVOID IndexAllocation,
+	_In_ PNTFS_INDEX_ENTRY_CALLBACK IndexCallback,
+	_In_ PVOID CallbackContext)
 {
 	PNTFS_INDEX_ENTRY indexEntry = IndexEntry;
 	ULONG total = indexEntry->Size;
@@ -535,10 +533,10 @@ VOID NtfsWalkIndexEntries(
 			PULONGLONG subNodeVcn = NtfsOffsetToPointer(indexEntry, indexEntry->Size - sizeof(ULONGLONG));
 
 			//printf("\nSub-node VCN: %llu\n", *subNodeVcn);
-			NtfsGetIndexAllocationEntries(NtfsVolume, *subNodeVcn, IndexAllocation);
+			NtfsGetIndexAllocationEntries(NtfsVolume, *subNodeVcn, IndexAllocation, IndexCallback, CallbackContext);
 		}
 
-		NtfsVolume->IndexEntryCallback(NtfsVolume, indexEntry);
+		IndexCallback(NtfsVolume, indexEntry, CallbackContext);
 
 		if (indexEntry->Flags & INDEX_ENTRY_FLAG_LAST)
 			break;
@@ -551,7 +549,9 @@ VOID NtfsWalkIndexEntries(
 BOOLEAN NtfsGetIndexAllocationEntries(
 	_In_ PNTFS_VOLUME NtfsVolume,
 	_In_ ULONGLONG VCN,
-	_In_ PVOID IndexAllocation)
+	_In_ PVOID IndexAllocation,
+	_In_ PNTFS_INDEX_ENTRY_CALLBACK IndexCallback,
+	_In_ PVOID CallbackContext)
 {
 	ULONG byteOffset = (ULONG)VCN * NtfsVolume->SectorsPerCluster * NtfsVolume->BytesPerSector;
 	PNTFS_INDEX_BLOCK indexBlock = NtfsOffsetToPointer(IndexAllocation, byteOffset);
@@ -564,7 +564,7 @@ BOOLEAN NtfsGetIndexAllocationEntries(
 		assert(indexBlock->Magic == INDEX_BLOCK_MAGIC);
 		assert(indexBlock->VCN == VCN);
 
-		NtfsWalkIndexEntries(NtfsVolume, indexEntry, indexBlock->IndexHeader.TotalEntrySize, IndexAllocation);
+		NtfsWalkIndexEntries(NtfsVolume, indexEntry, indexBlock->IndexHeader.TotalEntrySize, IndexAllocation, IndexCallback, CallbackContext);
 
 		return TRUE;
 	}
@@ -578,7 +578,9 @@ BOOLEAN NtfsGetIndexAllocationEntries(
 BOOLEAN NtfsGetIndexRootEntries(
 	_In_ PNTFS_VOLUME NtfsVolume,
 	_In_ PNTFS_INDEX_ROOT_ATTRIBUTE IndexRoot,
-	_In_ PVOID IndexAllocation)
+	_In_ PVOID IndexAllocation,
+	_In_ PNTFS_INDEX_ENTRY_CALLBACK IndexCallback,
+	_In_ PVOID CallbackContext)
 {
 	PNTFS_INDEX_ENTRY indexEntry;
 
@@ -590,14 +592,16 @@ BOOLEAN NtfsGetIndexRootEntries(
 
 	indexEntry = NtfsOffsetToPointer(&IndexRoot->IndexHeader, IndexRoot->IndexHeader.EntryOffset);
 
-	NtfsWalkIndexEntries(NtfsVolume, indexEntry, IndexRoot->IndexHeader.TotalEntrySize, IndexAllocation);
+	NtfsWalkIndexEntries(NtfsVolume, indexEntry, IndexRoot->IndexHeader.TotalEntrySize, IndexAllocation, IndexCallback, CallbackContext);
 
 	return TRUE;
 }
 
 BOOLEAN NtfsEnumSubFiles(
 	_In_ PNTFS_VOLUME NtfsVolume,
-	_In_ ULONG RecordNumber)
+	_In_ ULONG RecordNumber,
+	_In_ PNTFS_INDEX_ENTRY_CALLBACK IndexCallback,
+	_In_ PVOID CallbackContext)
 {
 	BOOLEAN success = FALSE;
 	PNTFS_FILE_RECORD fileRecord = NtfsAllocate(NtfsVolume->FileRecordSize);
@@ -640,7 +644,7 @@ BOOLEAN NtfsEnumSubFiles(
 					NtfsReadNonResidentAttributeData(NtfsVolume, indexAllocation, indexAllocationData);
 				}
 
-				success = NtfsGetIndexRootEntries(NtfsVolume, indexRootAttribute, indexAllocationData);
+				success = NtfsGetIndexRootEntries(NtfsVolume, indexRootAttribute, indexAllocationData, IndexCallback, CallbackContext);
 
 				if (indexAllocationData)
 					NtfsFree(indexAllocationData);
@@ -663,7 +667,9 @@ BOOLEAN NtfsEnumSubFiles(
 
 BOOLEAN NtfsReadFileDataStreams(
 	_In_ PNTFS_VOLUME NtfsVolume,
-	_In_ ULONG RecordNumber)
+	_In_ ULONG RecordNumber,
+	_In_ PNTFS_STREAM_CALLBACK StreamCallback,
+	_In_ PVOID CallbackContext)
 {
 	PNTFS_FILE_RECORD fileRecord = NtfsAllocate(NtfsVolume->FileRecordSize);
 
@@ -685,7 +691,7 @@ BOOLEAN NtfsReadFileDataStreams(
 
 			if (NtfsReadAttributeData(NtfsVolume, attribute, &buffer, &bufferSize))
 			{
-				NtfsVolume->StreamCallback(NtfsVolume, attribute, buffer, bufferSize);
+				StreamCallback(NtfsVolume, attribute, buffer, bufferSize, CallbackContext);
 
 				NtfsFree(buffer);
 			}
