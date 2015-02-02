@@ -140,6 +140,12 @@ FORCEINLINE VOID HzrInit()
 	}
 }
 
+//void main()
+//{
+//	HzrInit();
+//	getchar();
+//}
+
 VOID WINAPI HzrServiceMain(
 	_In_ DWORD dwArgc,
 	_In_ LPTSTR *lpszArgv)

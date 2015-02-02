@@ -71,9 +71,13 @@ OB_PREOP_CALLBACK_STATUS HzrpObPreCallback(
 	{
 		// Remove access flags
 		if (OperationInformation->Operation == OB_OPERATION_HANDLE_CREATE)
+		{
 			OperationInformation->Parameters->CreateHandleInformation.DesiredAccess &= ~accessBitsToClear;
+		}
 		else if (OperationInformation->Operation == OB_OPERATION_HANDLE_DUPLICATE)
+		{
 			OperationInformation->Parameters->DuplicateHandleInformation.DesiredAccess &= ~accessBitsToClear;
+		}
 	}
 
 	return OB_PREOP_SUCCESS;
