@@ -47,7 +47,8 @@ OB_PREOP_CALLBACK_STATUS HzrpObPreCallback(
 	_Inout_ POB_PRE_OPERATION_INFORMATION OperationInformation)
 {
 	PEPROCESS process;
-	ACCESS_MASK accessBitsToClear;
+	ACCESS_MASK processAccessBitsToClear;
+	ACCESS_MASK threadAccessBitsToClear;
 
 	UNREFERENCED_PARAMETER(RegistrationContext);
 
@@ -67,8 +68,15 @@ OB_PREOP_CALLBACK_STATUS HzrpObPreCallback(
 	if (process == IoGetCurrentProcess())
 		return OB_PREOP_SUCCESS;
 
-	if (HzrIsProcessProtected(process, &accessBitsToClear))
+	if (HzrIsProcessProtected(process, &processAccessBitsToClear, &threadAccessBitsToClear))
 	{
+		ACCESS_MASK accessBitsToClear;
+
+		if (OperationInformation->ObjectType == *PsProcessType)
+			accessBitsToClear = processAccessBitsToClear;
+		else
+			accessBitsToClear = threadAccessBitsToClear;
+
 		// Remove access flags
 		if (OperationInformation->Operation == OB_OPERATION_HANDLE_CREATE)
 		{
@@ -151,12 +159,14 @@ VOID HzrUnRegisterProtector()
 
 VOID HzrAddProtectedProcess(
 	_In_ PEPROCESS Process,
-	_In_ ACCESS_MASK AccessBitsToClear)
+	_In_ ACCESS_MASK ProcessAccessBitsToClear,
+	_In_ ACCESS_MASK ThreadAccessBitsToClear)
 {
 	PROTECTED_PROCESS protectedProcess;
 
 	protectedProcess.Process = Process;
-	protectedProcess.AccessBitsToClear = AccessBitsToClear;
+	protectedProcess.ProcessAccessBitsToClear = ProcessAccessBitsToClear;
+	protectedProcess.ThreadAccessBitsToClear = ThreadAccessBitsToClear;
 
 	FltAcquirePushLockExclusive(&CallbackInstance.PushLock);
 
@@ -185,7 +195,8 @@ VOID HzrRemoveProtectedProcess(
 
 BOOLEAN HzrIsProcessProtected(
 	_In_ PEPROCESS Process,
-	_Out_ PACCESS_MASK AccessBitsToClear)
+	_Out_ PACCESS_MASK ProcessAccessBitsToClear,
+	_Out_ PACCESS_MASK ThreadAccessBitsToClear)
 {
 	BOOLEAN found;
 	PROTECTED_PROCESS searchKey;
@@ -202,7 +213,10 @@ BOOLEAN HzrIsProcessProtected(
 	found = protectedProcess != NULL;
 
 	if (found)
-		*AccessBitsToClear = protectedProcess->AccessBitsToClear;
+	{
+		*ProcessAccessBitsToClear = protectedProcess->ProcessAccessBitsToClear;
+		*ThreadAccessBitsToClear = protectedProcess->ThreadAccessBitsToClear;
+	}
 
 	FltReleasePushLock(&CallbackInstance.PushLock);
 

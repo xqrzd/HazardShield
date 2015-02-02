@@ -25,7 +25,8 @@
 
 typedef struct _PROTECTED_PROCESS {
 	PEPROCESS Process;
-	ACCESS_MASK AccessBitsToClear;
+	ACCESS_MASK ProcessAccessBitsToClear;
+	ACCESS_MASK ThreadAccessBitsToClear;
 } PROTECTED_PROCESS, *PPROTECTED_PROCESS;
 
 NTSTATUS HzrRegisterProtector(
@@ -36,7 +37,8 @@ VOID HzrUnRegisterProtector(
 
 VOID HzrAddProtectedProcess(
 	_In_ PEPROCESS Process,
-	_In_ ACCESS_MASK AccessBitsToClear
+	_In_ ACCESS_MASK ProcessAccessBitsToClear,
+	_In_ ACCESS_MASK ThreadAccessBitsToClear
 	);
 
 VOID HzrRemoveProtectedProcess(
@@ -45,7 +47,8 @@ VOID HzrRemoveProtectedProcess(
 
 BOOLEAN HzrIsProcessProtected(
 	_In_ PEPROCESS Process,
-	_Out_ PACCESS_MASK AccessBitsToClear
+	_Out_ PACCESS_MASK ProcessAccessBitsToClear,
+	_Out_ PACCESS_MASK ThreadAccessBitsToClear
 	);
 
 #endif

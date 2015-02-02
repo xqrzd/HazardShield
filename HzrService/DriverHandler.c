@@ -47,7 +47,8 @@ typedef struct _SERVICE_REQUEST_BUFFER {
 typedef struct _SERVICE_REQUEST_PROTECT_PROCESS {
 	ULONG Command;
 	ULONG ProcessId;
-	ACCESS_MASK AccessBitsToClear;
+	ACCESS_MASK ProcessAccessBitsToClear;
+	ACCESS_MASK ThreadAccessBitsToClear;
 } SERVICE_REQUEST_PROTECT_PROCESS, *PSERVICE_REQUEST_PROTECT_PROCESS;
 
 typedef struct _SERVICE_RESPONSE {
@@ -244,14 +245,16 @@ VOID DrvStartEventMonitor(
 BOOLEAN DrvProtectProcess(
 	_In_ PDRIVER_INSTANCE DriverInstance,
 	_In_ ULONG ProcessId,
-	_In_ ACCESS_MASK AccessBitsToClear)
+	_In_ ACCESS_MASK ProcessAccessBitsToClear,
+	_In_ ACCESS_MASK ThreadAccessBitsToClear)
 {
 	DWORD bytesReturned;
 	SERVICE_REQUEST_PROTECT_PROCESS serviceRequest;
 
 	serviceRequest.Command = DRV_CMD_PROTECT_PROCESS;
 	serviceRequest.ProcessId = ProcessId;
-	serviceRequest.AccessBitsToClear = AccessBitsToClear;
+	serviceRequest.ProcessAccessBitsToClear = ProcessAccessBitsToClear;
+	serviceRequest.ThreadAccessBitsToClear = ThreadAccessBitsToClear;
 
 	return FilterSendMessage(
 		DriverInstance->CommunicationPort,

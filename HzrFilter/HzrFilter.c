@@ -245,7 +245,7 @@ NTSTATUS HzrFilterPortConnect(
 	FilterData.ClientProcess = IoGetCurrentProcess();
 	FilterData.ClientPort = ClientPort;
 
-	HzrAddProtectedProcess(FilterData.ClientProcess, (ACCESS_MASK)-1);
+	HzrAddProtectedProcess(FilterData.ClientProcess, (ACCESS_MASK)-1, (ACCESS_MASK)-1);
 
 	return STATUS_SUCCESS;
 }
@@ -324,7 +324,7 @@ NTSTATUS HzrFilterClientMessage(
 
 		if (NT_SUCCESS(status))
 		{
-			HzrAddProtectedProcess(process, request->AccessBitsToClear);
+			HzrAddProtectedProcess(process, request->ProcessAccessBitsToClear, request->ThreadAccessBitsToClear);
 
 			ObDereferenceObject(process);
 		}
