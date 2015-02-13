@@ -20,6 +20,8 @@
 
 #include "Handle.h"
 
+#define HANDLE_TABLE_TAG 'tHzH'
+
 FORCEINLINE BOOLEAN HndpFindAvailableHandle(
 	_In_ PHANDLE_SYSTEM HandleSystem,
 	_Out_ PULONG Handle)
@@ -48,10 +50,10 @@ FORCEINLINE NTSTATUS HndpGrowTable(
 	SIZE_T newTableSize;
 
 	// Double table size.
-	oldTableSize = HandleSystem->MaxHandles * sizeof(ULONG);
+	oldTableSize = HandleSystem->MaxHandles * sizeof(PVOID);
 	newTableSize = oldTableSize * 2;
 
-	newTable = ExAllocatePoolWithTag(PagedPool, newTableSize, 'HAND');
+	newTable = ExAllocatePoolWithTag(PagedPool, newTableSize, HANDLE_TABLE_TAG);
 
 	if (newTable)
 	{
@@ -64,7 +66,7 @@ FORCEINLINE NTSTATUS HndpGrowTable(
 		HandleSystem->ObjectTable = newTable;
 		HandleSystem->MaxHandles *= 2;
 
-		ExFreePoolWithTag(oldTable, 'HAND');
+		ExFreePoolWithTag(oldTable, HANDLE_TABLE_TAG);
 
 		status = STATUS_SUCCESS;
 	}
@@ -79,9 +81,9 @@ NTSTATUS HndInitialize(
 	_In_ ULONG InitialHandleCount)
 {
 	NTSTATUS status;
-	SIZE_T tableSize = InitialHandleCount * sizeof(ULONG);
+	SIZE_T tableSize = InitialHandleCount * sizeof(PVOID);
 
-	HandleSystem->ObjectTable = ExAllocatePoolWithTag(PagedPool, tableSize, 'HAND');
+	HandleSystem->ObjectTable = ExAllocatePoolWithTag(PagedPool, tableSize, HANDLE_TABLE_TAG);
 
 	if (HandleSystem->ObjectTable)
 	{
@@ -100,7 +102,7 @@ NTSTATUS HndInitialize(
 VOID HndFree(
 	_In_ PHANDLE_SYSTEM HandleSystem)
 {
-	ExFreePoolWithTag(HandleSystem->ObjectTable, 'HAND');
+	ExFreePoolWithTag(HandleSystem->ObjectTable, HANDLE_TABLE_TAG);
 	FltDeletePushLock(&HandleSystem->ObjectTableLock);
 }
 
