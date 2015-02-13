@@ -21,6 +21,10 @@
 #include "Context.h"
 #include "Utility.h"
 
+#define HZR_CTX_INSTANCE_TAG 'iCzH'
+#define HZR_CTX_STREAM_TAG 'sCzH'
+#define HZR_CTX_STREAMHANDLE_TAG 'hCzH'
+
 VOID HzrFilterInstanceContextCleanup(
 	_In_ PFLT_CONTEXT Context,
 	_In_ FLT_CONTEXT_TYPE ContextType
@@ -37,21 +41,21 @@ const FLT_CONTEXT_REGISTRATION ContextRegistration[] = {
 		0,
 		HzrFilterInstanceContextCleanup,
 		sizeof(FILTER_INSTANCE_CONTEXT),
-		'xtci'
+		HZR_CTX_INSTANCE_TAG
 	},
 	{
 		FLT_STREAM_CONTEXT,
 		0,
 		HzrFilterStreamContextCleanup,
 		sizeof(FILTER_STREAM_CONTEXT),
-		'sctx'
+		HZR_CTX_STREAM_TAG
 	},
 	{
 		FLT_STREAMHANDLE_CONTEXT,
 		0,
 		NULL,
 		sizeof(FILTER_STREAMHANDLE_CONTEXT),
-		'hctx'
+		HZR_CTX_STREAMHANDLE_TAG
 	},
 
 	{ FLT_CONTEXT_END }

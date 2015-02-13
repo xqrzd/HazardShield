@@ -22,6 +22,8 @@
 #include "Context.h"
 #include "Utility.h"
 
+#define AVL_ENTRY_TAG 'vAzH'
+
 NTSTATUS HzrFilterGetFileSize(
 	_In_ PFLT_INSTANCE Instance,
 	_In_ PFILE_OBJECT FileObject,
@@ -115,7 +117,7 @@ PVOID NTAPI AvlAllocate(
 {
 	UNREFERENCED_PARAMETER(Table);
 
-	return ExAllocatePoolWithTag(PagedPool, ByteSize, 'AVLT');
+	return ExAllocatePoolWithTag(PagedPool, ByteSize, AVL_ENTRY_TAG);
 }
 
 VOID NTAPI AvlFree(
@@ -124,7 +126,7 @@ VOID NTAPI AvlFree(
 {
 	UNREFERENCED_PARAMETER(Table);
 
-	ExFreePoolWithTag(Entry, 'AVLT');
+	ExFreePoolWithTag(Entry, AVL_ENTRY_TAG);
 }
 
 RTL_GENERIC_COMPARE_RESULTS AvlCompareNtfsEntry(

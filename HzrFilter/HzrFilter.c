@@ -87,6 +87,8 @@ CONST FLT_REGISTRATION FilterRegistration = {
 	NULL	// NormalizeNameComponent
 };
 
+#define HZR_FILE_TAG 'iFzH'
+
 NTSTATUS HzrFilterInstanceSetup(
 	_In_ PCFLT_RELATED_OBJECTS FltObjects,
 	_In_ FLT_INSTANCE_SETUP_FLAGS Flags,
@@ -688,6 +690,7 @@ NTSTATUS HzrFilterScanStream(
 	return status;
 }
 
+// TODO: On Windows8+, use FltCreateSectionForDataScan instead of FltReadFile
 NTSTATUS HzrFilterScanFile(
 	_In_ PFLT_INSTANCE Instance,
 	_In_ PFILE_OBJECT FileObject,
@@ -709,7 +712,7 @@ NTSTATUS HzrFilterScanFile(
 			{
 				PVOID buffer;
 
-				buffer = ExAllocatePoolWithTag(PagedPool, fileSize.LowPart, 'file');
+				buffer = ExAllocatePoolWithTag(PagedPool, fileSize.LowPart, HZR_FILE_TAG);
 				if (buffer)
 				{
 					LARGE_INTEGER byteOffset;
@@ -739,7 +742,7 @@ NTSTATUS HzrFilterScanFile(
 					else
 						DbgPrint("HzrFilterScanFile: FltReadFile failed %X", status);
 
-					ExFreePoolWithTag(buffer, 'file');
+					ExFreePoolWithTag(buffer, HZR_FILE_TAG);
 				}
 				else
 					status = STATUS_INSUFFICIENT_RESOURCES;

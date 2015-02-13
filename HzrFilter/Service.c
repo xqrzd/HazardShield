@@ -20,6 +20,8 @@
 
 #include "Service.h"
 
+#define SERVICE_BUFFER_TAG 'vSzH'
+
 NTSTATUS SvcpSendMessage(
 	_In_ PHANDLE_SYSTEM HandleSystem,
 	_In_ PFLT_FILTER Filter,
@@ -71,7 +73,7 @@ NTSTATUS SvcScanFile(
 	BUFFER_INFO bufferInfo;
 
 	bufferInfo.BufferSize = sizeof(FILE_SCAN_INFO) + FullFilePath->Name.Length + FileSize + sizeof(WCHAR);
-	bufferInfo.Buffer = ExAllocatePoolWithTag(PagedPool, bufferInfo.BufferSize, 'fibf');
+	bufferInfo.Buffer = ExAllocatePoolWithTag(PagedPool, bufferInfo.BufferSize, SERVICE_BUFFER_TAG);
 
 	if (bufferInfo.Buffer)
 	{
@@ -94,7 +96,7 @@ NTSTATUS SvcScanFile(
 
 		status = SvcpSendMessage(HandleSystem, Filter, ClientPort, &bufferInfo, Response);
 
-		ExFreePoolWithTag(bufferInfo.Buffer, 'fibf');
+		ExFreePoolWithTag(bufferInfo.Buffer, SERVICE_BUFFER_TAG);
 	}
 	else
 		status = STATUS_INSUFFICIENT_RESOURCES;
