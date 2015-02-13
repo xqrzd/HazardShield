@@ -29,6 +29,7 @@
 #include "Utility.h"
 
 #define MAX_FILE_SCAN_SIZE 8388608 // 8 MB
+#define INITIAL_HANDLE_COUNT 16
 
 ULONG PsGetCurrentProcessSessionId(
 	);

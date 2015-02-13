@@ -18,25 +18,27 @@
 *  MA 02110-1301, USA.
 */
 
+/*
+	A simple handle system that maps a handle to a pointer.
+	In this case an array is used, as this module was designed
+	to support a system that rapidly uses and releases handles,
+	so typically only a few handles will be used at once.
+*/
+
 #ifndef HZRFILTER_HANDLE_H
 #define HZRFILTER_HANDLE_H
 
 #include <fltKernel.h>
 
-#define MAX_HANDLE_COUNT 16
-
-typedef struct _HANDLE_ENTRY {
-	PVOID Object;
-} HANDLE_ENTRY, *PHANDLE_ENTRY;
-
-// TODO: Use a tree instead of a static array.
 typedef struct _HANDLE_SYSTEM {
-	EX_PUSH_LOCK PushLock;
-	HANDLE_ENTRY Handles[MAX_HANDLE_COUNT];
+	PVOID* ObjectTable;
+	EX_PUSH_LOCK ObjectTableLock;
+	ULONG MaxHandles;
 } HANDLE_SYSTEM, *PHANDLE_SYSTEM;
 
-VOID HndInitialize(
-	_In_ PHANDLE_SYSTEM HandleSystem
+NTSTATUS HndInitialize(
+	_In_ PHANDLE_SYSTEM HandleSystem,
+	_In_ ULONG InitialHandleCount
 	);
 
 VOID HndFree(

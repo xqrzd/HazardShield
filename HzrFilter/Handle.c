@@ -26,9 +26,9 @@ FORCEINLINE BOOLEAN HndpFindAvailableHandle(
 {
 	ULONG i;
 
-	for (i = 0; i < MAX_HANDLE_COUNT; i++)
+	for (i = 0; i < HandleSystem->MaxHandles; i++)
 	{
-		if (HandleSystem->Handles[i].Object == NULL)
+		if (HandleSystem->ObjectTable[i] == NULL)
 		{
 			*Handle = i;
 			return TRUE;
@@ -38,17 +38,70 @@ FORCEINLINE BOOLEAN HndpFindAvailableHandle(
 	return FALSE;
 }
 
-VOID HndInitialize(
-	_In_ PHANDLE_SYSTEM HandleSystem)
+FORCEINLINE NTSTATUS HndpGrowTable(
+	_Inout_ PHANDLE_SYSTEM HandleSystem)
 {
-	RtlZeroMemory(HandleSystem->Handles, sizeof(HandleSystem->Handles));
-	FltInitializePushLock(&HandleSystem->PushLock);
+	NTSTATUS status;
+	PVOID oldTable = HandleSystem->ObjectTable;
+	PVOID newTable;
+	SIZE_T oldTableSize;
+	SIZE_T newTableSize;
+
+	// Double table size.
+	oldTableSize = HandleSystem->MaxHandles * sizeof(ULONG);
+	newTableSize = oldTableSize * 2;
+
+	newTable = ExAllocatePoolWithTag(PagedPool, newTableSize, 'HAND');
+
+	if (newTable)
+	{
+		// Copy previous table entries.
+		RtlCopyMemory(newTable, oldTable, oldTableSize);
+
+		// Zero out new table entries.
+		RtlZeroMemory(RtlOffsetToPointer(newTable, oldTableSize), oldTableSize);
+
+		HandleSystem->ObjectTable = newTable;
+		HandleSystem->MaxHandles *= 2;
+
+		ExFreePoolWithTag(oldTable, 'HAND');
+
+		status = STATUS_SUCCESS;
+	}
+	else
+		status = STATUS_INSUFFICIENT_RESOURCES;
+
+	return status;
+}
+
+NTSTATUS HndInitialize(
+	_In_ PHANDLE_SYSTEM HandleSystem,
+	_In_ ULONG InitialHandleCount)
+{
+	NTSTATUS status;
+	SIZE_T tableSize = InitialHandleCount * sizeof(ULONG);
+
+	HandleSystem->ObjectTable = ExAllocatePoolWithTag(PagedPool, tableSize, 'HAND');
+
+	if (HandleSystem->ObjectTable)
+	{
+		RtlZeroMemory(HandleSystem->ObjectTable, tableSize);
+		FltInitializePushLock(&HandleSystem->ObjectTableLock);
+		HandleSystem->MaxHandles = InitialHandleCount;
+
+		status = STATUS_SUCCESS;
+	}
+	else
+		status = STATUS_INSUFFICIENT_RESOURCES;
+
+	return status;
 }
 
 VOID HndFree(
 	_In_ PHANDLE_SYSTEM HandleSystem)
 {
-	FltDeletePushLock(&HandleSystem->PushLock);
+	ExFreePoolWithTag(HandleSystem->ObjectTable, 'HAND');
+	FltDeletePushLock(&HandleSystem->ObjectTableLock);
 }
 
 NTSTATUS HndCreateHandle(
@@ -58,18 +111,33 @@ NTSTATUS HndCreateHandle(
 {
 	NTSTATUS status;
 
-	FltAcquirePushLockExclusive(&HandleSystem->PushLock);
+	if (!Object)
+		return STATUS_INVALID_PARAMETER;
 
+	FltAcquirePushLockExclusive(&HandleSystem->ObjectTableLock);
+
+FindHandle:
 	if (HndpFindAvailableHandle(HandleSystem, Handle))
 	{
-		HandleSystem->Handles[*Handle].Object = Object;
+		HandleSystem->ObjectTable[*Handle] = Object;
 
 		status = STATUS_SUCCESS;
 	}
 	else
-		status = STATUS_INSUFFICIENT_RESOURCES;
+	{
+		DbgPrint("Need to grow handle table [Current size: %u]", HandleSystem->MaxHandles);
 
-	FltReleasePushLock(&HandleSystem->PushLock);
+		status = HndpGrowTable(HandleSystem);
+
+		if (NT_SUCCESS(status))
+		{
+			// Push locks cannot be acquired recursively, so use
+			// goto instead of calling HndCreateHandle again.
+			goto FindHandle;
+		}
+	}
+
+	FltReleasePushLock(&HandleSystem->ObjectTableLock);
 
 	return status;
 }
@@ -81,13 +149,13 @@ NTSTATUS HndLookupObject(
 {
 	NTSTATUS status;
 
-	if (Handle < MAX_HANDLE_COUNT)
+	if (Handle < HandleSystem->MaxHandles)
 	{
 		PVOID object;
 
-		FltAcquirePushLockShared(&HandleSystem->PushLock);
+		FltAcquirePushLockShared(&HandleSystem->ObjectTableLock);
 
-		object = HandleSystem->Handles[Handle].Object;
+		object = HandleSystem->ObjectTable[Handle];
 
 		if (object)
 		{
@@ -97,7 +165,7 @@ NTSTATUS HndLookupObject(
 		else
 			status = STATUS_NOT_FOUND;
 
-		FltReleasePushLock(&HandleSystem->PushLock);
+		FltReleasePushLock(&HandleSystem->ObjectTableLock);
 	}
 	else
 		status = STATUS_INVALID_PARAMETER;
@@ -109,12 +177,12 @@ VOID HndReleaseHandle(
 	_In_ PHANDLE_SYSTEM HandleSystem,
 	_In_ ULONG Handle)
 {
-	if (Handle < MAX_HANDLE_COUNT)
+	if (Handle < HandleSystem->MaxHandles)
 	{
-		FltAcquirePushLockExclusive(&HandleSystem->PushLock);
+		FltAcquirePushLockExclusive(&HandleSystem->ObjectTableLock);
 
-		HandleSystem->Handles[Handle].Object = NULL;
+		HandleSystem->ObjectTable[Handle] = NULL;
 
-		FltReleasePushLock(&HandleSystem->PushLock);
+		FltReleasePushLock(&HandleSystem->ObjectTableLock);
 	}
 }

@@ -198,7 +198,9 @@ NTSTATUS DriverEntry(
 					status = HzrRegisterProtector();
 
 					if (NT_SUCCESS(status))
-						HndInitialize(&FilterData.HandleSystem);
+					{
+						status = HndInitialize(&FilterData.HandleSystem, INITIAL_HANDLE_COUNT);
+					}
 				}
 			}
 
