@@ -30,6 +30,7 @@ struct {
 	PEPROCESS ClientProcess;
 
 	HANDLE_SYSTEM HandleSystem;
+	OB_CALLBACK_INSTANCE ObCallbackInstance;
 } FilterData;
 
 CONST FLT_OPERATION_REGISTRATION Callbacks[] = {
@@ -197,11 +198,14 @@ NTSTATUS DriverEntry(
 
 				if (NT_SUCCESS(status))
 				{
-					status = HzrRegisterProtector();
+					status = HzrRegisterProtector(&FilterData.ObCallbackInstance);
 
 					if (NT_SUCCESS(status))
 					{
 						status = HndInitialize(&FilterData.HandleSystem, INITIAL_HANDLE_COUNT);
+
+						if (NT_SUCCESS(status))
+							status = PsSetCreateProcessNotifyRoutineEx(HzrCreateProcessNotifyEx, FALSE);
 					}
 				}
 			}
@@ -224,7 +228,8 @@ NTSTATUS HzrFilterUnload(
 
 	FltCloseCommunicationPort(FilterData.ServerPort);
 	FltUnregisterFilter(FilterData.Filter);
-	HzrUnRegisterProtector();
+	PsSetCreateProcessNotifyRoutineEx(HzrCreateProcessNotifyEx, TRUE);
+	HzrUnRegisterProtector(&FilterData.ObCallbackInstance);
 	HndFree(&FilterData.HandleSystem);
 
 	return STATUS_SUCCESS;
@@ -249,7 +254,7 @@ NTSTATUS HzrFilterPortConnect(
 	FilterData.ClientProcess = IoGetCurrentProcess();
 	FilterData.ClientPort = ClientPort;
 
-	HzrAddProtectedProcess(FilterData.ClientProcess, (ACCESS_MASK)-1, (ACCESS_MASK)-1);
+	HzrAddProtectedProcess(&FilterData.ObCallbackInstance, FilterData.ClientProcess, (ACCESS_MASK)-1, (ACCESS_MASK)-1);
 
 	return STATUS_SUCCESS;
 }
@@ -328,7 +333,11 @@ NTSTATUS HzrFilterClientMessage(
 
 		if (NT_SUCCESS(status))
 		{
-			HzrAddProtectedProcess(process, request->ProcessAccessBitsToClear, request->ThreadAccessBitsToClear);
+			HzrAddProtectedProcess(
+				&FilterData.ObCallbackInstance,
+				process,
+				request->ProcessAccessBitsToClear,
+				request->ThreadAccessBitsToClear);
 
 			ObDereferenceObject(process);
 		}
@@ -893,4 +902,23 @@ NTSTATUS HzrFilterSyncCache(
 		DbgPrint("HzrFilterSyncCache::FltGetInstanceContext failed %X", status);
 
 	return status;
+}
+
+VOID HzrCreateProcessNotifyEx(
+	_Inout_ PEPROCESS Process,
+	_In_ HANDLE ProcessId,
+	_Inout_opt_ PPS_CREATE_NOTIFY_INFO CreateInfo)
+{
+	UNREFERENCED_PARAMETER(ProcessId);
+
+	if (CreateInfo)
+	{
+		/*if (CreateInfo->FileOpenNameAvailable)
+			DbgPrint("Process: %wZ", CreateInfo->ImageFileName);*/
+	}
+	else
+	{
+		// Process is exiting, remove it from the protected processes.
+		HzrRemoveProtectedProcess(&FilterData.ObCallbackInstance, Process);
+	}
 }

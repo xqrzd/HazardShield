@@ -21,12 +21,6 @@
 #include "Protect.h"
 #include "Utility.h"
 
-struct {
-	RTL_AVL_TABLE ProtectedProcesses;
-	PVOID RegistrationHandle;
-	EX_PUSH_LOCK PushLock;
-} CallbackInstance;
-
 RTL_GENERIC_COMPARE_RESULTS AvlpCompareProcess(
 	_In_ PRTL_AVL_TABLE Table,
 	_In_ PPROTECTED_PROCESS Lhs,
@@ -46,11 +40,12 @@ OB_PREOP_CALLBACK_STATUS HzrpObPreCallback(
 	_In_ PVOID RegistrationContext,
 	_Inout_ POB_PRE_OPERATION_INFORMATION OperationInformation)
 {
+	POB_CALLBACK_INSTANCE callbackInstance;
 	PEPROCESS process;
 	ACCESS_MASK processAccessBitsToClear;
 	ACCESS_MASK threadAccessBitsToClear;
 
-	UNREFERENCED_PARAMETER(RegistrationContext);
+	callbackInstance = RegistrationContext;
 
 	// ObRegisterCallbacks doesn't allow changing access of kernel handles
 	if (OperationInformation->KernelHandle)
@@ -68,7 +63,7 @@ OB_PREOP_CALLBACK_STATUS HzrpObPreCallback(
 	if (process == IoGetCurrentProcess())
 		return OB_PREOP_SUCCESS;
 
-	if (HzrIsProcessProtected(process, &processAccessBitsToClear, &threadAccessBitsToClear))
+	if (HzrIsProcessProtected(callbackInstance, process, &processAccessBitsToClear, &threadAccessBitsToClear))
 	{
 		ACCESS_MASK accessBitsToClear;
 
@@ -91,21 +86,8 @@ OB_PREOP_CALLBACK_STATUS HzrpObPreCallback(
 	return OB_PREOP_SUCCESS;
 }
 
-VOID HzrpCreateProcessNotifyEx(
-	_Inout_ PEPROCESS Process,
-	_In_ HANDLE ProcessId,
-	_Inout_opt_ PPS_CREATE_NOTIFY_INFO CreateInfo)
-{
-	UNREFERENCED_PARAMETER(ProcessId);
-
-	if (!CreateInfo)
-	{
-		// Process is exiting, remove it from the protected processes.
-		HzrRemoveProtectedProcess(Process);
-	}
-}
-
-NTSTATUS HzrRegisterProtector()
+NTSTATUS HzrRegisterProtector(
+	_Out_ POB_CALLBACK_INSTANCE CallbackInstance)
 {
 	NTSTATUS status;
 	OB_CALLBACK_REGISTRATION callbackRegistration;
@@ -122,42 +104,38 @@ NTSTATUS HzrRegisterProtector()
 	operationRegistration[1].PostOperation = NULL;
 
 	callbackRegistration.Version = OB_FLT_REGISTRATION_VERSION;
-	callbackRegistration.RegistrationContext = NULL;
+	callbackRegistration.RegistrationContext = CallbackInstance;
 	callbackRegistration.OperationRegistrationCount = ARRAYSIZE(operationRegistration);
 	callbackRegistration.OperationRegistration = operationRegistration;
 
 	RtlInitUnicodeString(&callbackRegistration.Altitude, L"40100.7");
 
-	FltInitializePushLock(&CallbackInstance.PushLock);
-	RtlInitializeGenericTableAvl(&CallbackInstance.ProtectedProcesses, AvlpCompareProcess, AvlAllocate, AvlFree, NULL);
+	FltInitializePushLock(&CallbackInstance->ProtectedProcessLock);
+	RtlInitializeGenericTableAvl(&CallbackInstance->ProtectedProcesses, AvlpCompareProcess, AvlAllocate, AvlFree, NULL);
 
-	status = ObRegisterCallbacks(&callbackRegistration, &CallbackInstance.RegistrationHandle);
-
-	if (NT_SUCCESS(status))
-	{
-		status = PsSetCreateProcessNotifyRoutineEx(HzrpCreateProcessNotifyEx, FALSE);
-	}
+	status = ObRegisterCallbacks(&callbackRegistration, &CallbackInstance->RegistrationHandle);
 
 	if (!NT_SUCCESS(status))
-		FltDeletePushLock(&CallbackInstance.PushLock);
+		FltDeletePushLock(&CallbackInstance->ProtectedProcessLock);
 
 	return status;
 }
 
-VOID HzrUnRegisterProtector()
+VOID HzrUnRegisterProtector(
+	_In_ POB_CALLBACK_INSTANCE CallbackInstance)
 {
-	ObUnRegisterCallbacks(CallbackInstance.RegistrationHandle);
-	PsSetCreateProcessNotifyRoutineEx(HzrpCreateProcessNotifyEx, TRUE);
+	ObUnRegisterCallbacks(CallbackInstance->RegistrationHandle);
 
-	FltAcquirePushLockExclusive(&CallbackInstance.PushLock);
+	FltAcquirePushLockExclusive(&CallbackInstance->ProtectedProcessLock);
 
-	AvlDeleteAllElements(&CallbackInstance.ProtectedProcesses);
+	AvlDeleteAllElements(&CallbackInstance->ProtectedProcesses);
 
-	FltReleasePushLock(&CallbackInstance.PushLock);
-	FltDeletePushLock(&CallbackInstance.PushLock);
+	FltReleasePushLock(&CallbackInstance->ProtectedProcessLock);
+	FltDeletePushLock(&CallbackInstance->ProtectedProcessLock);
 }
 
 VOID HzrAddProtectedProcess(
+	_In_ POB_CALLBACK_INSTANCE CallbackInstance,
 	_In_ PEPROCESS Process,
 	_In_ ACCESS_MASK ProcessAccessBitsToClear,
 	_In_ ACCESS_MASK ThreadAccessBitsToClear)
@@ -168,32 +146,34 @@ VOID HzrAddProtectedProcess(
 	protectedProcess.ProcessAccessBitsToClear = ProcessAccessBitsToClear;
 	protectedProcess.ThreadAccessBitsToClear = ThreadAccessBitsToClear;
 
-	FltAcquirePushLockExclusive(&CallbackInstance.PushLock);
+	FltAcquirePushLockExclusive(&CallbackInstance->ProtectedProcessLock);
 
 	RtlInsertElementGenericTableAvl(
-		&CallbackInstance.ProtectedProcesses,
+		&CallbackInstance->ProtectedProcesses,
 		&protectedProcess,
 		sizeof(PROTECTED_PROCESS),
 		NULL);
 
-	FltReleasePushLock(&CallbackInstance.PushLock);
+	FltReleasePushLock(&CallbackInstance->ProtectedProcessLock);
 }
 
 VOID HzrRemoveProtectedProcess(
+	_In_ POB_CALLBACK_INSTANCE CallbackInstance,
 	_In_ PEPROCESS Process)
 {
 	PROTECTED_PROCESS protectedProcess;
 
 	protectedProcess.Process = Process;
 
-	FltAcquirePushLockExclusive(&CallbackInstance.PushLock);
+	FltAcquirePushLockExclusive(&CallbackInstance->ProtectedProcessLock);
 
-	RtlDeleteElementGenericTableAvl(&CallbackInstance.ProtectedProcesses, &protectedProcess);
+	RtlDeleteElementGenericTableAvl(&CallbackInstance->ProtectedProcesses, &protectedProcess);
 
-	FltReleasePushLock(&CallbackInstance.PushLock);
+	FltReleasePushLock(&CallbackInstance->ProtectedProcessLock);
 }
 
 BOOLEAN HzrIsProcessProtected(
+	_In_ POB_CALLBACK_INSTANCE CallbackInstance,
 	_In_ PEPROCESS Process,
 	_Out_ PACCESS_MASK ProcessAccessBitsToClear,
 	_Out_ PACCESS_MASK ThreadAccessBitsToClear)
@@ -204,10 +184,10 @@ BOOLEAN HzrIsProcessProtected(
 
 	searchKey.Process = Process;
 
-	FltAcquirePushLockShared(&CallbackInstance.PushLock);
+	FltAcquirePushLockShared(&CallbackInstance->ProtectedProcessLock);
 
 	protectedProcess = RtlLookupElementGenericTableAvl(
-		&CallbackInstance.ProtectedProcesses,
+		&CallbackInstance->ProtectedProcesses,
 		&searchKey);
 
 	found = protectedProcess != NULL;
@@ -218,7 +198,7 @@ BOOLEAN HzrIsProcessProtected(
 		*ThreadAccessBitsToClear = protectedProcess->ThreadAccessBitsToClear;
 	}
 
-	FltReleasePushLock(&CallbackInstance.PushLock);
+	FltReleasePushLock(&CallbackInstance->ProtectedProcessLock);
 
 	return found;
 }
