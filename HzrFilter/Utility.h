@@ -50,6 +50,11 @@ BOOLEAN HzrFilterIsPrefetchContextPresent(
 	_In_ PFILE_OBJECT FileObject
 	);
 
+PVOID HzrFilterGetBuffer(
+	_In_ PVOID Buffer,
+	_In_ PMDL MdlAddress
+	);
+
 PVOID NTAPI AvlAllocate(
 	_In_ PRTL_AVL_TABLE Table,
 	_In_ CLONG ByteSize
@@ -68,6 +73,11 @@ RTL_GENERIC_COMPARE_RESULTS AvlCompareNtfsEntry(
 
 VOID AvlDeleteAllElements(
 	_In_ PRTL_AVL_TABLE Table
+	);
+
+BOOLEAN HzrGetFileNameFromPath(
+	_In_ PCUNICODE_STRING FilePath,
+	_Out_ PUNICODE_STRING FileName
 	);
 
 #endif

@@ -111,6 +111,16 @@ BOOLEAN HzrFilterIsPrefetchContextPresent(
 	return prefetchOpen;
 }
 
+PVOID HzrFilterGetBuffer(
+	_In_ PVOID Buffer,
+	_In_ PMDL MdlAddress)
+{
+	if (MdlAddress)
+		return MmGetSystemAddressForMdlSafe(MdlAddress, NormalPagePriority);
+	else
+		return Buffer;
+}
+
 PVOID NTAPI AvlAllocate(
 	_In_ PRTL_AVL_TABLE Table,
 	_In_ CLONG ByteSize)
@@ -157,4 +167,27 @@ VOID AvlDeleteAllElements(
 		entry = RtlGetElementGenericTableAvl(Table, 0);
 		RtlDeleteElementGenericTableAvl(Table, entry);
 	}
+}
+
+BOOLEAN HzrGetFileNameFromPath(
+	_In_ PCUNICODE_STRING FilePath,
+	_Out_ PUNICODE_STRING FileName)
+{
+	USHORT i;
+
+	for (i = FilePath->Length / sizeof(WCHAR) - 1; i > 0; i--)
+	{
+		if (FilePath->Buffer[i] == L'\\')
+		{
+			i++; // Skip over the forward slash.
+
+			FileName->Buffer = &FilePath->Buffer[i];
+			FileName->Length = FilePath->Length - (i * sizeof(WCHAR));
+			FileName->MaximumLength = FileName->Length;
+
+			return TRUE;
+		}
+	}
+
+	return FALSE;
 }

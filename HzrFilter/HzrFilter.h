@@ -23,6 +23,7 @@
 
 #include <fltKernel.h>
 #include "Context.h"
+#include "Exploit.h"
 #include "Handle.h"
 #include "Protect.h"
 #include "Service.h"
@@ -127,9 +128,10 @@ NTSTATUS HzrFilterDeleteFile(
 	_In_ PFILE_OBJECT FileObject
 	);
 
-NTSTATUS HzrFilterMarkStreamModified(
+NTSTATUS HzrFilterSetStreamFlags(
 	_In_ PFLT_INSTANCE Instance,
-	_In_ PFILE_OBJECT FileObject
+	_In_ PFILE_OBJECT FileObject,
+	_In_ ULONG FlagsToSet
 	);
 
 NTSTATUS HzrFilterGetFileCacheStatus(

@@ -42,6 +42,9 @@
     <ClCompile Include="Protect.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Exploit.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="HzrFilter.rc">
@@ -68,6 +71,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Protect.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Exploit.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

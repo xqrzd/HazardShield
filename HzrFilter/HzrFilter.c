@@ -31,6 +31,7 @@ struct {
 
 	HANDLE_SYSTEM HandleSystem;
 	OB_CALLBACK_INSTANCE ObCallbackInstance;
+	EXPL_INSTANCE ExploitInstance;
 } FilterData;
 
 CONST FLT_OPERATION_REGISTRATION Callbacks[] = {
@@ -160,6 +161,8 @@ NTSTATUS DriverEntry(
 
 	UNREFERENCED_PARAMETER(RegistryPath);
 
+	HzrExplInit(&FilterData.ExploitInstance);
+
 	status = FltRegisterFilter(DriverObject, &FilterRegistration, &FilterData.Filter);
 
 	if (NT_SUCCESS(status))
@@ -230,6 +233,7 @@ NTSTATUS HzrFilterUnload(
 	FltUnregisterFilter(FilterData.Filter);
 	PsSetCreateProcessNotifyRoutineEx(HzrCreateProcessNotifyEx, TRUE);
 	HzrUnRegisterProtector(&FilterData.ObCallbackInstance);
+	HzrExplFree(&FilterData.ExploitInstance);
 	HndFree(&FilterData.HandleSystem);
 
 	return STATUS_SUCCESS;
@@ -494,6 +498,7 @@ FLT_POSTOP_CALLBACK_STATUS HzrFilterPostCreate(
 		if (infected)
 		{
 			FltCancelFileOpen(FltObjects->Instance, FltObjects->FileObject);
+
 			Data->IoStatus.Status = STATUS_ACCESS_DENIED;
 			Data->IoStatus.Information = 0;
 		}
@@ -507,10 +512,17 @@ FLT_PREOP_CALLBACK_STATUS HzrFilterPreWrite(
 	_In_ PCFLT_RELATED_OBJECTS FltObjects,
 	_Flt_CompletionContext_Outptr_ PVOID *CompletionContext)
 {
-	UNREFERENCED_PARAMETER(Data);
 	UNREFERENCED_PARAMETER(CompletionContext);
 
-	HzrFilterMarkStreamModified(FltObjects->Instance, FltObjects->FileObject);
+	HzrFilterSetStreamFlags(FltObjects->Instance, FltObjects->FileObject, STREAM_FLAG_MODIFIED);
+
+	if (HzrExplPreWrite(&FilterData.ExploitInstance, Data, FltObjects))
+	{
+		DbgPrint("Preventing write %wZ", &FltObjects->FileObject->FileName);
+		HzrFilterSetStreamFlags(FltObjects->Instance, FltObjects->FileObject, STREAM_FLAG_INFECTED | STREAM_FLAG_DELETE);
+
+		ZwTerminateProcess(ZwCurrentProcess(), STATUS_VIRUS_INFECTED);
+	}
 
 	return FLT_PREOP_SUCCESS_NO_CALLBACK;
 }
@@ -527,7 +539,7 @@ FLT_PREOP_CALLBACK_STATUS HzrFilterPreSetInformation(
 	if (fileInformationClass == FileEndOfFileInformation ||
 		fileInformationClass == FileValidDataLengthInformation)
 	{
-		HzrFilterMarkStreamModified(FltObjects->Instance, FltObjects->FileObject);
+		HzrFilterSetStreamFlags(FltObjects->Instance, FltObjects->FileObject, STREAM_FLAG_MODIFIED);
 	}
 
 	return FLT_PREOP_SUCCESS_NO_CALLBACK;
@@ -659,6 +671,7 @@ NTSTATUS HzrFilterScanStream(
 	{
 		FltAcquirePushLockExclusive(&streamContext->ScanLock);
 
+		// TODO: Check if the stream is already infected here.
 		if (FlagOn(streamContext->Flags, STREAM_FLAG_MODIFIED) ||
 			FlagOn(streamContext->Flags, STREAM_FLAG_NOT_SCANNED))
 		{
@@ -788,9 +801,10 @@ NTSTATUS HzrFilterDeleteFile(
 		FileDispositionInformation);
 }
 
-NTSTATUS HzrFilterMarkStreamModified(
+NTSTATUS HzrFilterSetStreamFlags(
 	_In_ PFLT_INSTANCE Instance,
-	_In_ PFILE_OBJECT FileObject)
+	_In_ PFILE_OBJECT FileObject,
+	_In_ ULONG FlagsToSet)
 {
 	NTSTATUS status;
 	PFILTER_STREAM_CONTEXT streamContext;
@@ -798,7 +812,7 @@ NTSTATUS HzrFilterMarkStreamModified(
 	status = FltGetStreamContext(Instance, FileObject, &streamContext);
 	if (NT_SUCCESS(status))
 	{
-		RtlInterlockedSetBits(&streamContext->Flags, STREAM_FLAG_MODIFIED);
+		RtlInterlockedSetBits(&streamContext->Flags, FlagsToSet);
 
 		FltReleaseContext(streamContext);
 	}
@@ -911,12 +925,9 @@ VOID HzrCreateProcessNotifyEx(
 {
 	UNREFERENCED_PARAMETER(ProcessId);
 
-	if (CreateInfo)
-	{
-		/*if (CreateInfo->FileOpenNameAvailable)
-			DbgPrint("Process: %wZ", CreateInfo->ImageFileName);*/
-	}
-	else
+	HzrExplCreateProcessNotifyEx(&FilterData.ExploitInstance, Process, CreateInfo);
+
+	if (!CreateInfo)
 	{
 		// Process is exiting, remove it from the protected processes.
 		HzrRemoveProtectedProcess(&FilterData.ObCallbackInstance, Process);

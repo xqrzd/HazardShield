@@ -51,6 +51,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Exploit.c" />
     <ClCompile Include="Protect.c" />
     <ClCompile Include="Service.c" />
     <ClCompile Include="Utility.c" />
@@ -276,6 +277,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Context.h" />
+    <ClInclude Include="Exploit.h" />
     <ClInclude Include="Handle.h" />
     <ClInclude Include="HzrFilter.h" />
     <ClInclude Include="Protect.h" />
