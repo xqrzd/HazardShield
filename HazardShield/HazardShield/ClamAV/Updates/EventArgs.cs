@@ -24,12 +24,12 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace HazardShield.Updates.ClamAV
+namespace HazardShield.ClamAV.Updates
 {
     /// <summary>
     /// Provides data for the DownloadCompleted event.
     /// </summary>
-    public class ClamAVDownloadCompletedArgs : EventArgs
+    public class FreshclamDownloadCompletedArgs : EventArgs
     {
         /// <summary>
         /// The name of the database
@@ -47,12 +47,12 @@ namespace HazardShield.Updates.ClamAV
         public bool Updated { get; private set; }
 
         /// <summary>
-        /// Initializes a new instance of ClamAVDownloadCompletedArgs.
+        /// Initializes a new instance of FreshclamDownloadCompletedArgs.
         /// </summary>
         /// <param name="database">The database name.</param>
         /// <param name="version">The database version.</param>
         /// <param name="updated">Whether the database was updated.</param>
-        public ClamAVDownloadCompletedArgs(string database, uint version, bool updated)
+        public FreshclamDownloadCompletedArgs(string database, uint version, bool updated)
         {
             Database = database;
             Version = version;
@@ -63,7 +63,7 @@ namespace HazardShield.Updates.ClamAV
     /// <summary>
     /// Provides data for the ProgressChanged event.
     /// </summary>
-    public class ClamAVProgressChangedArgs : EventArgs
+    public class FreshclamProgressChangedArgs : EventArgs
     {
         /// <summary>
         /// The current progress.
@@ -71,10 +71,10 @@ namespace HazardShield.Updates.ClamAV
         public string Progress { get; private set; }
 
         /// <summary>
-        /// Initializes a new instance of ClamAVProgressChangedArgs.
+        /// Initializes a new instance of FreshclamProgressChangedArgs.
         /// </summary>
         /// <param name="progress">The current progress.</param>
-        public ClamAVProgressChangedArgs(string progress)
+        public FreshclamProgressChangedArgs(string progress)
         {
             Progress = progress;
         }
@@ -83,7 +83,7 @@ namespace HazardShield.Updates.ClamAV
     /// <summary>
     /// Provides data for the UpdateFinished event.
     /// </summary>
-    public class ClamAVUpdateFinishedEventArgs : EventArgs
+    public class FreshclamUpdateFinishedEventArgs : EventArgs
     {
         /// <summary>
         /// True if any of the specified databases were updated.
@@ -91,12 +91,13 @@ namespace HazardShield.Updates.ClamAV
         public bool ReloadRequired { get; private set; }
 
         /// <summary>
-        /// Initializes a new instance of ClamAVUpdateFinishedEventArgs.
+        /// Initializes a new instance of FreshclamUpdateFinishedEventArgs.
         /// </summary>
         /// <param name="reloadRequired">True if any of the databases were updated.</param>
-        public ClamAVUpdateFinishedEventArgs(bool reloadRequired)
+        public FreshclamUpdateFinishedEventArgs(bool reloadRequired)
         {
             ReloadRequired = reloadRequired;
         }
     }
+
 }

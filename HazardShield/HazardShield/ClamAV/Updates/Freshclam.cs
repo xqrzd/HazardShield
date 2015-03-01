@@ -18,17 +18,17 @@
 *  MA 02110-1301, USA.
 */
 
-using HazardShield.Scanning.ClamAV;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
-namespace HazardShield.Updates.ClamAV
+namespace HazardShield.ClamAV.Updates
 {
     /// <summary>
     /// Represents a ClamAV database.
@@ -58,24 +58,24 @@ namespace HazardShield.Updates.ClamAV
     }
 
     /// <summary>
-    /// A wrapper for freshclam.
+    /// A wrapper for freshclam.exe.
     /// </summary>
-    public class ClamUpdater
+    public class Freshclam
     {
         /// <summary>
         /// Occurs when freshclam outputs a message.
         /// </summary>
-        public event EventHandler<ClamAVProgressChangedArgs> ProgressChanged;
+        public event EventHandler<FreshclamProgressChangedArgs> ProgressChanged;
 
         /// <summary>
         /// Occurs when a database has finished updating.
         /// </summary>
-        public event EventHandler<ClamAVDownloadCompletedArgs> DownloadCompleted;
+        public event EventHandler<FreshclamDownloadCompletedArgs> DownloadCompleted;
 
         /// <summary>
         /// Occurs when freshclam is finished.
         /// </summary>
-        public event EventHandler<ClamAVUpdateFinishedEventArgs> UpdateFinished;
+        public event EventHandler<FreshclamUpdateFinishedEventArgs> UpdateFinished;
 
         /// <summary>
         /// A collection of all ClamAV databases in the specified directory.
@@ -86,10 +86,10 @@ namespace HazardShield.Updates.ClamAV
         bool ReloadRequired;
 
         /// <summary>
-        /// Initializes a new instance of ClamUpdater.
+        /// Initializes a new instance of Freshclam.
         /// </summary>
         /// <param name="databaseDirectory">The database directory. All databases in this directory will be updated.</param>
-        public ClamUpdater(string databaseDirectory)
+        public Freshclam(string databaseDirectory)
         {
             DatabaseDirectory = databaseDirectory;
             ReloadRequired = false;
@@ -117,6 +117,7 @@ namespace HazardShield.Updates.ClamAV
             process.StartInfo.CreateNoWindow = true;
             process.StartInfo.RedirectStandardOutput = true;
             process.OutputDataReceived += Freshclam_OutputDataReceived;
+
             process.Start();
             process.BeginOutputReadLine();
             process.WaitForExit();
@@ -127,13 +128,13 @@ namespace HazardShield.Updates.ClamAV
         /// <summary>
         /// Retrieves a list of all ClamAV databases in the specified directory.
         /// </summary>
-        /// <returns>A list of ClamAV databases</returns>
+        /// <returns>A list of ClamAV databases.</returns>
         IEnumerable<ClamDatabase> EnumerateDatabases()
         {
             DirectoryInfo directoryInfo = new DirectoryInfo(DatabaseDirectory);
             foreach (FileInfo fileInfo in directoryInfo.EnumerateFiles().Where(fInfo => fInfo.Extension == ".cld" || fInfo.Extension == ".cvd"))
             {
-                ClamDatabaseHeader header = HazardShield.Scanning.ClamAV.ClamAV.GetDatabaseHeader(fileInfo.FullName);
+                ClamDatabaseHeader header = GetDatabaseHeader(fileInfo.FullName);
                 if (header.Version != 0)
                     yield return new ClamDatabase(Path.GetFileNameWithoutExtension(fileInfo.Name), header);
             }
@@ -149,24 +150,27 @@ namespace HazardShield.Updates.ClamAV
             if (string.IsNullOrEmpty(e.Data) || e.Data.Length < 5)
                 return;
 
+            System.IO.File.AppendAllText("C:\\Users\\Andy\\Desktop\\log.txt", e.Data + "\r\n");
+
             Match match = Regex.Match(e.Data, @"(?<database>.*)\.(?<action>.*) \(version: (?<version>\d*)");
+
             if (match.Success)
             {
                 string database = match.Groups["database"].Value;
                 uint version = Convert.ToUInt32(match.Groups["version"].Value);
                 bool updated = match.Groups["action"].Value.Contains("updated");
 
-                InvokeDownloadCompleted(new ClamAVDownloadCompletedArgs(database, version, updated));
+                InvokeDownloadCompleted(new FreshclamDownloadCompletedArgs(database, version, updated));
             }
             else
-                InvokeProgressChanged(new ClamAVProgressChangedArgs(e.Data));
+                InvokeProgressChanged(new FreshclamProgressChangedArgs(e.Data));
         }
 
         /// <summary>
         /// Calls the ProgressChanged event.
         /// </summary>
         /// <param name="eventArgs">Progress changed args.</param>
-        void InvokeProgressChanged(ClamAVProgressChangedArgs eventArgs)
+        void InvokeProgressChanged(FreshclamProgressChangedArgs eventArgs)
         {
             if (ProgressChanged != null)
                 ProgressChanged(this, eventArgs);
@@ -176,7 +180,7 @@ namespace HazardShield.Updates.ClamAV
         /// Calls the DownloadCompleted event.
         /// </summary>
         /// <param name="eventArgs">Download completed args.</param>
-        void InvokeDownloadCompleted(ClamAVDownloadCompletedArgs eventArgs)
+        void InvokeDownloadCompleted(FreshclamDownloadCompletedArgs eventArgs)
         {
             // If any database is updated, a reload is needed
             if (eventArgs.Updated)
@@ -191,10 +195,37 @@ namespace HazardShield.Updates.ClamAV
         /// </summary>
         void InvokeUpdateFinished()
         {
-            ClamAVUpdateFinishedEventArgs eventArgs = new ClamAVUpdateFinishedEventArgs(ReloadRequired);
+            FreshclamUpdateFinishedEventArgs eventArgs = new FreshclamUpdateFinishedEventArgs(ReloadRequired);
 
             if (UpdateFinished != null)
                 UpdateFinished(this, eventArgs);
+        }
+
+        [DllImport("libclamav.dll", CallingConvention = CallingConvention.Cdecl)]
+        static extern IntPtr cl_cvdhead(string file);
+
+        [DllImport("libclamav.dll", CallingConvention = CallingConvention.Cdecl)]
+        static extern void cl_cvdfree(IntPtr cvd);
+
+        /// <summary>
+        /// Retrieves metadata about a ClamAV database file from its header.
+        /// </summary>
+        /// <param name="filePath">The full path to the database file.</param>
+        /// <returns>The database header.</returns>
+        ClamDatabaseHeader GetDatabaseHeader(string filePath)
+        {
+            ClamDatabaseHeader database;
+            IntPtr cvd = cl_cvdhead(filePath);
+
+            if (cvd != IntPtr.Zero)
+            {
+                database = (ClamDatabaseHeader)Marshal.PtrToStructure(cvd, typeof(ClamDatabaseHeader));
+                cl_cvdfree(cvd);
+            }
+            else
+                database = default(ClamDatabaseHeader);
+
+            return database;
         }
 
     }

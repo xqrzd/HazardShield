@@ -24,7 +24,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace HazardShield.Scanning.ClamAV
+namespace HazardShield.ClamAV
 {
     public enum cl_error_t
     {

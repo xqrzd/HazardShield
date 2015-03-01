@@ -54,6 +54,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Forms\DatabaseUpdateLabel.cs" />
     <Compile Include="Forms\FrmMain.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -124,6 +125,12 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="Resources\logo_48.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\image_check.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\image_info.png" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

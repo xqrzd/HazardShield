@@ -39,12 +39,12 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ClamAV\Structures.cs" />
+    <Compile Include="ClamAV\Updates\EventArgs.cs" />
+    <Compile Include="ClamAV\Updates\Freshclam.cs" />
     <Compile Include="Logger.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Scanning\ClamAV\ClamAV.cs" />
-    <Compile Include="Scanning\ClamAV\Structures.cs" />
-    <Compile Include="Updates\ClamAV\ClamUpdater.cs" />
-    <Compile Include="Updates\ClamAV\EventArgs.cs" />
+    <Compile Include="Scanning\Scanner.cs" />
     <Compile Include="Win32\WinApi.cs" />
   </ItemGroup>
   <ItemGroup />
