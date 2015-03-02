@@ -43,26 +43,28 @@ namespace HazardShieldUI.Forms
 
         public FrmMain()
         {
+            UiProtector = new GuiProtector();
+            UiProtector.StartProtection();
+
             InitializeComponent();
 
             ApplyStyle(PaletteModeManager.Office2010Blue);
 
             Icon = Properties.Resources.icon;
+            RadScannerSmart.Checked = true;
             TabBtnMainScanner.Checked = true;
             TabControlMain.HideTabs = true;
             TabControlScanner.HideTabs = true;
+
+            Utils.MakeKryptonTextBold(BtnScannerScan);
+            Utils.MakeKryptonTextBold(BtnUpdateCheck);
+            Utils.MakeKryptonTextBold(BtnUpdateDownload);
 
             CurrentLanguage = new Language();
             CurrentLanguage.LoadLanguage(RuntimeInfo.HzrLanguagePath + "\\English.txt");
             SetControlsText(this);
 
-            UiProtector = new GuiProtector();
-            UiProtector.StartProtection();
             SetUpdateText();
-            Utils.MakeKryptonTextBold(BtnScannerScan);
-            Utils.MakeKryptonTextBold(BtnUpdateCheck);
-            Utils.MakeKryptonTextBold(BtnUpdateDownload);
-            RadScannerSmart.Checked = true;
 
             FreshclamWrapper = new Freshclam(RuntimeInfo.HzrDataDirectory);
             FreshclamWrapper.ProgressChanged += FreshclamProgressChanged;
@@ -398,6 +400,11 @@ namespace HazardShieldUI.Forms
                 LblUpdateClamAVStatus.Text = " Not supported yet";
                 LblUpdateClamAVStatus.Values.Image = Properties.Resources.image_info;
             }
+        }
+
+        private void BtnScannerScan_Click(object sender, EventArgs e)
+        {
+            TabControlScanner.SelectedTab = TabScannerProgress;
         }
 
     }

@@ -150,8 +150,6 @@ namespace HazardShield.ClamAV.Updates
             if (string.IsNullOrEmpty(e.Data) || e.Data.Length < 5)
                 return;
 
-            System.IO.File.AppendAllText("C:\\Users\\Andy\\Desktop\\log.txt", e.Data + "\r\n");
-
             Match match = Regex.Match(e.Data, @"(?<database>.*)\.(?<action>.*) \(version: (?<version>\d*)");
 
             if (match.Success)

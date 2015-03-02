@@ -52,6 +52,7 @@
             this.TabScannerResults = new System.Windows.Forms.TabPage();
             this.HeaderScanner = new ComponentFactory.Krypton.Toolkit.KryptonHeader();
             this.TabMainUpdates = new System.Windows.Forms.TabPage();
+            this.LblUpdateStatus = new ComponentFactory.Krypton.Toolkit.KryptonLabel();
             this.LblUpdateClamAVStatus = new ComponentFactory.Krypton.Toolkit.KryptonLabel();
             this.LblUpdateDatabaseStatus = new ComponentFactory.Krypton.Toolkit.KryptonLabel();
             this.LblUpdateClamAVVer = new ComponentFactory.Krypton.Toolkit.KryptonLabel();
@@ -78,7 +79,6 @@
             this.HeaderReserved = new ComponentFactory.Krypton.Toolkit.KryptonHeader();
             this.TabMainAbout = new System.Windows.Forms.TabPage();
             this.HeaderAbout = new ComponentFactory.Krypton.Toolkit.KryptonHeader();
-            this.LblUpdateStatus = new ComponentFactory.Krypton.Toolkit.KryptonLabel();
             ((System.ComponentModel.ISupportInitialize)(this.PanelMainTab)).BeginInit();
             this.PanelMainTab.SuspendLayout();
             this.TabControlMain.SuspendLayout();
@@ -317,6 +317,7 @@
             this.BtnScannerScan.Size = new System.Drawing.Size(170, 37);
             this.BtnScannerScan.TabIndex = 0;
             this.BtnScannerScan.Values.Text = "kryptonButton1";
+            this.BtnScannerScan.Click += new System.EventHandler(this.BtnScannerScan_Click);
             // 
             // TabScannerCustom
             // 
@@ -374,39 +375,46 @@
             this.TabMainUpdates.TabIndex = 1;
             this.TabMainUpdates.UseVisualStyleBackColor = true;
             // 
+            // LblUpdateStatus
+            // 
+            this.LblUpdateStatus.Location = new System.Drawing.Point(12, 358);
+            this.LblUpdateStatus.Name = "LblUpdateStatus";
+            this.LblUpdateStatus.Size = new System.Drawing.Size(39, 20);
+            this.LblUpdateStatus.TabIndex = 75;
+            // 
             // LblUpdateClamAVStatus
             // 
             this.LblUpdateClamAVStatus.Location = new System.Drawing.Point(220, 210);
             this.LblUpdateClamAVStatus.Name = "LblUpdateClamAVStatus";
-            this.LblUpdateClamAVStatus.Size = new System.Drawing.Size(88, 20);
+            this.LblUpdateClamAVStatus.Size = new System.Drawing.Size(39, 20);
             this.LblUpdateClamAVStatus.TabIndex = 72;
             // 
             // LblUpdateDatabaseStatus
             // 
             this.LblUpdateDatabaseStatus.Location = new System.Drawing.Point(220, 166);
             this.LblUpdateDatabaseStatus.Name = "LblUpdateDatabaseStatus";
-            this.LblUpdateDatabaseStatus.Size = new System.Drawing.Size(88, 20);
+            this.LblUpdateDatabaseStatus.Size = new System.Drawing.Size(39, 20);
             this.LblUpdateDatabaseStatus.TabIndex = 71;
             // 
             // LblUpdateClamAVVer
             // 
             this.LblUpdateClamAVVer.Location = new System.Drawing.Point(126, 210);
             this.LblUpdateClamAVVer.Name = "LblUpdateClamAVVer";
-            this.LblUpdateClamAVVer.Size = new System.Drawing.Size(88, 20);
+            this.LblUpdateClamAVVer.Size = new System.Drawing.Size(39, 20);
             this.LblUpdateClamAVVer.TabIndex = 66;
             // 
             // LblUpdateDatabaseVer
             // 
             this.LblUpdateDatabaseVer.Location = new System.Drawing.Point(126, 166);
             this.LblUpdateDatabaseVer.Name = "LblUpdateDatabaseVer";
-            this.LblUpdateDatabaseVer.Size = new System.Drawing.Size(88, 20);
+            this.LblUpdateDatabaseVer.Size = new System.Drawing.Size(39, 20);
             this.LblUpdateDatabaseVer.TabIndex = 60;
             // 
             // LblUpdateProgramVer
             // 
             this.LblUpdateProgramVer.Location = new System.Drawing.Point(126, 144);
             this.LblUpdateProgramVer.Name = "LblUpdateProgramVer";
-            this.LblUpdateProgramVer.Size = new System.Drawing.Size(88, 20);
+            this.LblUpdateProgramVer.Size = new System.Drawing.Size(39, 20);
             this.LblUpdateProgramVer.TabIndex = 59;
             // 
             // LblUpdateClamAV
@@ -584,13 +592,6 @@
             this.HeaderAbout.Size = new System.Drawing.Size(659, 52);
             this.HeaderAbout.TabIndex = 0;
             this.HeaderAbout.Values.Image = global::HazardShieldUI.Properties.Resources.logo_48;
-            // 
-            // LblUpdateStatus
-            // 
-            this.LblUpdateStatus.Location = new System.Drawing.Point(12, 358);
-            this.LblUpdateStatus.Name = "LblUpdateStatus";
-            this.LblUpdateStatus.Size = new System.Drawing.Size(88, 20);
-            this.LblUpdateStatus.TabIndex = 75;
             // 
             // FrmMain
             // 
