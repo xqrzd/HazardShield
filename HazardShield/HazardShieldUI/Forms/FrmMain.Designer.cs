@@ -49,6 +49,8 @@
             this.BtnScannerScan = new ComponentFactory.Krypton.Toolkit.KryptonButton();
             this.TabScannerCustom = new System.Windows.Forms.TabPage();
             this.TabScannerProgress = new System.Windows.Forms.TabPage();
+            this.BtnScannerAbort = new ComponentFactory.Krypton.Toolkit.KryptonButton();
+            this.BtnScannerPauseResume = new ComponentFactory.Krypton.Toolkit.KryptonButton();
             this.TabScannerResults = new System.Windows.Forms.TabPage();
             this.HeaderScanner = new ComponentFactory.Krypton.Toolkit.KryptonHeader();
             this.TabMainUpdates = new System.Windows.Forms.TabPage();
@@ -89,6 +91,7 @@
             ((System.ComponentModel.ISupportInitialize)(this.GrpScanner.Panel)).BeginInit();
             this.GrpScanner.Panel.SuspendLayout();
             this.GrpScanner.SuspendLayout();
+            this.TabScannerProgress.SuspendLayout();
             this.TabMainUpdates.SuspendLayout();
             this.TabMainProtection.SuspendLayout();
             this.TabMainSettings.SuspendLayout();
@@ -329,11 +332,33 @@
             // 
             // TabScannerProgress
             // 
+            this.TabScannerProgress.Controls.Add(this.BtnScannerAbort);
+            this.TabScannerProgress.Controls.Add(this.BtnScannerPauseResume);
             this.TabScannerProgress.Location = new System.Drawing.Point(4, 4);
             this.TabScannerProgress.Name = "TabScannerProgress";
             this.TabScannerProgress.Size = new System.Drawing.Size(651, 312);
             this.TabScannerProgress.TabIndex = 2;
             this.TabScannerProgress.UseVisualStyleBackColor = true;
+            // 
+            // BtnScannerAbort
+            // 
+            this.BtnScannerAbort.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+            this.BtnScannerAbort.AutoSize = true;
+            this.BtnScannerAbort.Location = new System.Drawing.Point(198, 256);
+            this.BtnScannerAbort.Name = "BtnScannerAbort";
+            this.BtnScannerAbort.Size = new System.Drawing.Size(150, 25);
+            this.BtnScannerAbort.TabIndex = 1;
+            // 
+            // BtnScannerPauseResume
+            // 
+            this.BtnScannerPauseResume.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+            this.BtnScannerPauseResume.AutoSize = true;
+            this.BtnScannerPauseResume.Location = new System.Drawing.Point(40, 256);
+            this.BtnScannerPauseResume.Name = "BtnScannerPauseResume";
+            this.BtnScannerPauseResume.Size = new System.Drawing.Size(150, 25);
+            this.BtnScannerPauseResume.TabIndex = 0;
+            this.BtnScannerPauseResume.SizeChanged += new System.EventHandler(this.BtnScannerPauseResume_SizeChanged);
+            this.BtnScannerPauseResume.Click += new System.EventHandler(this.BtnScannerPauseResume_Click);
             // 
             // TabScannerResults
             // 
@@ -461,6 +486,7 @@
             // 
             // BtnUpdateDownload
             // 
+            this.BtnUpdateDownload.AutoSize = true;
             this.BtnUpdateDownload.Location = new System.Drawing.Point(190, 63);
             this.BtnUpdateDownload.Name = "BtnUpdateDownload";
             this.BtnUpdateDownload.Size = new System.Drawing.Size(170, 40);
@@ -618,6 +644,8 @@
             this.GrpScanner.Panel.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this.GrpScanner)).EndInit();
             this.GrpScanner.ResumeLayout(false);
+            this.TabScannerProgress.ResumeLayout(false);
+            this.TabScannerProgress.PerformLayout();
             this.TabMainUpdates.ResumeLayout(false);
             this.TabMainUpdates.PerformLayout();
             this.TabMainProtection.ResumeLayout(false);
@@ -690,6 +718,8 @@
         private ComponentFactory.Krypton.Toolkit.KryptonLabel LblUpdateClamAVStatus;
         private ComponentFactory.Krypton.Toolkit.KryptonLabel LblUpdateDatabaseStatus;
         private ComponentFactory.Krypton.Toolkit.KryptonLabel LblUpdateStatus;
+        private ComponentFactory.Krypton.Toolkit.KryptonButton BtnScannerPauseResume;
+        private ComponentFactory.Krypton.Toolkit.KryptonButton BtnScannerAbort;
 
 
 

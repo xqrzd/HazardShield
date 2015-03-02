@@ -407,5 +407,14 @@ namespace HazardShieldUI.Forms
             TabControlScanner.SelectedTab = TabScannerProgress;
         }
 
+        private void BtnScannerPauseResume_SizeChanged(object sender, EventArgs e)
+        {
+            BtnScannerAbort.Location = new Point(BtnScannerPauseResume.Location.X + BtnScannerPauseResume.Size.Width + 8, BtnScannerPauseResume.Location.Y);
+        }
+
+        private void BtnScannerPauseResume_Click(object sender, EventArgs e)
+        {
+        }
+
     }
 }
