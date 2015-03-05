@@ -23,6 +23,7 @@
 #include <Windows.h>
 
 #define SERVICE_NAME L"HazardShield"
+#define FILTER_NAME L"HzrFilter"
 #define PORT_NAME L"\\HzrFilterPort"
 
 #define CLAMAV_DATABASE_PATH "%AllUsersProfile%\\Hazard Shield"

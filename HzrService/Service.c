@@ -128,16 +128,41 @@ VOID HzrpInitClamAV()
 
 FORCEINLINE VOID HzrInit()
 {
-	if (DrvConnect(PORT_NAME, GetProcessorCount(), FileCallback, &ServiceData.DriverInstance))
+	HRESULT result;
+
+	HzrEnableLoadDriverPrivilege();
+
+	result = DrvLoad(FILTER_NAME);
+
+	if (!SUCCEEDED(result))
+	{
+		// Check if minifilter is already running.
+		if (result != HRESULT_FROM_WIN32(ERROR_ALREADY_EXISTS) &&
+			result != HRESULT_FROM_WIN32(ERROR_SERVICE_ALREADY_RUNNING))
+		{
+			LogMessageA("HzrInit::DrvLoad failed %X", result);
+			return;
+		}
+	}
+
+	if (DrvConnect(PORT_NAME, HzrGetProcessorCount(), FileCallback, &ServiceData.DriverInstance))
 	{
 		InitializeSRWLock(&ServiceData.EngineLock);
 		cl_init(CL_INIT_DEFAULT);
 		HzrpInitClamAV();
 
 		DrvStartEventMonitor(&ServiceData.DriverInstance);
-
-		//DrvStartFiltering
 	}
+}
+
+VOID HzrServiceCleanup()
+{
+	DrvUnload(&ServiceData.DriverInstance, FILTER_NAME);
+
+	DrvDisconnect(&ServiceData.DriverInstance);
+
+	if (ServiceData.Engine)
+		cl_engine_free(ServiceData.Engine);
 }
 
 //void main()
@@ -176,10 +201,7 @@ DWORD WINAPI HzrHandlerEx(
 		ServiceData.ServiceStatus.dwCurrentState = SERVICE_STOP_PENDING;
 		SetServiceStatus(ServiceData.ServiceStatusHandle, &ServiceData.ServiceStatus);
 
-		// TODO: cleanup DriverHandler
-
-		if (ServiceData.Engine)
-			cl_engine_free(ServiceData.Engine);
+		HzrServiceCleanup();
 
 		ServiceData.ServiceStatus.dwCurrentState = SERVICE_STOPPED;
 		SetServiceStatus(ServiceData.ServiceStatusHandle, &ServiceData.ServiceStatus);

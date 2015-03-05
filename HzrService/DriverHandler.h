@@ -58,6 +58,10 @@ BOOLEAN DrvConnect(
 	_Out_ PDRIVER_INSTANCE DriverInstance
 	);
 
+VOID DrvDisconnect(
+	_In_ PDRIVER_INSTANCE DriverInstance
+	);
+
 VOID DrvStartEventMonitor(
 	_In_ PDRIVER_INSTANCE DriverInstance
 	);
@@ -67,4 +71,13 @@ BOOLEAN DrvProtectProcess(
 	_In_ ULONG ProcessId,
 	_In_ ACCESS_MASK ProcessAccessBitsToClear,
 	_In_ ACCESS_MASK ThreadAccessBitsToClear
+	);
+
+HRESULT DrvLoad(
+	_In_ LPCWSTR FilterName
+	);
+
+HRESULT DrvUnload(
+	_In_ PDRIVER_INSTANCE DriverInstance,
+	_In_ LPCWSTR FilterName
 	);

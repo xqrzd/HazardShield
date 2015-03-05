@@ -24,6 +24,7 @@
 
 #define DRV_CMD_GET_BUFFER 1
 #define DRV_CMD_PROTECT_PROCESS 2
+#define DRV_CMD_ALLOW_UNLOAD 3
 
 #define OP_SCAN_FILE 1
 #define OP_REG_VALUE_CHANGED 2
@@ -227,9 +228,16 @@ BOOLEAN DrvConnect(
 		}
 	}
 	else
-		LogMessageA(":DrvConnect::FilterConnectCommunicationPort failed %X", result);
+		LogMessageA("DrvConnect::FilterConnectCommunicationPort failed %X", result);
 
 	return result == S_OK;
+}
+
+VOID DrvDisconnect(
+	_In_ PDRIVER_INSTANCE DriverInstance)
+{
+	CloseHandle(DriverInstance->CompletionPort);
+	CloseHandle(DriverInstance->CommunicationPort);
 }
 
 VOID DrvStartEventMonitor(
@@ -263,4 +271,32 @@ BOOLEAN DrvProtectProcess(
 		NULL,
 		0,
 		&bytesReturned) == S_OK;
+}
+
+HRESULT DrvLoad(
+	_In_ LPCWSTR FilterName)
+{
+	return FilterLoad(FilterName);
+}
+
+HRESULT DrvUnload(
+	_In_ PDRIVER_INSTANCE DriverInstance,
+	_In_ LPCWSTR FilterName)
+{
+	ULONG command = DRV_CMD_ALLOW_UNLOAD;
+	DWORD bytesReturned;
+	HRESULT result;
+
+	result = FilterSendMessage(
+		DriverInstance->CommunicationPort,
+		&command,
+		sizeof(command),
+		NULL,
+		0,
+		&bytesReturned);
+
+	if (!SUCCEEDED(result))
+		return result;
+
+	return FilterUnload(FilterName);
 }

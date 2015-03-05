@@ -28,6 +28,7 @@ struct {
 	PFLT_PORT ServerPort;
 	PFLT_PORT ClientPort;
 	PEPROCESS ClientProcess;
+	BOOLEAN AllowUnload;
 
 	HANDLE_SYSTEM HandleSystem;
 	OB_CALLBACK_INSTANCE ObCallbackInstance;
@@ -72,7 +73,7 @@ CONST FLT_OPERATION_REGISTRATION Callbacks[] = {
 CONST FLT_REGISTRATION FilterRegistration = {
 	sizeof(FLT_REGISTRATION),	// Size
 	FLT_REGISTRATION_VERSION,	// Version
-	0,							// Flags
+	FLTFL_REGISTRATION_DO_NOT_SUPPORT_SERVICE_STOP,	// Flags
 
 	ContextRegistration,		// Context
 	Callbacks,					// Operation callbacks
@@ -227,16 +228,20 @@ NTSTATUS DriverEntry(
 NTSTATUS HzrFilterUnload(
 	_In_ FLT_FILTER_UNLOAD_FLAGS Flags)
 {
-	UNREFERENCED_PARAMETER(Flags);
+	if (FlagOn(Flags, FLTFL_FILTER_UNLOAD_MANDATORY) ||
+		FilterData.AllowUnload)
+	{
+		FltCloseCommunicationPort(FilterData.ServerPort);
+		FltUnregisterFilter(FilterData.Filter);
+		PsSetCreateProcessNotifyRoutineEx(HzrCreateProcessNotifyEx, TRUE);
+		HzrUnRegisterProtector(&FilterData.ObCallbackInstance);
+		HzrExplFree(&FilterData.ExploitInstance);
+		HndFree(&FilterData.HandleSystem);
 
-	FltCloseCommunicationPort(FilterData.ServerPort);
-	FltUnregisterFilter(FilterData.Filter);
-	PsSetCreateProcessNotifyRoutineEx(HzrCreateProcessNotifyEx, TRUE);
-	HzrUnRegisterProtector(&FilterData.ObCallbackInstance);
-	HzrExplFree(&FilterData.ExploitInstance);
-	HndFree(&FilterData.HandleSystem);
+		return STATUS_SUCCESS;
+	}
 
-	return STATUS_SUCCESS;
+	return STATUS_ACCESS_DENIED;
 }
 
 NTSTATUS HzrFilterPortConnect(
@@ -345,6 +350,10 @@ NTSTATUS HzrFilterClientMessage(
 
 			ObDereferenceObject(process);
 		}
+	}
+	else if (command == DRV_CMD_ALLOW_UNLOAD)
+	{
+		FilterData.AllowUnload = TRUE;
 	}
 
 	return status;

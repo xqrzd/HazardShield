@@ -22,5 +22,8 @@
 
 #include <Windows.h>
 
-DWORD GetProcessorCount(
+DWORD HzrGetProcessorCount(
+	);
+
+VOID HzrEnableLoadDriverPrivilege(
 	);

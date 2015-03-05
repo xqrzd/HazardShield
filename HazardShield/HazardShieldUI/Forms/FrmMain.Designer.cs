@@ -344,7 +344,7 @@
             // 
             this.BtnScannerAbort.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
             this.BtnScannerAbort.AutoSize = true;
-            this.BtnScannerAbort.Location = new System.Drawing.Point(198, 256);
+            this.BtnScannerAbort.Location = new System.Drawing.Point(198, 258);
             this.BtnScannerAbort.Name = "BtnScannerAbort";
             this.BtnScannerAbort.Size = new System.Drawing.Size(150, 25);
             this.BtnScannerAbort.TabIndex = 1;
@@ -353,7 +353,7 @@
             // 
             this.BtnScannerPauseResume.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
             this.BtnScannerPauseResume.AutoSize = true;
-            this.BtnScannerPauseResume.Location = new System.Drawing.Point(40, 256);
+            this.BtnScannerPauseResume.Location = new System.Drawing.Point(40, 258);
             this.BtnScannerPauseResume.Name = "BtnScannerPauseResume";
             this.BtnScannerPauseResume.Size = new System.Drawing.Size(150, 25);
             this.BtnScannerPauseResume.TabIndex = 0;

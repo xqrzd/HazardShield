@@ -22,11 +22,42 @@
 
 #include "Utility.h"
 
-DWORD GetProcessorCount()
+#define SE_LOAD_DRIVER_PRIVILEGE 10
+
+DWORD HzrGetProcessorCount()
 {
 	SYSTEM_INFO systemInfo;
 
 	GetSystemInfo(&systemInfo);
 
 	return systemInfo.dwNumberOfProcessors;
+}
+
+VOID HzrEnableLoadDriverPrivilege()
+{
+	HANDLE tokenHandle;
+
+	if (OpenProcessToken(
+		GetCurrentProcess(),
+		TOKEN_ADJUST_PRIVILEGES,
+		&tokenHandle))
+	{
+		TOKEN_PRIVILEGES privileges;
+
+		privileges.PrivilegeCount = 1;
+
+		privileges.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED;
+		privileges.Privileges[0].Luid.LowPart = SE_LOAD_DRIVER_PRIVILEGE;
+		privileges.Privileges[0].Luid.HighPart = 0;
+
+		AdjustTokenPrivileges(
+			tokenHandle,
+			FALSE,
+			&privileges,
+			0,
+			NULL,
+			NULL);
+
+		CloseHandle(tokenHandle);
+	}
 }
