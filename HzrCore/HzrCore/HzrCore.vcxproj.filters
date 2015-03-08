@@ -25,10 +25,16 @@
     <ClInclude Include="ossl_typ.h">
       <Filter>ClamAV</Filter>
     </ClInclude>
+    <ClInclude Include="Scanner.h">
+      <Filter>Scanner</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Ntfs.c">
       <Filter>LibNTFS</Filter>
+    </ClCompile>
+    <ClCompile Include="Scanner.c">
+      <Filter>Scanner</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

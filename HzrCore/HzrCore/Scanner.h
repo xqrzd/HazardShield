@@ -18,10 +18,10 @@
 *  MA 02110-1301, USA.
 */
 
-#include <stdio.h>
-#include "Scanner.h"
+#pragma once
 
-VOID main()
-{
-	HzrInitClamAV();
-}
+#include <inttypes.h>
+#include "clamav.h"
+
+__declspec(dllexport) int HzrInitClamAV(
+	);
