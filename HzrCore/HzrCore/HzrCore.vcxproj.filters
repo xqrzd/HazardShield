@@ -8,10 +8,22 @@
     <Filter Include="LibNTFS">
       <UniqueIdentifier>{e70a3502-1a82-4f5b-b176-3dcc6cea6f98}</UniqueIdentifier>
     </Filter>
+    <Filter Include="ClamAV">
+      <UniqueIdentifier>{b66d0c27-a73a-449f-9662-d3bba29c95ab}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Scanner">
+      <UniqueIdentifier>{e0749ec6-9119-4889-a2a4-0515868fc9da}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Ntfs.h">
       <Filter>LibNTFS</Filter>
+    </ClInclude>
+    <ClInclude Include="clamav.h">
+      <Filter>ClamAV</Filter>
+    </ClInclude>
+    <ClInclude Include="ossl_typ.h">
+      <Filter>ClamAV</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
