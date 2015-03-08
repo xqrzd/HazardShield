@@ -161,6 +161,7 @@
     <ClInclude Include="clamav.h" />
     <ClInclude Include="DriverHandler.h" />
     <ClInclude Include="Logger.h" />
+    <ClInclude Include="ossl_typ.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="Service.h" />
     <ClInclude Include="Utility.h" />
