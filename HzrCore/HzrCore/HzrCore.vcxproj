@@ -148,11 +148,15 @@
     <ClInclude Include="clamav.h" />
     <ClInclude Include="Ntfs.h" />
     <ClInclude Include="ossl_typ.h" />
+    <ClInclude Include="resource.h" />
     <ClInclude Include="Scanner.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Ntfs.c" />
     <ClCompile Include="Scanner.c" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="HzrCore.rc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

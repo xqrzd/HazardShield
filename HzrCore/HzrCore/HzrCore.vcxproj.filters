@@ -28,6 +28,7 @@
     <ClInclude Include="Scanner.h">
       <Filter>Scanner</Filter>
     </ClInclude>
+    <ClInclude Include="resource.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Ntfs.c">
@@ -36,5 +37,10 @@
     <ClCompile Include="Scanner.c">
       <Filter>Scanner</Filter>
     </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="HzrCore.rc">
+      <Filter>Resource Files</Filter>
+    </ResourceCompile>
   </ItemGroup>
 </Project>

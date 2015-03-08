@@ -23,5 +23,36 @@
 #include <inttypes.h>
 #include "clamav.h"
 
-__declspec(dllexport) int HzrInitClamAV(
+typedef struct _HZR_SCANNER {
+	struct cl_engine* Engine;
+	ULONG Signatures;
+} HZR_SCANNER, *PHZR_SCANNER;
+
+__declspec(dllexport) cl_error_t HzrInitClamAv(
+	);
+
+__declspec(dllexport) BOOLEAN HzrInitScanner(
+	_Out_ PHZR_SCANNER Scanner
+	);
+
+__declspec(dllexport) VOID HzrFreeScanner(
+	_In_ PHZR_SCANNER Scanner
+	);
+
+__declspec(dllexport) cl_error_t HzrLoadClamAvDatabase(
+	_In_ PHZR_SCANNER Scanner,
+	_In_ CONST PCHAR Path,
+	_In_ ULONG DatabaseOptions
+	);
+
+__declspec(dllexport) cl_error_t HzrCompileClamAvDatabase(
+	_In_ PHZR_SCANNER Scanner
+	);
+
+__declspec(dllexport) cl_error_t HzrScanBuffer(
+	_In_ PHZR_SCANNER Scanner,
+	_In_ CONST PVOID Buffer,
+	_In_ SIZE_T Length,
+	_In_ ULONG ScanOptions,
+	_Out_ PCHAR* VirusName
 	);

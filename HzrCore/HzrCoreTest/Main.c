@@ -23,5 +23,16 @@
 
 VOID main()
 {
-	HzrInitClamAV();
+	HZR_SCANNER scanner;
+
+	HzrInitClamAv();
+
+	if (HzrInitScanner(&scanner))
+	{
+		HzrLoadClamAvDatabase(&scanner, "C:\\ProgramData\\Hazard Shield", CL_DB_BYTECODE);
+
+		HzrCompileClamAvDatabase(&scanner);
+
+		HzrFreeScanner(&scanner);
+	}
 }
