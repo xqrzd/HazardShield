@@ -18,6 +18,63 @@
 *  MA 02110-1301, USA.
 */
 
-void main()
+#include "Ntfs.h"
+#include <stdio.h>
+
+BOOLEAN ReadSector(
+	_In_ struct _NTFS_VOLUME* NtfsVolume,
+	_In_ ULONGLONG Sector,
+	_In_ ULONG SectorCount,
+	_Out_ PVOID Buffer)
 {
+	BOOL result;
+	HANDLE volumeHandle = NtfsVolume->Context;
+	LARGE_INTEGER byteOffset;
+	DWORD bytesToRead;
+	DWORD bytesRead;
+
+	bytesToRead = SectorCount * NtfsVolume->BytesPerSector;
+	byteOffset.QuadPart = Sector * NtfsVolume->BytesPerSector;
+
+	SetFilePointerEx(volumeHandle, byteOffset, NULL, FILE_BEGIN);
+
+	result = ReadFile(volumeHandle, Buffer, bytesToRead, &bytesRead, NULL);
+
+	return result;
+}
+
+VOID IndexCallback(PNTFS_VOLUME NtfsVolume, PNTFS_INDEX_ENTRY IndexEntry, PVOID Context)
+{
+	if (IndexEntry->FileNameOffset &&
+		IndexEntry->FileName.NameLength &&
+		IndexEntry->FileName.NameSpace != ATTR_FILENAME_NAMESPACE_DOS &&
+		IndexEntry->FileReference.RecordNumber > MFT_RECORD_USER &&
+		!(IndexEntry->FileName.Flags & ATTR_FILENAME_FLAG_SPARSE))
+	{
+		WCHAR filePath[MAX_PATH];
+		RtlCopyMemory(filePath, IndexEntry->FileName.Name, IndexEntry->FileName.NameLength * sizeof(WCHAR));
+		filePath[IndexEntry->FileName.NameLength] = L'\0';
+
+		wprintf(L"%s\n", filePath);
+	}
+}
+
+VOID StreamCallback(PNTFS_VOLUME NtfsVolume, PNTFS_ATTRIBUTE Attribute, PVOID Buffer, ULONG BufferSize, PVOID Context)
+{
+
+}
+
+VOID main()
+{
+	HANDLE volumeHandle = CreateFileW(L"\\\\.\\C:", GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+	if (volumeHandle != INVALID_HANDLE_VALUE)
+	{
+		NTFS_VOLUME ntfsVolume;
+		NtfsInitVolume(ReadSector, 512, volumeHandle, &ntfsVolume);
+		NtfsEnumSubFiles(&ntfsVolume, MFT_RECORD_ROOT, IndexCallback, NULL);
+		CloseHandle(volumeHandle);
+		NtfsFreeVolume(&ntfsVolume);
+	}
+	else
+		printf("CreateFileW failed %u\n", GetLastError());
 }

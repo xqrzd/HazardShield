@@ -6,6 +6,9 @@ MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "HzrCore", "HzrCore\HzrCore.vcxproj", "{23933E5F-65F6-442C-9268-5BB39011DEE2}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "HzrCoreTest", "HzrCoreTest\HzrCoreTest.vcxproj", "{10236705-A44C-45D3-8542-12C9D5739A6A}"
+	ProjectSection(ProjectDependencies) = postProject
+		{23933E5F-65F6-442C-9268-5BB39011DEE2} = {23933E5F-65F6-442C-9268-5BB39011DEE2}
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

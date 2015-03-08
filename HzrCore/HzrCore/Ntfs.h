@@ -326,38 +326,38 @@ typedef struct _NTFS_VOLUME {
 	PVOID Context;	// Can be used to store anything
 } NTFS_VOLUME, *PNTFS_VOLUME;
 
-BOOLEAN NtfsInitVolume(
+__declspec(dllexport) BOOLEAN NtfsInitVolume(
 	_In_ PNTFS_READ_SECTOR NtfsReadSector,
 	_In_ USHORT BytesPerSector,
 	_In_ PVOID Context,
 	_Out_ PNTFS_VOLUME Volume
 	);
 
-VOID NtfsFreeVolume(
+__declspec(dllexport) VOID NtfsFreeVolume(
 	_In_ PNTFS_VOLUME NtfsVolume
 	);
 
-BOOLEAN NtfsReadFileRecord(
+__declspec(dllexport) BOOLEAN NtfsReadFileRecord(
 	_In_ PNTFS_VOLUME NtfsVolume,
 	_In_ ULONG RecordNumber,
 	_Out_ PNTFS_FILE_RECORD FileRecord
 	);
 
-BOOLEAN NtfsPatchUpdateSequence(
+__declspec(dllexport) BOOLEAN NtfsPatchUpdateSequence(
 	_In_ PNTFS_VOLUME NtfsVolume,
 	_Inout_ PUSHORT Sector,
 	_In_ ULONG SectorCount,
 	_In_ PUSHORT UsnAddress
 	);
 
-VOID NtfsReadFileAttributes(
+__declspec(dllexport) VOID NtfsReadFileAttributes(
 	_In_ PNTFS_VOLUME NtfsVolume,
 	_In_ PNTFS_FILE_RECORD FileRecord,
 	_In_ ULONG AttributeMask,
 	_Out_ PLIST_ENTRY ListHead
 	);
 
-VOID NtfsParseAttributeList(
+__declspec(dllexport) VOID NtfsParseAttributeList(
 	_In_ PNTFS_VOLUME NtfsVolume,
 	_In_ PNTFS_ATTRIBUTE AttributeList,
 	_In_ PNTFS_FILE_RECORD FileRecord,
@@ -365,47 +365,47 @@ VOID NtfsParseAttributeList(
 	_Out_ PLIST_ENTRY ListHead
 	);
 
-PNTFS_ATTRIBUTE_ENTRY NtfsFindFirstAttribute(
+__declspec(dllexport) PNTFS_ATTRIBUTE_ENTRY NtfsFindFirstAttribute(
 	_In_ PLIST_ENTRY ListHead,
 	_In_ ULONG AttributeType
 	);
 
-PNTFS_ATTRIBUTE_ENTRY NtfsFindNextAttribute(
+__declspec(dllexport) PNTFS_ATTRIBUTE_ENTRY NtfsFindNextAttribute(
 	_In_ PLIST_ENTRY ListHead,
 	_In_ PLIST_ENTRY StartEntry,
 	_In_ ULONG AttributeType
 	);
 
-VOID NtfsGetDataRuns(
+__declspec(dllexport) VOID NtfsGetDataRuns(
 	_In_ PNTFS_VOLUME NtfsVolume,
 	_In_ PNTFS_NONRESIDENT_ATTRIBUTE NonResidentAttribute,
 	_Out_ PLIST_ENTRY ListHead
 	);
 
-BOOLEAN NtfsReadDataRuns(
+__declspec(dllexport) BOOLEAN NtfsReadDataRuns(
 	_In_ PNTFS_VOLUME NtfsVolume,
 	_In_ PLIST_ENTRY DataRunsHead,
 	_Out_ PVOID Buffer
 	);
 
-PVOID NtfsReadResidentAttributeData(
+__declspec(dllexport) PVOID NtfsReadResidentAttributeData(
 	_In_ PNTFS_RESIDENT_ATTRIBUTE Attribute
 	);
 
-BOOLEAN NtfsReadNonResidentAttributeData(
+__declspec(dllexport) BOOLEAN NtfsReadNonResidentAttributeData(
 	_In_ PNTFS_VOLUME NtfsVolume,
 	_In_ PNTFS_NONRESIDENT_ATTRIBUTE Attribute,
 	_Out_ PVOID Buffer
 	);
 
-BOOLEAN NtfsReadAttributeData(
+__declspec(dllexport) BOOLEAN NtfsReadAttributeData(
 	_In_ PNTFS_VOLUME NtfsVolume,
 	_In_ PNTFS_ATTRIBUTE Attribute,
 	_Out_ PVOID* Buffer,
 	_Out_ PULONG BufferSize
 	);
 
-VOID NtfsWalkIndexEntries(
+__declspec(dllexport) VOID NtfsWalkIndexEntries(
 	_In_ PNTFS_VOLUME NtfsVolume,
 	_In_ PNTFS_INDEX_ENTRY IndexEntry,
 	_In_ ULONG TotalEntrySize,
@@ -414,7 +414,7 @@ VOID NtfsWalkIndexEntries(
 	_In_ PVOID CallbackContext
 	);
 
-BOOLEAN NtfsGetIndexAllocationEntries(
+__declspec(dllexport) BOOLEAN NtfsGetIndexAllocationEntries(
 	_In_ PNTFS_VOLUME NtfsVolume,
 	_In_ ULONGLONG VCN,
 	_In_ PVOID IndexAllocation,
@@ -422,7 +422,7 @@ BOOLEAN NtfsGetIndexAllocationEntries(
 	_In_ PVOID CallbackContext
 	);
 
-BOOLEAN NtfsGetIndexRootEntries(
+__declspec(dllexport) BOOLEAN NtfsGetIndexRootEntries(
 	_In_ PNTFS_VOLUME NtfsVolume,
 	_In_ PNTFS_INDEX_ROOT_ATTRIBUTE IndexRoot,
 	_In_ PVOID IndexAllocation,
@@ -430,14 +430,14 @@ BOOLEAN NtfsGetIndexRootEntries(
 	_In_ PVOID CallbackContext
 	);
 
-BOOLEAN NtfsEnumSubFiles(
+__declspec(dllexport) BOOLEAN NtfsEnumSubFiles(
 	_In_ PNTFS_VOLUME NtfsVolume,
 	_In_ ULONG RecordNumber,
 	_In_ PNTFS_INDEX_ENTRY_CALLBACK IndexCallback,
 	_In_ PVOID CallbackContext
 	);
 
-BOOLEAN NtfsReadFileDataStreams(
+__declspec(dllexport) BOOLEAN NtfsReadFileDataStreams(
 	_In_ PNTFS_VOLUME NtfsVolume,
 	_In_ ULONG RecordNumber,
 	_In_ PNTFS_STREAM_CALLBACK StreamCallback,
