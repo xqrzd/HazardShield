@@ -18,32 +18,27 @@
 *  MA 02110-1301, USA.
 */
 
-#include <stdio.h>
-#include "Scanner.h"
-#include "Memory.h"
+#pragma once
 
-#ifdef _DEBUG
-#define _CRTDBG_MAP_ALLOC
-#include <stdlib.h>
-#include <crtdbg.h>
-#endif
+#include "Base.h"
 
-VOID main()
-{
-	HZR_SCANNER scanner;
+typedef struct _HS_LIST {
+	ULONG Count;
+	ULONG AllocationCount;
 
-	HzrInitClamAv();
+	PVOID* Items;
+} HS_LIST, *PHS_LIST;
 
-	if (HzrInitScanner(&scanner))
-	{
-		HzrLoadClamAvDatabase(&scanner, "C:\\ProgramData\\Hazard Shield", CL_DB_BYTECODE);
+__declspec(dllexport) VOID HsInitializeList(
+	_Out_ PHS_LIST List,
+	_In_ ULONG InitialCapacity
+	);
 
-		HzrCompileClamAvDatabase(&scanner);
+__declspec(dllexport) VOID HsDeleteList(
+	_In_ PHS_LIST List
+	);
 
-		HzrFreeScanner(&scanner);
-	}
-
-#ifdef _DEBUG
-	_CrtDumpMemoryLeaks();
-#endif
-}
+__declspec(dllexport) VOID HsAddItemList(
+	_Inout_ PHS_LIST List,
+	_In_ PVOID Item
+	);

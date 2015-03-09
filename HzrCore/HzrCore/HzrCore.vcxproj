@@ -68,9 +68,11 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
+    <LibraryPath>$(ProjectDir)lib\x86;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
+    <LibraryPath>$(ProjectDir)lib\x64;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
@@ -145,7 +147,9 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="Base.h" />
     <ClInclude Include="clamav.h" />
+    <ClInclude Include="List.h" />
     <ClInclude Include="Memory.h" />
     <ClInclude Include="Ntfs.h" />
     <ClInclude Include="ossl_typ.h" />
@@ -153,6 +157,7 @@
     <ClInclude Include="Scanner.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="List.c" />
     <ClCompile Include="Memory.c" />
     <ClCompile Include="Ntfs.c" />
     <ClCompile Include="Scanner.c" />

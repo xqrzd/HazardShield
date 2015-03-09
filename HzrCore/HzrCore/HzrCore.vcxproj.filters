@@ -14,6 +14,9 @@
     <Filter Include="Scanner">
       <UniqueIdentifier>{e0749ec6-9119-4889-a2a4-0515868fc9da}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Core">
+      <UniqueIdentifier>{98f182d7-a645-4fa9-b505-f89b6fcac316}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Ntfs.h">
@@ -32,6 +35,12 @@
     <ClInclude Include="Memory.h">
       <Filter>Scanner</Filter>
     </ClInclude>
+    <ClInclude Include="List.h">
+      <Filter>Core</Filter>
+    </ClInclude>
+    <ClInclude Include="Base.h">
+      <Filter>Core</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Ntfs.c">
@@ -42,6 +51,9 @@
     </ClCompile>
     <ClCompile Include="Memory.c">
       <Filter>Scanner</Filter>
+    </ClCompile>
+    <ClCompile Include="List.c">
+      <Filter>Core</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

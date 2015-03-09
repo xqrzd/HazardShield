@@ -18,32 +18,41 @@
 *  MA 02110-1301, USA.
 */
 
-#include <stdio.h>
-#include "Scanner.h"
-#include "Memory.h"
+#pragma once
+
+#include <Windows.h>
 
 #ifdef _DEBUG
-#define _CRTDBG_MAP_ALLOC
-#include <stdlib.h>
-#include <crtdbg.h>
+#include <malloc.h>
 #endif
 
-VOID main()
+PVOID FORCEINLINE HsAllocate(
+	_In_ SIZE_T Size)
 {
-	HZR_SCANNER scanner;
-
-	HzrInitClamAv();
-
-	if (HzrInitScanner(&scanner))
-	{
-		HzrLoadClamAvDatabase(&scanner, "C:\\ProgramData\\Hazard Shield", CL_DB_BYTECODE);
-
-		HzrCompileClamAvDatabase(&scanner);
-
-		HzrFreeScanner(&scanner);
-	}
-
 #ifdef _DEBUG
-	_CrtDumpMemoryLeaks();
+	return malloc(Size);
+#else
+	return HeapAlloc(GetProcessHeap(), HEAP_GENERATE_EXCEPTIONS, Size);
+#endif
+}
+
+PVOID FORCEINLINE HsReAllocate(
+	_In_ PVOID Memory,
+	_In_ SIZE_T Size)
+{
+#ifdef _DEBUG
+	return realloc(Memory, Size);
+#else
+	return HeapReAlloc(GetProcessHeap(), HEAP_GENERATE_EXCEPTIONS, Memory, Size);
+#endif
+}
+
+VOID FORCEINLINE HsFree(
+	_In_ PVOID Buffer)
+{
+#ifdef _DEBUG
+	free(Buffer);
+#else
+	HeapFree(GetProcessHeap(), 0, Buffer);
 #endif
 }

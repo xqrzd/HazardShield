@@ -18,32 +18,39 @@
 *  MA 02110-1301, USA.
 */
 
-#include <stdio.h>
-#include "Scanner.h"
-#include "Memory.h"
+#include "List.h"
 
-#ifdef _DEBUG
-#define _CRTDBG_MAP_ALLOC
-#include <stdlib.h>
-#include <crtdbg.h>
-#endif
-
-VOID main()
+VOID HsInitializeList(
+	_Out_ PHS_LIST List,
+	_In_ ULONG InitialCapacity)
 {
-	HZR_SCANNER scanner;
+	if (InitialCapacity == 0)
+		InitialCapacity = 1;
 
-	HzrInitClamAv();
+	List->Count = 0;
+	List->AllocationCount = InitialCapacity;
 
-	if (HzrInitScanner(&scanner))
+	List->Items = HsAllocate(InitialCapacity * sizeof(PVOID));
+}
+
+VOID HsDeleteList(
+	_In_ PHS_LIST List)
+{
+	HsFree(List->Items);
+}
+
+VOID HsAddItemList(
+	_Inout_ PHS_LIST List,
+	_In_ PVOID Item)
+{
+	if (List->Count == List->AllocationCount)
 	{
-		HzrLoadClamAvDatabase(&scanner, "C:\\ProgramData\\Hazard Shield", CL_DB_BYTECODE);
+		// Need to increase array size.
 
-		HzrCompileClamAvDatabase(&scanner);
-
-		HzrFreeScanner(&scanner);
+		List->AllocationCount *= 2;
+		List->Items = HsReAllocate(List->Items, List->AllocationCount * sizeof(PVOID));
 	}
 
-#ifdef _DEBUG
-	_CrtDumpMemoryLeaks();
-#endif
+	List->Items[List->Count] = Item;
+	List->Count++;
 }
