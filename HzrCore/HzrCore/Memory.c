@@ -18,22 +18,40 @@
 *  MA 02110-1301, USA.
 */
 
-#include <stdio.h>
-#include "Scanner.h"
 #include "Memory.h"
 
-VOID main()
+BOOLEAN HzrVirtualQuery(
+	_In_ HANDLE ProcessId,
+	_In_ PHZR_MEMORY_CALLBACK Callback)
 {
-	HZR_SCANNER scanner;
+	HANDLE processHandle;
+	PUCHAR baseAddress;
+	PVOID previousAllocationBase;
+	MEMORY_BASIC_INFORMATION basicInfo;
 
-	HzrInitClamAv();
+	baseAddress = 0;
+	previousAllocationBase = (PVOID)-1;
 
-	if (HzrInitScanner(&scanner))
+	processHandle = OpenProcess(
+		PROCESS_QUERY_INFORMATION | PROCESS_VM_READ,
+		FALSE,
+		(DWORD)ProcessId);
+
+	if (!processHandle)
 	{
-		HzrLoadClamAvDatabase(&scanner, "C:\\ProgramData\\Hazard Shield", CL_DB_BYTECODE);
-
-		HzrCompileClamAvDatabase(&scanner);
-
-		HzrFreeScanner(&scanner);
+		return FALSE;
 	}
+
+	while (VirtualQueryEx(
+		processHandle,
+		baseAddress,
+		&basicInfo,
+		sizeof(basicInfo)))
+	{
+		baseAddress += basicInfo.RegionSize;
+	}
+
+	CloseHandle(processHandle);
+
+	return TRUE;
 }
