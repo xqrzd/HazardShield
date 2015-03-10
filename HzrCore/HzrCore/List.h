@@ -34,6 +34,10 @@ __declspec(dllexport) VOID HsInitializeList(
 	_In_ ULONG InitialCapacity
 	);
 
+__declspec(dllexport) VOID HsClearList(
+	_Inout_ PHS_LIST List
+	);
+
 __declspec(dllexport) VOID HsDeleteList(
 	_In_ PHS_LIST List
 	);

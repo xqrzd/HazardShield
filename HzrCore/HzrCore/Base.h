@@ -26,6 +26,14 @@
 #include <malloc.h>
 #endif
 
+#ifndef FlagOn
+#define FlagOn(_F,_SF)        ((_F) & (_SF))
+#endif
+
+#ifndef FlagOff
+#define FlagOff(_F,_SF)        (!((_F) & (_SF)))
+#endif
+
 PVOID FORCEINLINE HsAllocate(
 	_In_ SIZE_T Size)
 {

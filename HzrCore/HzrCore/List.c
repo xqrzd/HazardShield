@@ -33,6 +33,12 @@ VOID HsInitializeList(
 	List->Items = HsAllocate(InitialCapacity * sizeof(PVOID));
 }
 
+VOID HsClearList(
+	_Inout_ PHS_LIST List)
+{
+	List->Count = 0;
+}
+
 VOID HsDeleteList(
 	_In_ PHS_LIST List)
 {
