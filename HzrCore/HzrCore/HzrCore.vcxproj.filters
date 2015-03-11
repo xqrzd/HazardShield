@@ -41,6 +41,9 @@
     <ClInclude Include="Base.h">
       <Filter>Core</Filter>
     </ClInclude>
+    <ClInclude Include="Reference.h">
+      <Filter>Core</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Ntfs.c">
@@ -53,6 +56,9 @@
       <Filter>Scanner</Filter>
     </ClCompile>
     <ClCompile Include="List.c">
+      <Filter>Core</Filter>
+    </ClCompile>
+    <ClCompile Include="Reference.c">
       <Filter>Core</Filter>
     </ClCompile>
   </ItemGroup>

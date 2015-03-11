@@ -153,6 +153,7 @@
     <ClInclude Include="Memory.h" />
     <ClInclude Include="Ntfs.h" />
     <ClInclude Include="ossl_typ.h" />
+    <ClInclude Include="Reference.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="Scanner.h" />
   </ItemGroup>
@@ -160,6 +161,7 @@
     <ClCompile Include="List.c" />
     <ClCompile Include="Memory.c" />
     <ClCompile Include="Ntfs.c" />
+    <ClCompile Include="Reference.c" />
     <ClCompile Include="Scanner.c" />
   </ItemGroup>
   <ItemGroup>
