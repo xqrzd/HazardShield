@@ -20,21 +20,21 @@
 
 #pragma once
 
-#include <Windows.h>
+#include "Base.h"
 
-typedef struct _HS_MEMORY_OBJECT {
-	PVOID BaseAddress;
-	SIZE_T Size;
-} HS_MEMORY_OBJECT, *PHS_MEMORY_OBJECT;
+typedef struct _HS_STRING {
+	SIZE_T Length;
+	WCHAR Buffer[1];
+} HS_STRING, *PHS_STRING;
 
-typedef VOID(*PHZR_MEMORY_CALLBACK)(
-	_In_ HANDLE ProcessId,
-	_In_ PVOID BaseAddress,
-	_In_ SIZE_T RegionSize,
-	_In_opt_ PWCHAR FilePath
+__declspec(dllexport) VOID HsInitializeStringType(
 	);
 
-__declspec(dllexport) BOOLEAN HzrVirtualQuery(
-	_In_ HANDLE ProcessId,
-	_In_ PHZR_MEMORY_CALLBACK Callback
+__declspec(dllexport) PHS_STRING HsCreateString(
+	_In_ PWSTR Buffer
+	);
+
+__declspec(dllexport) PHS_STRING HsCreateStringEx(
+	_In_opt_ PWCHAR Buffer,
+	_In_ SIZE_T Length
 	);

@@ -18,23 +18,46 @@
 *  MA 02110-1301, USA.
 */
 
-#pragma once
+#include "Reference.h"
+#include "String2.h"
 
-#include <Windows.h>
+HS_OBJECT_TYPE HsStringType;
 
-typedef struct _HS_MEMORY_OBJECT {
-	PVOID BaseAddress;
-	SIZE_T Size;
-} HS_MEMORY_OBJECT, *PHS_MEMORY_OBJECT;
+VOID HsInitializeStringType()
+{
+	HsInitializeObjectType(
+		&HsStringType,
+		NULL);
+}
 
-typedef VOID(*PHZR_MEMORY_CALLBACK)(
-	_In_ HANDLE ProcessId,
-	_In_ PVOID BaseAddress,
-	_In_ SIZE_T RegionSize,
-	_In_opt_ PWCHAR FilePath
-	);
+PHS_STRING HsCreateString(
+	_In_ PWSTR Buffer)
+{
+	return HsCreateStringEx(Buffer, wcslen(Buffer));
+}
 
-__declspec(dllexport) BOOLEAN HzrVirtualQuery(
-	_In_ HANDLE ProcessId,
-	_In_ PHZR_MEMORY_CALLBACK Callback
-	);
+PHS_STRING HsCreateStringEx(
+	_In_opt_ PWCHAR Buffer,
+	_In_ SIZE_T Length)
+{
+	PHS_STRING string;
+	SIZE_T size;
+
+	size = sizeof(HS_STRING) + (Length * sizeof(WCHAR));
+
+	string = HsCreateObject(
+		size,
+		&HsStringType);
+
+	RtlCopyMemory(
+		&string->Buffer,
+		Buffer,
+		Length * sizeof(WCHAR));
+
+	// Set null terminator.
+	string->Buffer[Length] = L'\0';
+
+	string->Length = Length;
+
+	return string;
+}

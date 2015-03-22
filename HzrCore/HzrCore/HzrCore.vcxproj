@@ -156,6 +156,7 @@
     <ClInclude Include="Reference.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="Scanner.h" />
+    <ClInclude Include="String2.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="List.c" />
@@ -163,6 +164,7 @@
     <ClCompile Include="Ntfs.c" />
     <ClCompile Include="Reference.c" />
     <ClCompile Include="Scanner.c" />
+    <ClCompile Include="String2.c" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="HzrCore.rc" />

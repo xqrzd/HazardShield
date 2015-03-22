@@ -29,16 +29,17 @@
 #include "Memory.h"
 #include "List.h"
 #include "Reference.h"
+#include "String2.h"
 
 VOID InitReferenceCounting()
 {
 	HsInitializeListType();
+	HsInitializeStringType();
 }
 
 VOID main()
 {
 	InitReferenceCounting();
-
 	/*HZR_SCANNER scanner;
 
 	HzrInitClamAv();
@@ -51,6 +52,8 @@ VOID main()
 
 		HzrFreeScanner(&scanner);
 	}*/
+
+	getchar();
 
 #ifdef _DEBUG
 	_CrtDumpMemoryLeaks();
