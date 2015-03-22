@@ -22,6 +22,10 @@
 
 #include <Windows.h>
 
+#ifdef _DEBUG
+#include <malloc.h>
+#endif
+
 // The first 17 file records
 #define MFT_RECORD_MFT			0
 #define MFT_RECORD_MFT_MIRROR	1
