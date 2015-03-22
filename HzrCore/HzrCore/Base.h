@@ -34,6 +34,9 @@
 #define FlagOff(_F,_SF)        (!((_F) & (_SF)))
 #endif
 
+#define HsOffsetToPointer(Base, Offset)	((PVOID)(((PCHAR)(Base)) + ((Offset))))
+#define HsNegativeOffsetToPointer(Base, Offset)	((PVOID)(((PCHAR)(Base)) - ((Offset))))
+
 PVOID FORCEINLINE HsAllocate(
 	_In_ SIZE_T Size)
 {

@@ -18,15 +18,16 @@
 *  MA 02110-1301, USA.
 */
 
-#include <stdio.h>
-#include "Scanner.h"
-#include "Memory.h"
-
 #ifdef _DEBUG
 #define _CRTDBG_MAP_ALLOC
 #include <stdlib.h>
 #include <crtdbg.h>
 #endif
+
+#include <stdio.h>
+#include "Scanner.h"
+#include "Memory.h"
+#include "Reference.h"
 
 VOID main()
 {

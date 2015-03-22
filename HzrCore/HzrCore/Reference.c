@@ -19,3 +19,101 @@
 */
 
 #include "Reference.h"
+
+HS_OBJECT_TYPE HsListType;
+
+VOID HspFreeObject(
+	_In_ PHS_OBJECT_HEADER ObjectHeader
+	);
+
+VOID HspDeleteListProcedure(
+	_In_ PVOID Object
+	);
+
+VOID HsInitializeReferenceCounting()
+{
+	HsInitializeObjectType(
+		&HsListType,
+		HspDeleteListProcedure);
+}
+
+PVOID HsCreateObject(
+	_In_ SIZE_T ObjectSize,
+	_In_ PHS_OBJECT_TYPE ObjectType)
+{
+	PHS_OBJECT_HEADER objectHeader;
+	SIZE_T objectSize;
+
+	// Allocate memory for the object and its header.
+	objectSize = sizeof(HS_OBJECT_HEADER) + ObjectSize;
+	objectHeader = HsAllocate(objectSize);
+
+	objectHeader->ReferenceCount = 1;
+	objectHeader->Type = ObjectType;
+
+	return HsObjectHeaderToObject(objectHeader);
+}
+
+VOID HsInitializeObjectType(
+	_Out_ PHS_OBJECT_TYPE ObjectType,
+	_In_opt_ PHS_TYPE_DELETE_PROCEDURE DeleteProcedure)
+{
+	ObjectType->DeleteProcedure = DeleteProcedure;
+}
+
+VOID HsReferenceObject(
+	_In_ PVOID Object)
+{
+	PHS_OBJECT_HEADER objectHeader;
+
+	objectHeader = HsObjectToObjectHeader(Object);
+
+	InterlockedIncrement(&objectHeader->ReferenceCount);
+}
+
+VOID HsDereferenceObject(
+	_In_ PVOID Object)
+{
+	PHS_OBJECT_HEADER objectHeader;
+	LONG newRefCount;
+
+	objectHeader = HsObjectToObjectHeader(Object);
+
+	newRefCount = InterlockedDecrement(&objectHeader->ReferenceCount);
+
+	if (newRefCount == 0)
+		HspFreeObject(objectHeader);
+}
+
+VOID HspFreeObject(
+	_In_ PHS_OBJECT_HEADER ObjectHeader)
+{
+	// Call the object type specific delete procedure, if one exists.
+	if (ObjectHeader->Type->DeleteProcedure)
+	{
+		ObjectHeader->Type->DeleteProcedure(
+			HsObjectHeaderToObject(ObjectHeader));
+	}
+
+	HsFree(ObjectHeader);
+}
+
+VOID HspDeleteListProcedure(
+	_In_ PVOID Object)
+{
+	HsDeleteList(Object);
+}
+
+PHS_LIST HsCreateList(
+	_In_ ULONG InitialCapacity)
+{
+	PHS_LIST list;
+
+	list = HsCreateObject(
+		sizeof(HS_LIST),
+		&HsListType);
+
+	HsInitializeList(list, InitialCapacity);
+
+	return list;
+}
