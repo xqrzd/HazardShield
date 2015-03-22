@@ -20,22 +20,9 @@
 
 #include "Reference.h"
 
-HS_OBJECT_TYPE HsListType;
-
 VOID HspFreeObject(
 	_In_ PHS_OBJECT_HEADER ObjectHeader
 	);
-
-VOID HspDeleteListProcedure(
-	_In_ PVOID Object
-	);
-
-VOID HsInitializeReferenceCounting()
-{
-	HsInitializeObjectType(
-		&HsListType,
-		HspDeleteListProcedure);
-}
 
 PVOID HsCreateObject(
 	_In_ SIZE_T ObjectSize,
@@ -96,24 +83,4 @@ VOID HspFreeObject(
 	}
 
 	HsFree(ObjectHeader);
-}
-
-VOID HspDeleteListProcedure(
-	_In_ PVOID Object)
-{
-	HsDeleteList(Object);
-}
-
-PHS_LIST HsCreateList(
-	_In_ ULONG InitialCapacity)
-{
-	PHS_LIST list;
-
-	list = HsCreateObject(
-		sizeof(HS_LIST),
-		&HsListType);
-
-	HsInitializeList(list, InitialCapacity);
-
-	return list;
 }

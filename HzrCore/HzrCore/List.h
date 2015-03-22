@@ -29,8 +29,15 @@ typedef struct _HS_LIST {
 	PVOID* Items;
 } HS_LIST, *PHS_LIST;
 
+__declspec(dllexport) VOID HsInitializeListType(
+	);
+
 __declspec(dllexport) VOID HsInitializeList(
 	_Out_ PHS_LIST List,
+	_In_ ULONG InitialCapacity
+	);
+
+__declspec(dllexport) PHS_LIST HsCreateList(
 	_In_ ULONG InitialCapacity
 	);
 

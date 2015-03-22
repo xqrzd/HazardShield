@@ -21,10 +21,20 @@
 #pragma once
 
 #include "Base.h"
-#include "List.h"
 
+/// <summary>
+/// Gets a pointer to an object from an object header.
+/// </summary>
+/// <param name="ObjectHeader">A pointer to an object header.</param>
+/// <returns>A pointer to the object.</returns>
 #define HsObjectHeaderToObject(ObjectHeader) (HsOffsetToPointer((ObjectHeader), (sizeof(HS_OBJECT_HEADER))))
-#define HsObjectToObjectHeader(ObjectHeader) (HsNegativeOffsetToPointer((ObjectHeader), (sizeof(HS_OBJECT_HEADER))))
+
+/// <summary>
+/// Gets a pointer an object header from an object.
+/// </summary>
+/// <param name="Object">A pointer to an object.</param>
+/// <returns>A pointer to the object's header.</returns>
+#define HsObjectToObjectHeader(Object) (HsNegativeOffsetToPointer((Object), (sizeof(HS_OBJECT_HEADER))))
 
 typedef VOID(*PHS_TYPE_DELETE_PROCEDURE)(
 	_In_ PVOID Object
@@ -38,9 +48,6 @@ typedef struct _HS_OBJECT_HEADER {
 	LONG ReferenceCount;
 	PHS_OBJECT_TYPE Type;
 } HS_OBJECT_HEADER, *PHS_OBJECT_HEADER;
-
-__declspec(dllexport) VOID HsInitializeReferenceCounting(
-	);
 
 __declspec(dllexport) PVOID HsCreateObject(
 	_In_ SIZE_T ObjectSize,
@@ -58,8 +65,4 @@ __declspec(dllexport) VOID HsReferenceObject(
 
 __declspec(dllexport) VOID HsDereferenceObject(
 	_In_ PVOID Object
-	);
-
-__declspec(dllexport) PHS_LIST HsCreateList(
-	_In_ ULONG InitialCapacity
 	);

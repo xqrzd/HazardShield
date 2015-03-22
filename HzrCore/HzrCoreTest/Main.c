@@ -27,11 +27,19 @@
 #include <stdio.h>
 #include "Scanner.h"
 #include "Memory.h"
+#include "List.h"
 #include "Reference.h"
+
+VOID InitReferenceCounting()
+{
+	HsInitializeListType();
+}
 
 VOID main()
 {
-	HZR_SCANNER scanner;
+	InitReferenceCounting();
+
+	/*HZR_SCANNER scanner;
 
 	HzrInitClamAv();
 
@@ -42,7 +50,7 @@ VOID main()
 		HzrCompileClamAvDatabase(&scanner);
 
 		HzrFreeScanner(&scanner);
-	}
+	}*/
 
 #ifdef _DEBUG
 	_CrtDumpMemoryLeaks();

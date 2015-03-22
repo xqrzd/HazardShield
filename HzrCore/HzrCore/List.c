@@ -19,6 +19,20 @@
 */
 
 #include "List.h"
+#include "Reference.h"
+
+VOID HspDeleteListProcedure(
+	_In_ PVOID Object
+	);
+
+HS_OBJECT_TYPE HsListType;
+
+VOID HsInitializeListType()
+{
+	HsInitializeObjectType(
+		&HsListType,
+		HspDeleteListProcedure);
+}
 
 VOID HsInitializeList(
 	_Out_ PHS_LIST List,
@@ -31,6 +45,20 @@ VOID HsInitializeList(
 	List->AllocationCount = InitialCapacity;
 
 	List->Items = HsAllocate(InitialCapacity * sizeof(PVOID));
+}
+
+PHS_LIST HsCreateList(
+	_In_ ULONG InitialCapacity)
+{
+	PHS_LIST list;
+
+	list = HsCreateObject(
+		sizeof(HS_LIST),
+		&HsListType);
+
+	HsInitializeList(list, InitialCapacity);
+
+	return list;
 }
 
 VOID HsClearList(
@@ -59,4 +87,10 @@ VOID HsAddItemList(
 
 	List->Items[List->Count] = Item;
 	List->Count++;
+}
+
+VOID HspDeleteListProcedure(
+	_In_ PVOID Object)
+{
+	HsDeleteList(Object);
 }
