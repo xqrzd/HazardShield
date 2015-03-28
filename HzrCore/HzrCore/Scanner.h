@@ -55,3 +55,8 @@ __declspec(dllexport) cl_error_t HzrScanBuffer(
 	_In_ ULONG ScanOptions,
 	_Out_ PCHAR* VirusName
 	);
+
+__declspec(dllexport) BOOLEAN HsScanProcessMemoryBasic(
+	_In_ PHZR_SCANNER Scanner,
+	_In_ HANDLE ProcessId
+	);

@@ -20,22 +20,21 @@
 
 #include "Memory.h"
 
+#define HS_MAX_MEMORY_SCAN_SIZE 52428800
+
 BOOLEAN HzrVirtualQuery(
-	_In_ HANDLE ProcessId,
-	_In_ PHZR_MEMORY_CALLBACK Callback)
+	_In_ PHS_MEMORY_PROVIDER Provider)
 {
 	HANDLE processHandle;
 	PUCHAR baseAddress;
-	PVOID previousAllocationBase;
 	MEMORY_BASIC_INFORMATION basicInfo;
 
 	baseAddress = 0;
-	previousAllocationBase = (PVOID)-1;
 
 	processHandle = OpenProcess(
 		PROCESS_QUERY_INFORMATION | PROCESS_VM_READ,
 		FALSE,
-		(DWORD)ProcessId);
+		(DWORD)Provider->ProcessId);
 
 	if (!processHandle)
 	{
@@ -48,6 +47,39 @@ BOOLEAN HzrVirtualQuery(
 		&basicInfo,
 		sizeof(basicInfo)))
 	{
+		if (basicInfo.State == MEM_COMMIT &&
+			FlagOff(basicInfo.Protect, PAGE_GUARD | PAGE_NOACCESS) &&
+			basicInfo.RegionSize <= HS_MAX_MEMORY_SCAN_SIZE)
+		{
+			BOOL success;
+			PVOID buffer;
+			SIZE_T bytesRead;
+
+			buffer = HsAllocate(basicInfo.RegionSize);
+
+			success = ReadProcessMemory(
+				processHandle,
+				baseAddress,
+				buffer,
+				basicInfo.RegionSize,
+				&bytesRead);
+
+			if (success)
+			{
+				HS_MEMORY_OBJECT memoryObject;
+
+				memoryObject.BaseAddress = basicInfo.BaseAddress;
+				memoryObject.Size = basicInfo.RegionSize;
+				memoryObject.ProcessId = Provider->ProcessId;
+				memoryObject.Protection = basicInfo.Protect;
+				memoryObject.Type = basicInfo.Type;
+
+				Provider->Callback(Provider, &memoryObject, buffer, basicInfo.RegionSize);
+			}
+
+			HsFree(buffer);
+		}
+
 		baseAddress += basicInfo.RegionSize;
 	}
 

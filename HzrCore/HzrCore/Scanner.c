@@ -18,7 +18,9 @@
 *  MA 02110-1301, USA.
 */
 
+#include "Memory.h"
 #include "Scanner.h"
+#include <stdio.h>
 
 cl_error_t HzrInitClamAv()
 {
@@ -92,4 +94,35 @@ cl_error_t HzrScanBuffer(
 		result = CL_EMAP;
 
 	return result;
+}
+
+VOID HsMemoryCallback(
+	_In_ PHS_MEMORY_PROVIDER Provider,
+	_In_ PHS_MEMORY_OBJECT MemoryObject,
+	_In_ PVOID Buffer,
+	_In_ SIZE_T BufferSize)
+{
+	PCHAR virusName;
+
+	printf("Scan block %p, %u\n", MemoryObject->BaseAddress, MemoryObject->Size);
+
+	HzrScanBuffer(
+		Provider->Context,
+		Buffer,
+		MemoryObject->Size,
+		CL_SCAN_STDOPT,
+		&virusName);
+}
+
+BOOLEAN HsScanProcessMemoryBasic(
+	_In_ PHZR_SCANNER Scanner,
+	_In_ HANDLE ProcessId)
+{
+	HS_MEMORY_PROVIDER provider;
+
+	provider.ProcessId = ProcessId;
+	provider.Callback = HsMemoryCallback;
+	provider.Context = Scanner;
+
+	return HzrVirtualQuery(&provider);
 }
