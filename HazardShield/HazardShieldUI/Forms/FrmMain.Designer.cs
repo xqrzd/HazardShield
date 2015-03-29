@@ -41,14 +41,16 @@
             this.TabMainScanner = new System.Windows.Forms.TabPage();
             this.TabControlScanner = new HazardShieldUI.Forms.HiddenTabControl();
             this.TabScannerMain = new System.Windows.Forms.TabPage();
+            this.LblScannerOverview = new ComponentFactory.Krypton.Toolkit.KryptonLabel();
             this.kryptonBorderEdge2 = new ComponentFactory.Krypton.Toolkit.KryptonBorderEdge();
-            this.LblScannerOverview = new ComponentFactory.Krypton.Toolkit.KryptonWrapLabel();
             this.GrpScanner = new ComponentFactory.Krypton.Toolkit.KryptonGroupBox();
             this.RadScannerCustom = new ComponentFactory.Krypton.Toolkit.KryptonRadioButton();
             this.RadScannerSmart = new ComponentFactory.Krypton.Toolkit.KryptonRadioButton();
             this.BtnScannerScan = new ComponentFactory.Krypton.Toolkit.KryptonButton();
             this.TabScannerCustom = new System.Windows.Forms.TabPage();
             this.TabScannerProgress = new System.Windows.Forms.TabPage();
+            this.kryptonBorderEdge3 = new ComponentFactory.Krypton.Toolkit.KryptonBorderEdge();
+            this.LblScannerScanType = new ComponentFactory.Krypton.Toolkit.KryptonLabel();
             this.BtnScannerAbort = new ComponentFactory.Krypton.Toolkit.KryptonButton();
             this.BtnScannerPauseResume = new ComponentFactory.Krypton.Toolkit.KryptonButton();
             this.TabScannerResults = new System.Windows.Forms.TabPage();
@@ -245,8 +247,8 @@
             // 
             // TabScannerMain
             // 
-            this.TabScannerMain.Controls.Add(this.kryptonBorderEdge2);
             this.TabScannerMain.Controls.Add(this.LblScannerOverview);
+            this.TabScannerMain.Controls.Add(this.kryptonBorderEdge2);
             this.TabScannerMain.Controls.Add(this.GrpScanner);
             this.TabScannerMain.Location = new System.Drawing.Point(4, 4);
             this.TabScannerMain.Name = "TabScannerMain";
@@ -255,21 +257,19 @@
             this.TabScannerMain.TabIndex = 0;
             this.TabScannerMain.UseVisualStyleBackColor = true;
             // 
+            // LblScannerOverview
+            // 
+            this.LblScannerOverview.Location = new System.Drawing.Point(13, 19);
+            this.LblScannerOverview.Name = "LblScannerOverview";
+            this.LblScannerOverview.Size = new System.Drawing.Size(39, 20);
+            this.LblScannerOverview.TabIndex = 1;
+            // 
             // kryptonBorderEdge2
             // 
             this.kryptonBorderEdge2.Location = new System.Drawing.Point(19, 42);
             this.kryptonBorderEdge2.Name = "kryptonBorderEdge2";
             this.kryptonBorderEdge2.Size = new System.Drawing.Size(300, 1);
             this.kryptonBorderEdge2.Text = "kryptonBorderEdge2";
-            // 
-            // LblScannerOverview
-            // 
-            this.LblScannerOverview.Font = new System.Drawing.Font("Segoe UI", 9F);
-            this.LblScannerOverview.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(30)))), ((int)(((byte)(57)))), ((int)(((byte)(91)))));
-            this.LblScannerOverview.Location = new System.Drawing.Point(15, 23);
-            this.LblScannerOverview.Name = "LblScannerOverview";
-            this.LblScannerOverview.Size = new System.Drawing.Size(110, 15);
-            this.LblScannerOverview.Text = "kryptonWrapLabel1";
             // 
             // GrpScanner
             // 
@@ -324,6 +324,8 @@
             // 
             // TabScannerProgress
             // 
+            this.TabScannerProgress.Controls.Add(this.kryptonBorderEdge3);
+            this.TabScannerProgress.Controls.Add(this.LblScannerScanType);
             this.TabScannerProgress.Controls.Add(this.BtnScannerAbort);
             this.TabScannerProgress.Controls.Add(this.BtnScannerPauseResume);
             this.TabScannerProgress.Location = new System.Drawing.Point(4, 4);
@@ -331,6 +333,21 @@
             this.TabScannerProgress.Size = new System.Drawing.Size(651, 312);
             this.TabScannerProgress.TabIndex = 2;
             this.TabScannerProgress.UseVisualStyleBackColor = true;
+            // 
+            // kryptonBorderEdge3
+            // 
+            this.kryptonBorderEdge3.Location = new System.Drawing.Point(19, 42);
+            this.kryptonBorderEdge3.Name = "kryptonBorderEdge3";
+            this.kryptonBorderEdge3.Size = new System.Drawing.Size(300, 1);
+            this.kryptonBorderEdge3.Text = "kryptonBorderEdge3";
+            // 
+            // LblScannerScanType
+            // 
+            this.LblScannerScanType.Location = new System.Drawing.Point(13, 19);
+            this.LblScannerScanType.Name = "LblScannerScanType";
+            this.LblScannerScanType.Size = new System.Drawing.Size(88, 20);
+            this.LblScannerScanType.TabIndex = 2;
+            this.LblScannerScanType.Values.Text = "kryptonLabel1";
             // 
             // BtnScannerAbort
             // 
@@ -697,7 +714,6 @@
         private ComponentFactory.Krypton.Toolkit.KryptonButton BtnScannerScan;
         private ComponentFactory.Krypton.Toolkit.KryptonRadioButton RadScannerSmart;
         private ComponentFactory.Krypton.Toolkit.KryptonRadioButton RadScannerCustom;
-        private ComponentFactory.Krypton.Toolkit.KryptonWrapLabel LblScannerOverview;
         private ComponentFactory.Krypton.Toolkit.KryptonBorderEdge kryptonBorderEdge2;
         private ComponentFactory.Krypton.Toolkit.KryptonLabel LblUpdateProgramStatus;
         private ComponentFactory.Krypton.Toolkit.KryptonLabel LblUpdateVersion;
@@ -712,6 +728,9 @@
         private ComponentFactory.Krypton.Toolkit.KryptonLabel LblUpdateStatus;
         private ComponentFactory.Krypton.Toolkit.KryptonButton BtnScannerPauseResume;
         private ComponentFactory.Krypton.Toolkit.KryptonButton BtnScannerAbort;
+        private ComponentFactory.Krypton.Toolkit.KryptonLabel LblScannerScanType;
+        private ComponentFactory.Krypton.Toolkit.KryptonLabel LblScannerOverview;
+        private ComponentFactory.Krypton.Toolkit.KryptonBorderEdge kryptonBorderEdge3;
 
 
 
