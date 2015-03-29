@@ -28,13 +28,16 @@ cl_error_t HzrInitClamAv()
 }
 
 BOOLEAN HzrInitScanner(
-	_Out_ PHZR_SCANNER Scanner)
+	_Out_ PHZR_SCANNER Scanner,
+	_In_ PHS_INFECTED_MEMORY_OBJECT_CALLBACK InfectedMemoryObjectCallback)
 {
 	Scanner->Engine = cl_engine_new();
 
 	if (Scanner->Engine)
 	{
 		Scanner->Signatures = 0;
+
+		Scanner->InfectedMemoryObjectCallback = InfectedMemoryObjectCallback;
 
 		return TRUE;
 	}
@@ -102,16 +105,23 @@ VOID HsMemoryCallback(
 	_In_ PVOID Buffer,
 	_In_ SIZE_T BufferSize)
 {
+	PHZR_SCANNER scanner;
+	cl_error_t result;
 	PCHAR virusName;
+
+	scanner = Provider->Context;
 
 	printf("Scan block %p, %u\n", MemoryObject->BaseAddress, MemoryObject->Size);
 
-	HzrScanBuffer(
-		Provider->Context,
+	result = HzrScanBuffer(
+		scanner,
 		Buffer,
 		MemoryObject->Size,
 		CL_SCAN_STDOPT,
 		&virusName);
+
+	if (result == CL_VIRUS)
+		scanner->InfectedMemoryObjectCallback(MemoryObject, virusName);
 }
 
 BOOLEAN HsScanProcessMemoryBasic(
