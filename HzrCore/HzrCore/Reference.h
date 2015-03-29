@@ -27,14 +27,14 @@
 /// </summary>
 /// <param name="ObjectHeader">A pointer to an object header.</param>
 /// <returns>A pointer to the object.</returns>
-#define HsObjectHeaderToObject(ObjectHeader) (HsOffsetToPointer((ObjectHeader), (sizeof(HS_OBJECT_HEADER))))
+#define HsObjectHeaderToObject(ObjectHeader) (PTR_ADD_OFFSET((ObjectHeader), (sizeof(HS_OBJECT_HEADER))))
 
 /// <summary>
 /// Gets a pointer an object header from an object.
 /// </summary>
 /// <param name="Object">A pointer to an object.</param>
 /// <returns>A pointer to the object's header.</returns>
-#define HsObjectToObjectHeader(Object) (HsNegativeOffsetToPointer((Object), (sizeof(HS_OBJECT_HEADER))))
+#define HsObjectToObjectHeader(Object) (PTR_SUB_OFFSET((Object), (sizeof(HS_OBJECT_HEADER))))
 
 typedef VOID(*PHS_TYPE_DELETE_PROCEDURE)(
 	_In_ PVOID Object

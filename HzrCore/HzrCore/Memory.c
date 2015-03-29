@@ -20,13 +20,13 @@
 
 #include "Memory.h"
 
-#define HS_MAX_MEMORY_SCAN_SIZE 52428800
+#define HS_MAX_MEMORY_SCAN_SIZE 10485760
 
 BOOLEAN HzrVirtualQuery(
 	_In_ PHS_MEMORY_PROVIDER Provider)
 {
 	HANDLE processHandle;
-	PUCHAR baseAddress;
+	PVOID baseAddress;
 	MEMORY_BASIC_INFORMATION basicInfo;
 
 	baseAddress = 0;
@@ -80,7 +80,7 @@ BOOLEAN HzrVirtualQuery(
 			HsFree(buffer);
 		}
 
-		baseAddress += basicInfo.RegionSize;
+		baseAddress = PTR_ADD_OFFSET(baseAddress, basicInfo.RegionSize);
 	}
 
 	CloseHandle(processHandle);
