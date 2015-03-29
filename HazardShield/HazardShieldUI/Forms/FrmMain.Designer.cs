@@ -129,7 +129,6 @@
             this.TabBtnMainAbout.Name = "TabBtnMainAbout";
             this.TabBtnMainAbout.Size = new System.Drawing.Size(140, 40);
             this.TabBtnMainAbout.TabIndex = 7;
-            this.TabBtnMainAbout.SizeChanged += new System.EventHandler(this.TabBtnMainAbout_SizeChanged);
             this.TabBtnMainAbout.Click += new System.EventHandler(this.TabBtnMainAbout_Click);
             // 
             // TabBtnMainReserved
@@ -140,7 +139,6 @@
             this.TabBtnMainReserved.Name = "TabBtnMainReserved";
             this.TabBtnMainReserved.Size = new System.Drawing.Size(140, 40);
             this.TabBtnMainReserved.TabIndex = 6;
-            this.TabBtnMainReserved.SizeChanged += new System.EventHandler(this.TabBtnMainReserved_SizeChanged);
             this.TabBtnMainReserved.Click += new System.EventHandler(this.TabBtnMainReserved_Click);
             // 
             // TabBtnMainTools
@@ -151,7 +149,6 @@
             this.TabBtnMainTools.Name = "TabBtnMainTools";
             this.TabBtnMainTools.Size = new System.Drawing.Size(140, 40);
             this.TabBtnMainTools.TabIndex = 5;
-            this.TabBtnMainTools.SizeChanged += new System.EventHandler(this.TabBtnMainTools_SizeChanged);
             this.TabBtnMainTools.Click += new System.EventHandler(this.TabBtnMainTools_Click);
             // 
             // TabBtnMainQuarantine
@@ -162,7 +159,6 @@
             this.TabBtnMainQuarantine.Name = "TabBtnMainQuarantine";
             this.TabBtnMainQuarantine.Size = new System.Drawing.Size(140, 40);
             this.TabBtnMainQuarantine.TabIndex = 4;
-            this.TabBtnMainQuarantine.SizeChanged += new System.EventHandler(this.TabBtnMainQuarantine_SizeChanged);
             this.TabBtnMainQuarantine.Click += new System.EventHandler(this.TabBtnMainQuarantine_Click);
             // 
             // TabBtnMainSettings
@@ -173,7 +169,6 @@
             this.TabBtnMainSettings.Name = "TabBtnMainSettings";
             this.TabBtnMainSettings.Size = new System.Drawing.Size(140, 40);
             this.TabBtnMainSettings.TabIndex = 3;
-            this.TabBtnMainSettings.SizeChanged += new System.EventHandler(this.TabBtnMainSettings_SizeChanged);
             this.TabBtnMainSettings.Click += new System.EventHandler(this.TabBtnMainSettings_Click);
             // 
             // TabBtnMainProtection
@@ -184,7 +179,6 @@
             this.TabBtnMainProtection.Name = "TabBtnMainProtection";
             this.TabBtnMainProtection.Size = new System.Drawing.Size(140, 40);
             this.TabBtnMainProtection.TabIndex = 2;
-            this.TabBtnMainProtection.SizeChanged += new System.EventHandler(this.TabBtnMainProtection_SizeChanged);
             this.TabBtnMainProtection.Click += new System.EventHandler(this.TabBtnMainProtection_Click);
             // 
             // TabBtnMainUpdates
@@ -195,7 +189,6 @@
             this.TabBtnMainUpdates.Name = "TabBtnMainUpdates";
             this.TabBtnMainUpdates.Size = new System.Drawing.Size(140, 40);
             this.TabBtnMainUpdates.TabIndex = 1;
-            this.TabBtnMainUpdates.SizeChanged += new System.EventHandler(this.TabBtnMainUpdates_SizeChanged);
             this.TabBtnMainUpdates.Click += new System.EventHandler(this.TabBtnMainUpdates_Click);
             // 
             // TabBtnMainScanner
@@ -206,7 +199,6 @@
             this.TabBtnMainScanner.Name = "TabBtnMainScanner";
             this.TabBtnMainScanner.Size = new System.Drawing.Size(140, 40);
             this.TabBtnMainScanner.TabIndex = 0;
-            this.TabBtnMainScanner.SizeChanged += new System.EventHandler(this.TabBtnMainScanner_SizeChanged);
             this.TabBtnMainScanner.Click += new System.EventHandler(this.TabBtnMainScanner_Click);
             // 
             // TabControlMain

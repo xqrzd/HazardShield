@@ -202,46 +202,6 @@ namespace HazardShieldUI.Forms
             ChangeMainTab((KryptonCheckButton)sender, TabMainAbout);
         }
 
-        private void TabBtnMainScanner_SizeChanged(object sender, EventArgs e)
-        {
-            ChangeMainTabSize((KryptonCheckButton)sender);
-        }
-
-        private void TabBtnMainUpdates_SizeChanged(object sender, EventArgs e)
-        {
-            ChangeMainTabSize((KryptonCheckButton)sender);
-        }
-
-        private void TabBtnMainProtection_SizeChanged(object sender, EventArgs e)
-        {
-            ChangeMainTabSize((KryptonCheckButton)sender);
-        }
-
-        private void TabBtnMainSettings_SizeChanged(object sender, EventArgs e)
-        {
-            ChangeMainTabSize((KryptonCheckButton)sender);
-        }
-
-        private void TabBtnMainQuarantine_SizeChanged(object sender, EventArgs e)
-        {
-            ChangeMainTabSize((KryptonCheckButton)sender);
-        }
-
-        private void TabBtnMainTools_SizeChanged(object sender, EventArgs e)
-        {
-            ChangeMainTabSize((KryptonCheckButton)sender);
-        }
-
-        private void TabBtnMainReserved_SizeChanged(object sender, EventArgs e)
-        {
-            ChangeMainTabSize((KryptonCheckButton)sender);
-        }
-
-        private void TabBtnMainAbout_SizeChanged(object sender, EventArgs e)
-        {
-            ChangeMainTabSize((KryptonCheckButton)sender);
-        }
-
         private void BtnUpdatesCheck_SizeChanged(object sender, EventArgs e)
         {
             BtnUpdateDownload.Location = new Point(BtnUpdateCheck.Location.X + BtnUpdateCheck.Size.Width + 8, BtnUpdateCheck.Location.Y);
