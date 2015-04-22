@@ -18,6 +18,7 @@
 *  MA 02110-1301, USA.
 */
 
+using HazardShield.Core;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -27,11 +28,37 @@ using System.Threading.Tasks;
 
 namespace HazardShield.Scanning
 {
-    public class Scanner
+    public class Scanner : IDisposable
     {
         [DllImport("libclamav.dll", CallingConvention = CallingConvention.Cdecl)]
         static extern IntPtr cl_retver();
 
         public static string ClamAVVersion { get { return Marshal.PtrToStringAnsi(cl_retver()); } }
+
+        IntPtr HsScanner;
+
+        MemoryObjectCallback MemoryObjectCallbackPtr;
+
+        public Scanner()
+        {
+            MemoryObjectCallbackPtr = MemoryObjectScanned;
+
+            HzrCore.CreateScanner(out HsScanner, MemoryObjectCallbackPtr);
+        }
+
+        public bool ScanMemory(IntPtr processId)
+        {
+            return HzrCore.ScanMemory(HsScanner, processId);
+        }
+
+        void MemoryObjectScanned(HS_MEMORY_OBJECT mem, string vir)
+        {
+        }
+
+        public void Dispose()
+        {
+            if (HsScanner != IntPtr.Zero)
+                HzrCore.DeleteScanner(HsScanner);
+        }
     }
 }

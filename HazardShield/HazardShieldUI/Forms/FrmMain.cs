@@ -40,6 +40,7 @@ namespace HazardShieldUI.Forms
         GuiProtector UiProtector;
         List<DatabaseUpdateLabel> DatabaseUpdateLabels;
         Freshclam FreshclamWrapper;
+        Scanner _scanner;
 
         public FrmMain()
         {
@@ -72,6 +73,8 @@ namespace HazardShieldUI.Forms
             FreshclamWrapper.UpdateFinished += FreshclamUpdateFinished;
 
             AddClamDatabaseUpdateLabels();
+
+            _scanner = new Scanner();
         }
 
         void ApplyStyle(PaletteModeManager style)

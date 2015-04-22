@@ -68,9 +68,9 @@ BOOLEAN HzrVirtualQuery(
 			{
 				HS_MEMORY_OBJECT memoryObject;
 
+				memoryObject.ProcessId = Provider->ProcessId;
 				memoryObject.BaseAddress = basicInfo.BaseAddress;
 				memoryObject.Size = basicInfo.RegionSize;
-				memoryObject.ProcessId = Provider->ProcessId;
 				memoryObject.Protection = basicInfo.Protect;
 				memoryObject.Type = basicInfo.Type;
 

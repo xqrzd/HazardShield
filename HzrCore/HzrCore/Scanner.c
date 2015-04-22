@@ -20,35 +20,45 @@
 
 #include "Memory.h"
 #include "Scanner.h"
-#include <stdio.h>
 
 cl_error_t HzrInitClamAv()
 {
 	return cl_init(CL_INIT_DEFAULT);
 }
 
-BOOLEAN HzrInitScanner(
-	_Out_ PHZR_SCANNER Scanner,
-	_In_ PHS_INFECTED_MEMORY_OBJECT_CALLBACK InfectedMemoryObjectCallback)
+BOOLEAN HzrCreateScanner(
+	_Out_ PHZR_SCANNER* Scanner,
+	_In_ PHS_MEMORY_OBJECT_CALLBACK MemoryObjectCallback)
 {
-	Scanner->Engine = cl_engine_new();
+	PHZR_SCANNER scanner = HsAllocate(sizeof(HZR_SCANNER));
 
-	if (Scanner->Engine)
+	scanner->Engine = cl_engine_new();
+
+	if (scanner->Engine)
 	{
-		Scanner->Signatures = 0;
+		scanner->Signatures = 0;
 
-		Scanner->InfectedMemoryObjectCallback = InfectedMemoryObjectCallback;
+		scanner->MemoryObjectCallback = MemoryObjectCallback;
+
+		//HzrLoadClamAvDatabase(scanner, "C:\\ProgramData\\Hazard Shield", CL_DB_BYTECODE);
+
+		//HzrCompileClamAvDatabase(scanner);
+
+		*Scanner = scanner;
 
 		return TRUE;
 	}
 
+	HsFree(scanner);
+
 	return FALSE;
 }
 
-VOID HzrFreeScanner(
+VOID HzrDeleteScanner(
 	_In_ PHZR_SCANNER Scanner)
 {
 	cl_engine_free(Scanner->Engine);
+	HsFree(Scanner);
 }
 
 cl_error_t HzrLoadClamAvDatabase(
@@ -110,8 +120,7 @@ VOID HsMemoryCallback(
 	PCHAR virusName;
 
 	scanner = Provider->Context;
-
-	printf("Scan block %p, %u\n", MemoryObject->BaseAddress, MemoryObject->Size);
+	virusName = NULL;
 
 	result = HzrScanBuffer(
 		scanner,
@@ -120,8 +129,7 @@ VOID HsMemoryCallback(
 		CL_SCAN_STDOPT,
 		&virusName);
 
-	if (result == CL_VIRUS)
-		scanner->InfectedMemoryObjectCallback(MemoryObject, virusName);
+	scanner->MemoryObjectCallback(MemoryObject, virusName);
 }
 
 BOOLEAN HsScanProcessMemoryBasic(

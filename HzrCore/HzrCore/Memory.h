@@ -21,16 +21,16 @@
 #pragma once
 
 #include "Base.h"
+#include "String2.h"
 
 typedef struct _HS_MEMORY_OBJECT {
+	HANDLE ProcessId;
+
 	PVOID BaseAddress;
 	SIZE_T Size;
-	HANDLE ProcessId;
 
 	DWORD Protection;
 	DWORD Type;
-
-	// Path
 } HS_MEMORY_OBJECT, *PHS_MEMORY_OBJECT;
 
 typedef struct _HS_MEMORY_PROVIDER *PHS_MEMORY_PROVIDER;

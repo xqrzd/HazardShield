@@ -23,7 +23,7 @@
 #include "clamav.h"
 #include "Memory.h"
 
-typedef VOID(*PHS_INFECTED_MEMORY_OBJECT_CALLBACK)(
+typedef VOID(*PHS_MEMORY_OBJECT_CALLBACK)(
 	_In_ PHS_MEMORY_OBJECT MemoryObject,
 	_In_ PCHAR VirusName
 	);
@@ -32,19 +32,19 @@ typedef struct _HZR_SCANNER {
 	struct cl_engine* Engine;
 	ULONG Signatures;
 
-	// 'Found infected object' Callbacks
-	PHS_INFECTED_MEMORY_OBJECT_CALLBACK InfectedMemoryObjectCallback;
+	// Scanner callbacks.
+	PHS_MEMORY_OBJECT_CALLBACK MemoryObjectCallback;
 } HZR_SCANNER, *PHZR_SCANNER;
 
 __declspec(dllexport) cl_error_t HzrInitClamAv(
 	);
 
-__declspec(dllexport) BOOLEAN HzrInitScanner(
-	_Out_ PHZR_SCANNER Scanner,
-	_In_ PHS_INFECTED_MEMORY_OBJECT_CALLBACK InfectedMemoryObjectCallback
+__declspec(dllexport) BOOLEAN HzrCreateScanner(
+	_Out_ PHZR_SCANNER* Scanner,
+	_In_ PHS_MEMORY_OBJECT_CALLBACK MemoryObjectCallback
 	);
 
-__declspec(dllexport) VOID HzrFreeScanner(
+__declspec(dllexport) VOID HzrDeleteScanner(
 	_In_ PHZR_SCANNER Scanner
 	);
 

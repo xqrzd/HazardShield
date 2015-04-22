@@ -42,6 +42,8 @@
     <Compile Include="ClamAV\Structures.cs" />
     <Compile Include="ClamAV\Updates\EventArgs.cs" />
     <Compile Include="ClamAV\Updates\Freshclam.cs" />
+    <Compile Include="Core\HzrCore.cs" />
+    <Compile Include="Core\Structures.cs" />
     <Compile Include="Logger.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Scanning\Scanner.cs" />
