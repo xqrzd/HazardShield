@@ -42,7 +42,7 @@
     <ClCompile Include="Protect.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Exploit.c">
+    <ClCompile Include="Behavior.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -73,7 +73,7 @@
     <ClInclude Include="Protect.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Exploit.h">
+    <ClInclude Include="Behavior.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

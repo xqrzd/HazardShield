@@ -18,7 +18,7 @@
 *  MA 02110-1301, USA.
 */
 
-#include "Exploit.h"
+#include "Behavior.h"
 #include "Utility.h"
 
 CONST UNICODE_STRING FirefoxPluginHost = RTL_CONSTANT_STRING(L"plugin-container.exe");

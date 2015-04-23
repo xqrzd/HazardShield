@@ -22,8 +22,8 @@
 #define HZRFILTER_H
 
 #include <fltKernel.h>
+#include "Behavior.h"
 #include "Context.h"
-#include "Exploit.h"
 #include "Handle.h"
 #include "Protect.h"
 #include "Service.h"
