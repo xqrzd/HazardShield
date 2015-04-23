@@ -25,6 +25,11 @@ CONST UNICODE_STRING FirefoxPluginHost = RTL_CONSTANT_STRING(L"plugin-container.
 CONST UNICODE_STRING Opera = RTL_CONSTANT_STRING(L"chrome.exe");
 CONST UNICODE_STRING Chrome = RTL_CONSTANT_STRING(L"opera.exe");
 
+struct {
+	RTL_AVL_TABLE Processes;
+	EX_PUSH_LOCK ProcessLock;
+} BehaviorInstance;
+
 RTL_GENERIC_COMPARE_RESULTS AvlpCompareExplProcess(
 	_In_ PRTL_AVL_TABLE Table,
 	_In_ PEXPL_PROCESS Lhs,
@@ -40,26 +45,23 @@ RTL_GENERIC_COMPARE_RESULTS AvlpCompareExplProcess(
 		return GenericEqual;
 }
 
-VOID HzrExplInit(
-	_Inout_ PEXPL_INSTANCE ExploitInstance)
+VOID HzrExplInit()
 {
-	FltInitializePushLock(&ExploitInstance->ProcessLock);
-	RtlInitializeGenericTableAvl(&ExploitInstance->Processes, AvlpCompareExplProcess, AvlAllocate, AvlFree, NULL);
+	FltInitializePushLock(&BehaviorInstance.ProcessLock);
+	RtlInitializeGenericTableAvl(&BehaviorInstance.Processes, AvlpCompareExplProcess, AvlAllocate, AvlFree, NULL);
 }
 
-VOID HzrExplFree(
-	_In_ PEXPL_INSTANCE ExploitInstance)
+VOID HzrExplFree()
 {
-	FltAcquirePushLockExclusive(&ExploitInstance->ProcessLock);
+	FltAcquirePushLockExclusive(&BehaviorInstance.ProcessLock);
 
-	AvlDeleteAllElements(&ExploitInstance->Processes);
+	AvlDeleteAllElements(&BehaviorInstance.Processes);
 
-	FltReleasePushLock(&ExploitInstance->ProcessLock);
-	FltDeletePushLock(&ExploitInstance->ProcessLock);
+	FltReleasePushLock(&BehaviorInstance.ProcessLock);
+	FltDeletePushLock(&BehaviorInstance.ProcessLock);
 }
 
 BOOLEAN HzrExplPreWrite(
-	_In_ PEXPL_INSTANCE ExploitInstance,
 	_Inout_ PFLT_CALLBACK_DATA Data,
 	_In_ PCFLT_RELATED_OBJECTS FltObjects)
 {
@@ -69,7 +71,7 @@ BOOLEAN HzrExplPreWrite(
 
 	UNREFERENCED_PARAMETER(FltObjects);
 
-	type = HzrExplIsProcessExploit(ExploitInstance, process);
+	type = HzrExplIsProcessExploit(process);
 
 	switch (type)
 	{
@@ -101,7 +103,6 @@ BOOLEAN HzrExplPreWrite(
 }
 
 BOOLEAN HzrExplpIsChildOfExploitProcess(
-	_In_ PEXPL_INSTANCE ExploitInstance,
 	_In_ HANDLE CreatorProcessId,
 	_Out_ PEXPL_PROCESS_TYPE Type)
 {
@@ -113,7 +114,7 @@ BOOLEAN HzrExplpIsChildOfExploitProcess(
 
 	if (NT_SUCCESS(status))
 	{
-		*Type = HzrExplIsProcessExploit(ExploitInstance, creatorProcess);
+		*Type = HzrExplIsProcessExploit(creatorProcess);
 
 		if (*Type)
 			isChild = TRUE;
@@ -125,7 +126,6 @@ BOOLEAN HzrExplpIsChildOfExploitProcess(
 }
 
 VOID HzrExplCreateProcessNotifyEx(
-	_Inout_ PEXPL_INSTANCE ExploitInstance,
 	_Inout_ PEPROCESS Process,
 	_Inout_opt_ PPS_CREATE_NOTIFY_INFO CreateInfo)
 {
@@ -134,11 +134,11 @@ VOID HzrExplCreateProcessNotifyEx(
 		EXPL_PROCESS_TYPE type;
 
 		// If a monitored process is creating a child, monitor the child.
-		if (HzrExplpIsChildOfExploitProcess(ExploitInstance, CreateInfo->CreatingThreadId.UniqueProcess, &type))
+		if (HzrExplpIsChildOfExploitProcess(CreateInfo->CreatingThreadId.UniqueProcess, &type))
 		{
 			DbgPrint("Adding child exploit process %wZ", CreateInfo->ImageFileName);
 
-			HzrExplAddExploitProcess(ExploitInstance, Process, type);
+			HzrExplAddExploitProcess(Process, type);
 
 			return;
 		}
@@ -151,7 +151,7 @@ VOID HzrExplCreateProcessNotifyEx(
 			{
 				DbgPrint("Adding exploit process %wZ", CreateInfo->ImageFileName);
 
-				HzrExplAddExploitProcess(ExploitInstance, Process, type);
+				HzrExplAddExploitProcess(Process, type);
 			}
 		}
 		else
@@ -159,7 +159,7 @@ VOID HzrExplCreateProcessNotifyEx(
 	}
 	else
 	{
-		HzrExplRemoveExploitProcess(ExploitInstance, Process);
+		HzrExplRemoveExploitProcess(Process);
 	}
 }
 
@@ -191,7 +191,6 @@ EXPL_PROCESS_TYPE HzrExplCheckNewProcess(
 }
 
 VOID HzrExplAddExploitProcess(
-	_In_ PEXPL_INSTANCE ExploitInstance,
 	_In_ PEPROCESS Process,
 	_In_ EXPL_PROCESS_TYPE Type)
 {
@@ -200,34 +199,32 @@ VOID HzrExplAddExploitProcess(
 	exploitProcess.Process = Process;
 	exploitProcess.Type = Type;
 
-	FltAcquirePushLockExclusive(&ExploitInstance->ProcessLock);
+	FltAcquirePushLockExclusive(&BehaviorInstance.ProcessLock);
 
 	RtlInsertElementGenericTableAvl(
-		&ExploitInstance->Processes,
+		&BehaviorInstance.Processes,
 		&exploitProcess,
 		sizeof(EXPL_PROCESS),
 		NULL);
 
-	FltReleasePushLock(&ExploitInstance->ProcessLock);
+	FltReleasePushLock(&BehaviorInstance.ProcessLock);
 }
 
 VOID HzrExplRemoveExploitProcess(
-	_In_ PEXPL_INSTANCE ExploitInstance,
 	_In_ PEPROCESS Process)
 {
 	EXPL_PROCESS exploitProcess;
 
 	exploitProcess.Process = Process;
 
-	FltAcquirePushLockExclusive(&ExploitInstance->ProcessLock);
+	FltAcquirePushLockExclusive(&BehaviorInstance.ProcessLock);
 
-	RtlDeleteElementGenericTableAvl(&ExploitInstance->Processes, &exploitProcess);
+	RtlDeleteElementGenericTableAvl(&BehaviorInstance.Processes, &exploitProcess);
 
-	FltReleasePushLock(&ExploitInstance->ProcessLock);
+	FltReleasePushLock(&BehaviorInstance.ProcessLock);
 }
 
 EXPL_PROCESS_TYPE HzrExplIsProcessExploit(
-	_In_ PEXPL_INSTANCE ExploitInstance,
 	_In_ PEPROCESS Process)
 {
 	EXPL_PROCESS searchKey;
@@ -236,10 +233,10 @@ EXPL_PROCESS_TYPE HzrExplIsProcessExploit(
 
 	searchKey.Process = Process;
 
-	FltAcquirePushLockShared(&ExploitInstance->ProcessLock);
+	FltAcquirePushLockShared(&BehaviorInstance.ProcessLock);
 
 	exploitProcess = RtlLookupElementGenericTableAvl(
-		&ExploitInstance->Processes,
+		&BehaviorInstance.Processes,
 		&searchKey);
 
 	if (exploitProcess)
@@ -247,7 +244,7 @@ EXPL_PROCESS_TYPE HzrExplIsProcessExploit(
 	else
 		processType = EXPL_PROCESS_NONE;
 
-	FltReleasePushLock(&ExploitInstance->ProcessLock);
+	FltReleasePushLock(&BehaviorInstance.ProcessLock);
 
 	return processType;
 }

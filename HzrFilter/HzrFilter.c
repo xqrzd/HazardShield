@@ -32,7 +32,6 @@ struct {
 
 	HANDLE_SYSTEM HandleSystem;
 	OB_CALLBACK_INSTANCE ObCallbackInstance;
-	EXPL_INSTANCE ExploitInstance;
 } FilterData;
 
 CONST FLT_OPERATION_REGISTRATION Callbacks[] = {
@@ -162,7 +161,7 @@ NTSTATUS DriverEntry(
 
 	UNREFERENCED_PARAMETER(RegistryPath);
 
-	HzrExplInit(&FilterData.ExploitInstance);
+	HzrExplInit();
 
 	status = FltRegisterFilter(DriverObject, &FilterRegistration, &FilterData.Filter);
 
@@ -235,7 +234,7 @@ NTSTATUS HzrFilterUnload(
 		FltUnregisterFilter(FilterData.Filter);
 		PsSetCreateProcessNotifyRoutineEx(HzrCreateProcessNotifyEx, TRUE);
 		HzrUnRegisterProtector(&FilterData.ObCallbackInstance);
-		HzrExplFree(&FilterData.ExploitInstance);
+		HzrExplFree();
 		HndFree(&FilterData.HandleSystem);
 
 		return STATUS_SUCCESS;
@@ -525,7 +524,7 @@ FLT_PREOP_CALLBACK_STATUS HzrFilterPreWrite(
 
 	HzrFilterSetStreamFlags(FltObjects->Instance, FltObjects->FileObject, STREAM_FLAG_MODIFIED);
 
-	if (HzrExplPreWrite(&FilterData.ExploitInstance, Data, FltObjects))
+	if (HzrExplPreWrite(Data, FltObjects))
 	{
 		DbgPrint("Preventing write %wZ", &FltObjects->FileObject->FileName);
 		HzrFilterSetStreamFlags(FltObjects->Instance, FltObjects->FileObject, STREAM_FLAG_INFECTED | STREAM_FLAG_DELETE);
@@ -934,7 +933,7 @@ VOID HzrCreateProcessNotifyEx(
 {
 	UNREFERENCED_PARAMETER(ProcessId);
 
-	HzrExplCreateProcessNotifyEx(&FilterData.ExploitInstance, Process, CreateInfo);
+	HzrExplCreateProcessNotifyEx(Process, CreateInfo);
 
 	if (!CreateInfo)
 	{

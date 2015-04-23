@@ -18,8 +18,8 @@
 *  MA 02110-1301, USA.
 */
 
-#ifndef HZRFILTER_EXPLOIT_H
-#define HZRFILTER_EXPLOIT_H
+#ifndef HZRFILTER_BEHAVIOR_H
+#define HZRFILTER_BEHAVIOR_H
 
 #include <fltKernel.h>
 
@@ -30,32 +30,23 @@ typedef enum _EXPL_PROCESS_TYPE {
 	EXPL_PROCESS_CHROME_OPERA_PLUGIN_HOST
 } EXPL_PROCESS_TYPE, *PEXPL_PROCESS_TYPE;
 
-typedef struct _EXPL_INSTANCE {
-	RTL_AVL_TABLE Processes;
-	EX_PUSH_LOCK ProcessLock;
-} EXPL_INSTANCE, *PEXPL_INSTANCE;
-
 typedef struct _EXPL_PROCESS {
 	PEPROCESS Process;
 	EXPL_PROCESS_TYPE Type;
 } EXPL_PROCESS, *PEXPL_PROCESS;
 
 VOID HzrExplInit(
-	_Inout_ PEXPL_INSTANCE ExploitInstance
 	);
 
 VOID HzrExplFree(
-	_In_ PEXPL_INSTANCE ExploitInstance
 	);
 
 BOOLEAN HzrExplPreWrite(
-	_In_ PEXPL_INSTANCE ExploitInstance,
 	_Inout_ PFLT_CALLBACK_DATA Data,
 	_In_ PCFLT_RELATED_OBJECTS FltObjects
 	);
 
 VOID HzrExplCreateProcessNotifyEx(
-	_Inout_ PEXPL_INSTANCE ExploitInstance,
 	_Inout_ PEPROCESS Process,
 	_Inout_opt_ PPS_CREATE_NOTIFY_INFO CreateInfo
 	);
@@ -66,18 +57,15 @@ EXPL_PROCESS_TYPE HzrExplCheckNewProcess(
 	);
 
 VOID HzrExplAddExploitProcess(
-	_In_ PEXPL_INSTANCE ExploitInstance,
 	_In_ PEPROCESS Process,
 	_In_ EXPL_PROCESS_TYPE Type
 	);
 
 VOID HzrExplRemoveExploitProcess(
-	_In_ PEXPL_INSTANCE ExploitInstance,
 	_In_ PEPROCESS Process
 	);
 
 EXPL_PROCESS_TYPE HzrExplIsProcessExploit(
-	_In_ PEXPL_INSTANCE ExploitInstance,
 	_In_ PEPROCESS Process
 	);
 
