@@ -23,49 +23,42 @@
 
 #include <fltKernel.h>
 
-typedef enum _EXPL_PROCESS_TYPE {
-	EXPL_PROCESS_NONE = 0,
-	EXPL_PROCESS_JAVA,
-	EXPL_PROCESS_FIREFOX_PLUGIN_HOST,
-	EXPL_PROCESS_CHROME_OPERA_PLUGIN_HOST
-} EXPL_PROCESS_TYPE, *PEXPL_PROCESS_TYPE;
+typedef enum _HS_PROCESS_TYPE {
+	HS_PROCESS_TYPE_NONE = 0,
+	HS_PROCESS_TYPE_FIREFOX_PLUGIN_HOST
+} HS_PROCESS_TYPE, *PHS_PROCESS_TYPE;
 
-typedef struct _EXPL_PROCESS {
+typedef struct _HS_MONITORED_PROCESS {
 	PEPROCESS Process;
-	EXPL_PROCESS_TYPE Type;
-} EXPL_PROCESS, *PEXPL_PROCESS;
+	HS_PROCESS_TYPE Type;
+} HS_MONITORED_PROCESS, *PHS_MONITORED_PROCESS;
 
-VOID HzrExplInit(
+VOID HsInitializeBehaviorSystem(
 	);
 
-VOID HzrExplFree(
+VOID HsDeleteBehaviorSystem(
 	);
 
-BOOLEAN HzrExplPreWrite(
+BOOLEAN HsMonitorPreWrite(
 	_Inout_ PFLT_CALLBACK_DATA Data,
 	_In_ PCFLT_RELATED_OBJECTS FltObjects
 	);
 
-VOID HzrExplCreateProcessNotifyEx(
+VOID HsMonitorCreateProcessNotifyEx(
 	_Inout_ PEPROCESS Process,
 	_Inout_opt_ PPS_CREATE_NOTIFY_INFO CreateInfo
 	);
 
-EXPL_PROCESS_TYPE HzrExplCheckNewProcess(
-	_In_ PCUNICODE_STRING ImageFileName,
-	_In_opt_ PCUNICODE_STRING CommandLine
-	);
-
-VOID HzrExplAddExploitProcess(
+VOID HsMonitorProcess(
 	_In_ PEPROCESS Process,
-	_In_ EXPL_PROCESS_TYPE Type
+	_In_ HS_PROCESS_TYPE Type
 	);
 
-VOID HzrExplRemoveExploitProcess(
+VOID HsUnMonitorProcess(
 	_In_ PEPROCESS Process
 	);
 
-EXPL_PROCESS_TYPE HzrExplIsProcessExploit(
+HS_PROCESS_TYPE HsIsProcessMonitored(
 	_In_ PEPROCESS Process
 	);
 

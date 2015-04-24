@@ -161,7 +161,7 @@ NTSTATUS DriverEntry(
 
 	UNREFERENCED_PARAMETER(RegistryPath);
 
-	HzrExplInit();
+	HsInitializeBehaviorSystem();
 
 	status = FltRegisterFilter(DriverObject, &FilterRegistration, &FilterData.Filter);
 
@@ -234,7 +234,7 @@ NTSTATUS HzrFilterUnload(
 		FltUnregisterFilter(FilterData.Filter);
 		PsSetCreateProcessNotifyRoutineEx(HzrCreateProcessNotifyEx, TRUE);
 		HzrUnRegisterProtector(&FilterData.ObCallbackInstance);
-		HzrExplFree();
+		HsDeleteBehaviorSystem();
 		HndFree(&FilterData.HandleSystem);
 
 		return STATUS_SUCCESS;
@@ -524,7 +524,7 @@ FLT_PREOP_CALLBACK_STATUS HzrFilterPreWrite(
 
 	HzrFilterSetStreamFlags(FltObjects->Instance, FltObjects->FileObject, STREAM_FLAG_MODIFIED);
 
-	if (HzrExplPreWrite(Data, FltObjects))
+	if (HsMonitorPreWrite(Data, FltObjects))
 	{
 		DbgPrint("Preventing write %wZ", &FltObjects->FileObject->FileName);
 		HzrFilterSetStreamFlags(FltObjects->Instance, FltObjects->FileObject, STREAM_FLAG_INFECTED | STREAM_FLAG_DELETE);
@@ -933,7 +933,7 @@ VOID HzrCreateProcessNotifyEx(
 {
 	UNREFERENCED_PARAMETER(ProcessId);
 
-	HzrExplCreateProcessNotifyEx(Process, CreateInfo);
+	HsMonitorCreateProcessNotifyEx(Process, CreateInfo);
 
 	if (!CreateInfo)
 	{

@@ -21,37 +21,36 @@
 #include "Behavior.h"
 #include "Utility.h"
 
-CONST UNICODE_STRING FirefoxPluginHost = RTL_CONSTANT_STRING(L"plugin-container.exe");
-CONST UNICODE_STRING Opera = RTL_CONSTANT_STRING(L"chrome.exe");
-CONST UNICODE_STRING Chrome = RTL_CONSTANT_STRING(L"opera.exe");
+BOOLEAN HspIsChildOfMonitoredProcess(
+	_In_ HANDLE CreatorProcessId,
+	_Out_ PHS_PROCESS_TYPE Type
+	);
+
+HS_PROCESS_TYPE HspShouldMonitorProcess(
+	_In_ PCUNICODE_STRING ImageFileName,
+	_In_opt_ PCUNICODE_STRING CommandLine
+	);
+
+RTL_GENERIC_COMPARE_RESULTS HspCompareMonitoredProcess(
+	_In_ PRTL_AVL_TABLE Table,
+	_In_ PHS_MONITORED_PROCESS Lhs,
+	_In_ PHS_MONITORED_PROCESS Rhs
+	);
+
+CONST UNICODE_STRING FIREFOX_PLUGIN_HOST = RTL_CONSTANT_STRING(L"plugin-container.exe");
 
 struct {
 	RTL_AVL_TABLE Processes;
 	EX_PUSH_LOCK ProcessLock;
 } BehaviorInstance;
 
-RTL_GENERIC_COMPARE_RESULTS AvlpCompareExplProcess(
-	_In_ PRTL_AVL_TABLE Table,
-	_In_ PEXPL_PROCESS Lhs,
-	_In_ PEXPL_PROCESS Rhs)
-{
-	UNREFERENCED_PARAMETER(Table);
-
-	if (Lhs->Process < Rhs->Process)
-		return GenericLessThan;
-	else if (Lhs->Process > Rhs->Process)
-		return GenericGreaterThan;
-	else
-		return GenericEqual;
-}
-
-VOID HzrExplInit()
+VOID HsInitializeBehaviorSystem()
 {
 	FltInitializePushLock(&BehaviorInstance.ProcessLock);
-	RtlInitializeGenericTableAvl(&BehaviorInstance.Processes, AvlpCompareExplProcess, AvlAllocate, AvlFree, NULL);
+	RtlInitializeGenericTableAvl(&BehaviorInstance.Processes, HspCompareMonitoredProcess, AvlAllocate, AvlFree, NULL);
 }
 
-VOID HzrExplFree()
+VOID HsDeleteBehaviorSystem()
 {
 	FltAcquirePushLockExclusive(&BehaviorInstance.ProcessLock);
 
@@ -61,23 +60,21 @@ VOID HzrExplFree()
 	FltDeletePushLock(&BehaviorInstance.ProcessLock);
 }
 
-BOOLEAN HzrExplPreWrite(
+BOOLEAN HsMonitorPreWrite(
 	_Inout_ PFLT_CALLBACK_DATA Data,
 	_In_ PCFLT_RELATED_OBJECTS FltObjects)
 {
-	PEPROCESS process = IoGetCurrentProcess();
-	BOOLEAN block = FALSE;
-	EXPL_PROCESS_TYPE type;
+	BOOLEAN block;
+	HS_PROCESS_TYPE type;
 
 	UNREFERENCED_PARAMETER(FltObjects);
 
-	type = HzrExplIsProcessExploit(process);
+	block = FALSE;
+	type = HsIsProcessMonitored(IoGetCurrentProcess());
 
 	switch (type)
 	{
-	case EXPL_PROCESS_JAVA:
-	case EXPL_PROCESS_FIREFOX_PLUGIN_HOST:
-	case EXPL_PROCESS_CHROME_OPERA_PLUGIN_HOST:
+	case HS_PROCESS_TYPE_FIREFOX_PLUGIN_HOST:
 	{
 		if (Data->Iopb->Parameters.Write.ByteOffset.QuadPart == 0 &&
 			Data->Iopb->Parameters.Write.Length >= 2)
@@ -102,9 +99,106 @@ BOOLEAN HzrExplPreWrite(
 	return block;
 }
 
-BOOLEAN HzrExplpIsChildOfExploitProcess(
+VOID HsMonitorCreateProcessNotifyEx(
+	_Inout_ PEPROCESS Process,
+	_Inout_opt_ PPS_CREATE_NOTIFY_INFO CreateInfo)
+{
+	if (CreateInfo)
+	{
+		HS_PROCESS_TYPE type;
+
+		// If a monitored process is creating a child, monitor the child.
+		if (HspIsChildOfMonitoredProcess(CreateInfo->CreatingThreadId.UniqueProcess, &type))
+		{
+			DbgPrint("Monitoring child process %wZ", CreateInfo->ImageFileName);
+
+			HsMonitorProcess(Process, type);
+
+			return;
+		}
+
+		if (CreateInfo->FileOpenNameAvailable)
+		{
+			type = HspShouldMonitorProcess(CreateInfo->ImageFileName, CreateInfo->CommandLine);
+
+			if (type)
+			{
+				DbgPrint("Monitoring process %wZ", CreateInfo->ImageFileName);
+
+				HsMonitorProcess(Process, type);
+			}
+		}
+		else
+			DbgPrint("HsMonitorCreateProcessNotifyEx: File name not available for EPROCESS %016llX", Process);
+	}
+	else
+	{
+		HsUnMonitorProcess(Process);
+	}
+}
+
+VOID HsMonitorProcess(
+	_In_ PEPROCESS Process,
+	_In_ HS_PROCESS_TYPE Type)
+{
+	HS_MONITORED_PROCESS process;
+
+	process.Process = Process;
+	process.Type = Type;
+
+	FltAcquirePushLockExclusive(&BehaviorInstance.ProcessLock);
+
+	RtlInsertElementGenericTableAvl(
+		&BehaviorInstance.Processes,
+		&process,
+		sizeof(HS_MONITORED_PROCESS),
+		NULL);
+
+	FltReleasePushLock(&BehaviorInstance.ProcessLock);
+}
+
+VOID HsUnMonitorProcess(
+	_In_ PEPROCESS Process)
+{
+	HS_MONITORED_PROCESS process;
+
+	process.Process = Process;
+
+	FltAcquirePushLockExclusive(&BehaviorInstance.ProcessLock);
+
+	RtlDeleteElementGenericTableAvl(&BehaviorInstance.Processes, &process);
+
+	FltReleasePushLock(&BehaviorInstance.ProcessLock);
+}
+
+HS_PROCESS_TYPE HsIsProcessMonitored(
+	_In_ PEPROCESS Process)
+{
+	HS_MONITORED_PROCESS searchKey;
+	PHS_MONITORED_PROCESS process;
+	HS_PROCESS_TYPE processType;
+
+	searchKey.Process = Process;
+
+	FltAcquirePushLockShared(&BehaviorInstance.ProcessLock);
+
+	process = RtlLookupElementGenericTableAvl(
+		&BehaviorInstance.Processes,
+		&searchKey);
+
+	if (process)
+		processType = process->Type;
+	else
+		processType = HS_PROCESS_TYPE_NONE;
+
+	FltReleasePushLock(&BehaviorInstance.ProcessLock);
+
+	return processType;
+}
+
+BOOLEAN HspIsChildOfMonitoredProcess(
 	_In_ HANDLE CreatorProcessId,
-	_Out_ PEXPL_PROCESS_TYPE Type)
+	_Out_ PHS_PROCESS_TYPE Type)
 {
 	NTSTATUS status;
 	PEPROCESS creatorProcess;
@@ -114,7 +208,7 @@ BOOLEAN HzrExplpIsChildOfExploitProcess(
 
 	if (NT_SUCCESS(status))
 	{
-		*Type = HzrExplIsProcessExploit(creatorProcess);
+		*Type = HsIsProcessMonitored(creatorProcess);
 
 		if (*Type)
 			isChild = TRUE;
@@ -125,45 +219,7 @@ BOOLEAN HzrExplpIsChildOfExploitProcess(
 	return isChild;
 }
 
-VOID HzrExplCreateProcessNotifyEx(
-	_Inout_ PEPROCESS Process,
-	_Inout_opt_ PPS_CREATE_NOTIFY_INFO CreateInfo)
-{
-	if (CreateInfo)
-	{
-		EXPL_PROCESS_TYPE type;
-
-		// If a monitored process is creating a child, monitor the child.
-		if (HzrExplpIsChildOfExploitProcess(CreateInfo->CreatingThreadId.UniqueProcess, &type))
-		{
-			DbgPrint("Adding child exploit process %wZ", CreateInfo->ImageFileName);
-
-			HzrExplAddExploitProcess(Process, type);
-
-			return;
-		}
-
-		if (CreateInfo->FileOpenNameAvailable)
-		{
-			type = HzrExplCheckNewProcess(CreateInfo->ImageFileName, CreateInfo->CommandLine);
-
-			if (type)
-			{
-				DbgPrint("Adding exploit process %wZ", CreateInfo->ImageFileName);
-
-				HzrExplAddExploitProcess(Process, type);
-			}
-		}
-		else
-			DbgPrint("HzrExplCreateProcessNotifyEx: File name not available for EPROCESS %016llX", Process);
-	}
-	else
-	{
-		HzrExplRemoveExploitProcess(Process);
-	}
-}
-
-EXPL_PROCESS_TYPE HzrExplCheckNewProcess(
+HS_PROCESS_TYPE HspShouldMonitorProcess(
 	_In_ PCUNICODE_STRING ImageFileName,
 	_In_opt_ PCUNICODE_STRING CommandLine)
 {
@@ -173,78 +229,28 @@ EXPL_PROCESS_TYPE HzrExplCheckNewProcess(
 
 	if (HzrGetFileNameFromPath(ImageFileName, &fileName))
 	{
-		if (RtlEqualUnicodeString(&fileName, &FirefoxPluginHost, FALSE))
+		if (RtlEqualUnicodeString(&fileName, &FIREFOX_PLUGIN_HOST, FALSE))
 		{
-			return EXPL_PROCESS_FIREFOX_PLUGIN_HOST;
+			return HS_PROCESS_TYPE_FIREFOX_PLUGIN_HOST;
 		}
-
-		/*if (RtlEqualUnicodeString(&fileName, &Chrome, FALSE) ||
-			RtlEqualUnicodeString(&fileName, &Opera, FALSE))
-		{
-			return EXPL_PROCESS_CHROME_OPERA_PLUGIN_HOST;
-		}*/
 	}
 	else
 		DbgPrint("Unable to get file name from %wZ", ImageFileName);
 
-	return EXPL_PROCESS_NONE;
+	return HS_PROCESS_TYPE_NONE;
 }
 
-VOID HzrExplAddExploitProcess(
-	_In_ PEPROCESS Process,
-	_In_ EXPL_PROCESS_TYPE Type)
+RTL_GENERIC_COMPARE_RESULTS HspCompareMonitoredProcess(
+	_In_ PRTL_AVL_TABLE Table,
+	_In_ PHS_MONITORED_PROCESS Lhs,
+	_In_ PHS_MONITORED_PROCESS Rhs)
 {
-	EXPL_PROCESS exploitProcess;
+	UNREFERENCED_PARAMETER(Table);
 
-	exploitProcess.Process = Process;
-	exploitProcess.Type = Type;
-
-	FltAcquirePushLockExclusive(&BehaviorInstance.ProcessLock);
-
-	RtlInsertElementGenericTableAvl(
-		&BehaviorInstance.Processes,
-		&exploitProcess,
-		sizeof(EXPL_PROCESS),
-		NULL);
-
-	FltReleasePushLock(&BehaviorInstance.ProcessLock);
-}
-
-VOID HzrExplRemoveExploitProcess(
-	_In_ PEPROCESS Process)
-{
-	EXPL_PROCESS exploitProcess;
-
-	exploitProcess.Process = Process;
-
-	FltAcquirePushLockExclusive(&BehaviorInstance.ProcessLock);
-
-	RtlDeleteElementGenericTableAvl(&BehaviorInstance.Processes, &exploitProcess);
-
-	FltReleasePushLock(&BehaviorInstance.ProcessLock);
-}
-
-EXPL_PROCESS_TYPE HzrExplIsProcessExploit(
-	_In_ PEPROCESS Process)
-{
-	EXPL_PROCESS searchKey;
-	PEXPL_PROCESS exploitProcess;
-	EXPL_PROCESS_TYPE processType;
-
-	searchKey.Process = Process;
-
-	FltAcquirePushLockShared(&BehaviorInstance.ProcessLock);
-
-	exploitProcess = RtlLookupElementGenericTableAvl(
-		&BehaviorInstance.Processes,
-		&searchKey);
-
-	if (exploitProcess)
-		processType = exploitProcess->Type;
+	if (Lhs->Process < Rhs->Process)
+		return GenericLessThan;
+	else if (Lhs->Process > Rhs->Process)
+		return GenericGreaterThan;
 	else
-		processType = EXPL_PROCESS_NONE;
-
-	FltReleasePushLock(&BehaviorInstance.ProcessLock);
-
-	return processType;
+		return GenericEqual;
 }

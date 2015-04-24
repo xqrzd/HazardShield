@@ -111,6 +111,7 @@ BOOLEAN HzrFilterIsPrefetchContextPresent(
 	return prefetchOpen;
 }
 
+// TODO: Use MdlMappingNoExecute on Windows 8+
 PVOID HzrFilterGetBuffer(
 	_In_ PVOID Buffer,
 	_In_ PMDL MdlAddress)
