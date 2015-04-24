@@ -22,7 +22,72 @@
 
 #define SERVICE_BUFFER_TAG 'vSzH'
 
-NTSTATUS SvcpSendMessage(
+/// <summary>
+/// Sends data using FltSendMessage.
+/// </summary>
+/// <param name="HandleSystem">A pointer to a HANDLE_SYSTEM.</param>
+/// <param name="Filter">A pointer to the filter instance.</param>
+/// <param name="ClientPort">A pointer to the client communication handle.</param>
+/// <param name="BufferInfo">The buffer to send.</param>
+/// <param name="Response">The response from the user-application.</param>
+NTSTATUS HspSendMessage(
+	_In_ PHANDLE_SYSTEM HandleSystem,
+	_In_ PFLT_FILTER Filter,
+	_In_ PFLT_PORT* ClientPort,
+	_In_ PBUFFER_INFO BufferInfo,
+	_Out_ PSERVICE_RESPONSE Response
+	);
+
+NTSTATUS HsScanFileUserMode(
+	_In_ PHANDLE_SYSTEM HandleSystem,
+	_In_ PFLT_FILTER Filter,
+	_In_ PFLT_PORT* ClientPort,
+	_In_ UCHAR FileAccess,
+	_In_ PUNICODE_STRING FilePath,
+	_In_ PVOID Buffer,
+	_In_ ULONG BufferSize,
+	_Out_ PSERVICE_RESPONSE Response)
+{
+	NTSTATUS status;
+	BUFFER_INFO bufferInfo;
+
+	// Allocate space for the FILE_SCAN_INFO header, the file data, file path, and a NULL terminator for the file path.
+	bufferInfo.BufferSize = sizeof(FILE_SCAN_INFO) + BufferSize + FilePath->Length + sizeof(WCHAR);
+	bufferInfo.Buffer = ExAllocatePoolWithTag(PagedPool, bufferInfo.BufferSize, SERVICE_BUFFER_TAG);
+
+	if (bufferInfo.Buffer)
+	{
+		ULONG offset;
+		PFILE_SCAN_INFO info;
+
+		offset = sizeof(FILE_SCAN_INFO);
+		info = bufferInfo.Buffer;
+
+		info->OperationType = OP_SCAN_FILE;
+		info->FileAccess = FileAccess;
+		info->FileNameLength = FilePath->Length;
+		info->FileSize = BufferSize;
+
+		info->FileDataOffset = offset;
+		WriteData(bufferInfo.Buffer, Buffer, BufferSize, offset);
+
+		info->FileNameOffset = offset;
+		WriteData(bufferInfo.Buffer, FilePath->Buffer, FilePath->Length, offset);
+
+		// Add NULL terminator to file path.
+		*(PWCHAR)((PUCHAR)bufferInfo.Buffer + offset) = L'\0';
+
+		status = HspSendMessage(HandleSystem, Filter, ClientPort, &bufferInfo, Response);
+
+		ExFreePoolWithTag(bufferInfo.Buffer, SERVICE_BUFFER_TAG);
+	}
+	else
+		status = STATUS_INSUFFICIENT_RESOURCES;
+
+	return status;
+}
+
+NTSTATUS HspSendMessage(
 	_In_ PHANDLE_SYSTEM HandleSystem,
 	_In_ PFLT_FILTER Filter,
 	_In_ PFLT_PORT* ClientPort,
@@ -55,51 +120,6 @@ NTSTATUS SvcpSendMessage(
 		// The handle isn't needed after FltSendMessage returns, since the client will have responded
 		HndReleaseHandle(HandleSystem, handle);
 	}
-
-	return status;
-}
-
-NTSTATUS SvcScanFile(
-	_In_ PHANDLE_SYSTEM HandleSystem,
-	_In_ PFLT_FILTER Filter,
-	_In_ PFLT_PORT* ClientPort,
-	_In_ UCHAR FileAccess,
-	_In_ POBJECT_NAME_INFORMATION FullFilePath,
-	_In_ PVOID FileData,
-	_In_ ULONG FileSize,
-	_Out_ PSERVICE_RESPONSE Response)
-{
-	NTSTATUS status;
-	BUFFER_INFO bufferInfo;
-
-	bufferInfo.BufferSize = sizeof(FILE_SCAN_INFO) + FullFilePath->Name.Length + FileSize + sizeof(WCHAR);
-	bufferInfo.Buffer = ExAllocatePoolWithTag(PagedPool, bufferInfo.BufferSize, SERVICE_BUFFER_TAG);
-
-	if (bufferInfo.Buffer)
-	{
-		ULONG offset = sizeof(FILE_SCAN_INFO);
-		PFILE_SCAN_INFO info = bufferInfo.Buffer;
-
-		info->OperationType = OP_SCAN_FILE;
-		info->FileAccess = FileAccess;
-		info->FileNameLength = FullFilePath->Name.Length;
-		info->FileSize = FileSize;
-
-		info->FileDataOffset = offset;
-		WriteData(bufferInfo.Buffer, FileData, FileSize, offset);
-
-		info->FileNameOffset = offset;
-		WriteData(bufferInfo.Buffer, FullFilePath->Name.Buffer, FullFilePath->Name.Length, offset);
-
-		// Add NULL terminator to file path.
-		*(PWCHAR)((PUCHAR)bufferInfo.Buffer + offset) = L'\0';
-
-		status = SvcpSendMessage(HandleSystem, Filter, ClientPort, &bufferInfo, Response);
-
-		ExFreePoolWithTag(bufferInfo.Buffer, SERVICE_BUFFER_TAG);
-	}
-	else
-		status = STATUS_INSUFFICIENT_RESOURCES;
 
 	return status;
 }

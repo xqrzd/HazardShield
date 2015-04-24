@@ -80,14 +80,25 @@ typedef struct _SERVICE_REQUEST_PROTECT_PROCESS {
 	ACCESS_MASK ThreadAccessBitsToClear;
 } SERVICE_REQUEST_PROTECT_PROCESS, *PSERVICE_REQUEST_PROTECT_PROCESS;
 
-NTSTATUS SvcScanFile(
+/// <summary>
+/// Scans a file in user-mode using HzrService.
+/// </summary>
+/// <param name="HandleSystem">A pointer to a HANDLE_SYSTEM.</param>
+/// <param name="Filter">A pointer to the filter instance.</param>
+/// <param name="ClientPort">A pointer to the client communication handle.</param>
+/// <param name="FileAccess">Any combination of FILE_ACCESS_READ/WRITE/EXECUTE.</param>
+/// <param name="FilePath">The full file path, DOS style.</param>
+/// <param name="Buffer">The file contents.</param>
+/// <param name="BufferSize">The size of Buffer, in bytes.</param>
+/// <param name="Response">The response from the user-application.</param>
+NTSTATUS HsScanFileUserMode(
 	_In_ PHANDLE_SYSTEM HandleSystem,
 	_In_ PFLT_FILTER Filter,
 	_In_ PFLT_PORT* ClientPort,
 	_In_ UCHAR FileAccess,
-	_In_ POBJECT_NAME_INFORMATION FullFilePath,
-	_In_ PVOID FileData,
-	_In_ ULONG FileSize,
+	_In_ PUNICODE_STRING FilePath,
+	_In_ PVOID Buffer,
+	_In_ ULONG BufferSize,
 	_Out_ PSERVICE_RESPONSE Response
 	);
 

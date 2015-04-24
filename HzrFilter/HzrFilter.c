@@ -759,12 +759,12 @@ NTSTATUS HzrFilterScanFile(
 
 					if (NT_SUCCESS(status))
 					{
-						status = SvcScanFile(
+						status = HsScanFileUserMode(
 							&FilterData.HandleSystem,
 							FilterData.Filter,
 							&FilterData.ClientPort,
 							FileAccess,
-							fullFilePath,
+							&fullFilePath->Name,
 							buffer,
 							fileSize.LowPart,
 							Response);
