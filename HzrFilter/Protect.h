@@ -23,12 +23,6 @@
 
 #include <fltKernel.h>
 
-typedef struct _OB_CALLBACK_INSTANCE {
-	RTL_AVL_TABLE ProtectedProcesses;
-	EX_PUSH_LOCK ProtectedProcessLock;
-	PVOID RegistrationHandle;
-} OB_CALLBACK_INSTANCE, *POB_CALLBACK_INSTANCE;
-
 typedef struct _PROTECTED_PROCESS {
 	PEPROCESS Process;
 	ACCESS_MASK ProcessAccessBitsToClear;
@@ -36,27 +30,22 @@ typedef struct _PROTECTED_PROCESS {
 } PROTECTED_PROCESS, *PPROTECTED_PROCESS;
 
 NTSTATUS HzrRegisterProtector(
-	_Out_ POB_CALLBACK_INSTANCE CallbackInstance
 	);
 
 VOID HzrUnRegisterProtector(
-	_In_ POB_CALLBACK_INSTANCE CallbackInstance
 	);
 
 VOID HzrAddProtectedProcess(
-	_In_ POB_CALLBACK_INSTANCE CallbackInstance,
 	_In_ PEPROCESS Process,
 	_In_ ACCESS_MASK ProcessAccessBitsToClear,
 	_In_ ACCESS_MASK ThreadAccessBitsToClear
 	);
 
 VOID HzrRemoveProtectedProcess(
-	_In_ POB_CALLBACK_INSTANCE CallbackInstance,
 	_In_ PEPROCESS Process
 	);
 
 BOOLEAN HzrIsProcessProtected(
-	_In_ POB_CALLBACK_INSTANCE CallbackInstance,
 	_In_ PEPROCESS Process,
 	_Out_ PACCESS_MASK ProcessAccessBitsToClear,
 	_Out_ PACCESS_MASK ThreadAccessBitsToClear

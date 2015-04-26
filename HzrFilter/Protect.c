@@ -21,6 +21,12 @@
 #include "Protect.h"
 #include "Utility.h"
 
+struct {
+	RTL_AVL_TABLE ProtectedProcesses;
+	EX_PUSH_LOCK ProtectedProcessLock;
+	PVOID RegistrationHandle;
+} ObCallbackInstance;
+
 RTL_GENERIC_COMPARE_RESULTS AvlpCompareProcess(
 	_In_ PRTL_AVL_TABLE Table,
 	_In_ PPROTECTED_PROCESS Lhs,
@@ -40,12 +46,11 @@ OB_PREOP_CALLBACK_STATUS HzrpObPreCallback(
 	_In_ PVOID RegistrationContext,
 	_Inout_ POB_PRE_OPERATION_INFORMATION OperationInformation)
 {
-	POB_CALLBACK_INSTANCE callbackInstance;
 	PEPROCESS process;
 	ACCESS_MASK processAccessBitsToClear;
 	ACCESS_MASK threadAccessBitsToClear;
 
-	callbackInstance = RegistrationContext;
+	UNREFERENCED_PARAMETER(RegistrationContext);
 
 	// ObRegisterCallbacks doesn't allow changing access of kernel handles
 	if (OperationInformation->KernelHandle)
@@ -63,7 +68,7 @@ OB_PREOP_CALLBACK_STATUS HzrpObPreCallback(
 	if (process == IoGetCurrentProcess())
 		return OB_PREOP_SUCCESS;
 
-	if (HzrIsProcessProtected(callbackInstance, process, &processAccessBitsToClear, &threadAccessBitsToClear))
+	if (HzrIsProcessProtected(process, &processAccessBitsToClear, &threadAccessBitsToClear))
 	{
 		ACCESS_MASK accessBitsToClear;
 
@@ -86,8 +91,7 @@ OB_PREOP_CALLBACK_STATUS HzrpObPreCallback(
 	return OB_PREOP_SUCCESS;
 }
 
-NTSTATUS HzrRegisterProtector(
-	_Out_ POB_CALLBACK_INSTANCE CallbackInstance)
+NTSTATUS HzrRegisterProtector()
 {
 	NTSTATUS status;
 	OB_CALLBACK_REGISTRATION callbackRegistration;
@@ -104,38 +108,36 @@ NTSTATUS HzrRegisterProtector(
 	operationRegistration[1].PostOperation = NULL;
 
 	callbackRegistration.Version = OB_FLT_REGISTRATION_VERSION;
-	callbackRegistration.RegistrationContext = CallbackInstance;
+	callbackRegistration.RegistrationContext = NULL;
 	callbackRegistration.OperationRegistrationCount = ARRAYSIZE(operationRegistration);
 	callbackRegistration.OperationRegistration = operationRegistration;
 
 	RtlInitUnicodeString(&callbackRegistration.Altitude, L"40100.7");
 
-	FltInitializePushLock(&CallbackInstance->ProtectedProcessLock);
-	RtlInitializeGenericTableAvl(&CallbackInstance->ProtectedProcesses, AvlpCompareProcess, AvlAllocate, AvlFree, NULL);
+	FltInitializePushLock(&ObCallbackInstance.ProtectedProcessLock);
+	RtlInitializeGenericTableAvl(&ObCallbackInstance.ProtectedProcesses, AvlpCompareProcess, AvlAllocate, AvlFree, NULL);
 
-	status = ObRegisterCallbacks(&callbackRegistration, &CallbackInstance->RegistrationHandle);
+	status = ObRegisterCallbacks(&callbackRegistration, &ObCallbackInstance.RegistrationHandle);
 
 	if (!NT_SUCCESS(status))
-		FltDeletePushLock(&CallbackInstance->ProtectedProcessLock);
+		FltDeletePushLock(&ObCallbackInstance.ProtectedProcessLock);
 
 	return status;
 }
 
-VOID HzrUnRegisterProtector(
-	_In_ POB_CALLBACK_INSTANCE CallbackInstance)
+VOID HzrUnRegisterProtector()
 {
-	ObUnRegisterCallbacks(CallbackInstance->RegistrationHandle);
+	ObUnRegisterCallbacks(ObCallbackInstance.RegistrationHandle);
 
-	FltAcquirePushLockExclusive(&CallbackInstance->ProtectedProcessLock);
+	FltAcquirePushLockExclusive(&ObCallbackInstance.ProtectedProcessLock);
 
-	AvlDeleteAllElements(&CallbackInstance->ProtectedProcesses);
+	AvlDeleteAllElements(&ObCallbackInstance.ProtectedProcesses);
 
-	FltReleasePushLock(&CallbackInstance->ProtectedProcessLock);
-	FltDeletePushLock(&CallbackInstance->ProtectedProcessLock);
+	FltReleasePushLock(&ObCallbackInstance.ProtectedProcessLock);
+	FltDeletePushLock(&ObCallbackInstance.ProtectedProcessLock);
 }
 
 VOID HzrAddProtectedProcess(
-	_In_ POB_CALLBACK_INSTANCE CallbackInstance,
 	_In_ PEPROCESS Process,
 	_In_ ACCESS_MASK ProcessAccessBitsToClear,
 	_In_ ACCESS_MASK ThreadAccessBitsToClear)
@@ -146,34 +148,32 @@ VOID HzrAddProtectedProcess(
 	protectedProcess.ProcessAccessBitsToClear = ProcessAccessBitsToClear;
 	protectedProcess.ThreadAccessBitsToClear = ThreadAccessBitsToClear;
 
-	FltAcquirePushLockExclusive(&CallbackInstance->ProtectedProcessLock);
+	FltAcquirePushLockExclusive(&ObCallbackInstance.ProtectedProcessLock);
 
 	RtlInsertElementGenericTableAvl(
-		&CallbackInstance->ProtectedProcesses,
+		&ObCallbackInstance.ProtectedProcesses,
 		&protectedProcess,
 		sizeof(PROTECTED_PROCESS),
 		NULL);
 
-	FltReleasePushLock(&CallbackInstance->ProtectedProcessLock);
+	FltReleasePushLock(&ObCallbackInstance.ProtectedProcessLock);
 }
 
 VOID HzrRemoveProtectedProcess(
-	_In_ POB_CALLBACK_INSTANCE CallbackInstance,
 	_In_ PEPROCESS Process)
 {
 	PROTECTED_PROCESS protectedProcess;
 
 	protectedProcess.Process = Process;
 
-	FltAcquirePushLockExclusive(&CallbackInstance->ProtectedProcessLock);
+	FltAcquirePushLockExclusive(&ObCallbackInstance.ProtectedProcessLock);
 
-	RtlDeleteElementGenericTableAvl(&CallbackInstance->ProtectedProcesses, &protectedProcess);
+	RtlDeleteElementGenericTableAvl(&ObCallbackInstance.ProtectedProcesses, &protectedProcess);
 
-	FltReleasePushLock(&CallbackInstance->ProtectedProcessLock);
+	FltReleasePushLock(&ObCallbackInstance.ProtectedProcessLock);
 }
 
 BOOLEAN HzrIsProcessProtected(
-	_In_ POB_CALLBACK_INSTANCE CallbackInstance,
 	_In_ PEPROCESS Process,
 	_Out_ PACCESS_MASK ProcessAccessBitsToClear,
 	_Out_ PACCESS_MASK ThreadAccessBitsToClear)
@@ -184,10 +184,10 @@ BOOLEAN HzrIsProcessProtected(
 
 	searchKey.Process = Process;
 
-	FltAcquirePushLockShared(&CallbackInstance->ProtectedProcessLock);
+	FltAcquirePushLockShared(&ObCallbackInstance.ProtectedProcessLock);
 
 	protectedProcess = RtlLookupElementGenericTableAvl(
-		&CallbackInstance->ProtectedProcesses,
+		&ObCallbackInstance.ProtectedProcesses,
 		&searchKey);
 
 	found = protectedProcess != NULL;
@@ -198,7 +198,7 @@ BOOLEAN HzrIsProcessProtected(
 		*ThreadAccessBitsToClear = protectedProcess->ThreadAccessBitsToClear;
 	}
 
-	FltReleasePushLock(&CallbackInstance->ProtectedProcessLock);
+	FltReleasePushLock(&ObCallbackInstance.ProtectedProcessLock);
 
 	return found;
 }

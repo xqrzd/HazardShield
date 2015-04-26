@@ -31,7 +31,6 @@ struct {
 	BOOLEAN AllowUnload;
 
 	HANDLE_SYSTEM HandleSystem;
-	OB_CALLBACK_INSTANCE ObCallbackInstance;
 } FilterData;
 
 CONST FLT_OPERATION_REGISTRATION Callbacks[] = {
@@ -201,7 +200,7 @@ NTSTATUS DriverEntry(
 
 				if (NT_SUCCESS(status))
 				{
-					status = HzrRegisterProtector(&FilterData.ObCallbackInstance);
+					status = HzrRegisterProtector();
 
 					if (NT_SUCCESS(status))
 					{
@@ -227,13 +226,13 @@ NTSTATUS DriverEntry(
 NTSTATUS HzrFilterUnload(
 	_In_ FLT_FILTER_UNLOAD_FLAGS Flags)
 {
-	if (FlagOn(Flags, FLTFL_FILTER_UNLOAD_MANDATORY) ||
-		FilterData.AllowUnload)
+	if (FlagOn(Flags, FLTFL_FILTER_UNLOAD_MANDATORY) || FilterData.AllowUnload)
 	{
 		FltCloseCommunicationPort(FilterData.ServerPort);
 		FltUnregisterFilter(FilterData.Filter);
 		PsSetCreateProcessNotifyRoutineEx(HzrCreateProcessNotifyEx, TRUE);
-		HzrUnRegisterProtector(&FilterData.ObCallbackInstance);
+		HzrUnRegisterProtector();
+
 		HsDeleteBehaviorSystem();
 		HndFree(&FilterData.HandleSystem);
 
@@ -262,7 +261,7 @@ NTSTATUS HzrFilterPortConnect(
 	FilterData.ClientProcess = IoGetCurrentProcess();
 	FilterData.ClientPort = ClientPort;
 
-	HzrAddProtectedProcess(&FilterData.ObCallbackInstance, FilterData.ClientProcess, (ACCESS_MASK)-1, (ACCESS_MASK)-1);
+	HzrAddProtectedProcess(FilterData.ClientProcess, (ACCESS_MASK)-1, (ACCESS_MASK)-1);
 
 	return STATUS_SUCCESS;
 }
@@ -342,7 +341,6 @@ NTSTATUS HzrFilterClientMessage(
 		if (NT_SUCCESS(status))
 		{
 			HzrAddProtectedProcess(
-				&FilterData.ObCallbackInstance,
 				process,
 				request->ProcessAccessBitsToClear,
 				request->ThreadAccessBitsToClear);
@@ -938,6 +936,6 @@ VOID HzrCreateProcessNotifyEx(
 	if (!CreateInfo)
 	{
 		// Process is exiting, remove it from the protected processes.
-		HzrRemoveProtectedProcess(&FilterData.ObCallbackInstance, Process);
+		HzrRemoveProtectedProcess(Process);
 	}
 }
