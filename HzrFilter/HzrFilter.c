@@ -200,7 +200,7 @@ NTSTATUS DriverEntry(
 
 				if (NT_SUCCESS(status))
 				{
-					status = HzrRegisterProtector();
+					status = HsRegisterProtector();
 
 					if (NT_SUCCESS(status))
 					{
@@ -231,7 +231,7 @@ NTSTATUS HzrFilterUnload(
 		FltCloseCommunicationPort(FilterData.ServerPort);
 		FltUnregisterFilter(FilterData.Filter);
 		PsSetCreateProcessNotifyRoutineEx(HzrCreateProcessNotifyEx, TRUE);
-		HzrUnRegisterProtector();
+		HsUnRegisterProtector();
 
 		HsDeleteBehaviorSystem();
 		HndFree(&FilterData.HandleSystem);
@@ -261,7 +261,7 @@ NTSTATUS HzrFilterPortConnect(
 	FilterData.ClientProcess = IoGetCurrentProcess();
 	FilterData.ClientPort = ClientPort;
 
-	HzrAddProtectedProcess(FilterData.ClientProcess, (ACCESS_MASK)-1, (ACCESS_MASK)-1);
+	HsProtectProcess(FilterData.ClientProcess, (ACCESS_MASK)-1, (ACCESS_MASK)-1);
 
 	return STATUS_SUCCESS;
 }
@@ -340,7 +340,7 @@ NTSTATUS HzrFilterClientMessage(
 
 		if (NT_SUCCESS(status))
 		{
-			HzrAddProtectedProcess(
+			HsProtectProcess(
 				process,
 				request->ProcessAccessBitsToClear,
 				request->ThreadAccessBitsToClear);
@@ -936,6 +936,6 @@ VOID HzrCreateProcessNotifyEx(
 	if (!CreateInfo)
 	{
 		// Process is exiting, remove it from the protected processes.
-		HzrRemoveProtectedProcess(Process);
+		HsUnProtectProcess(Process);
 	}
 }

@@ -21,28 +21,25 @@
 #include "Protect.h"
 #include "Utility.h"
 
+typedef struct _HSP_PROTECTED_PROCESS {
+	PEPROCESS Process;
+	ACCESS_MASK ProcessAccessBitsToClear;
+	ACCESS_MASK ThreadAccessBitsToClear;
+} HSP_PROTECTED_PROCESS, *PHSP_PROTECTED_PROCESS;
+
+RTL_GENERIC_COMPARE_RESULTS HspCompareProtectedProcess(
+	_In_ PRTL_AVL_TABLE Table,
+	_In_ PHSP_PROTECTED_PROCESS Lhs,
+	_In_ PHSP_PROTECTED_PROCESS Rhs
+	);
+
 struct {
 	RTL_AVL_TABLE ProtectedProcesses;
 	EX_PUSH_LOCK ProtectedProcessLock;
 	PVOID RegistrationHandle;
 } ObCallbackInstance;
 
-RTL_GENERIC_COMPARE_RESULTS AvlpCompareProcess(
-	_In_ PRTL_AVL_TABLE Table,
-	_In_ PPROTECTED_PROCESS Lhs,
-	_In_ PPROTECTED_PROCESS Rhs)
-{
-	UNREFERENCED_PARAMETER(Table);
-
-	if (Lhs->Process < Rhs->Process)
-		return GenericLessThan;
-	else if (Lhs->Process > Rhs->Process)
-		return GenericGreaterThan;
-	else
-		return GenericEqual;
-}
-
-OB_PREOP_CALLBACK_STATUS HzrpObPreCallback(
+OB_PREOP_CALLBACK_STATUS HspObPreCallback(
 	_In_ PVOID RegistrationContext,
 	_Inout_ POB_PRE_OPERATION_INFORMATION OperationInformation)
 {
@@ -52,23 +49,23 @@ OB_PREOP_CALLBACK_STATUS HzrpObPreCallback(
 
 	UNREFERENCED_PARAMETER(RegistrationContext);
 
-	// ObRegisterCallbacks doesn't allow changing access of kernel handles
+	// ObRegisterCallbacks doesn't allow changing access of kernel handles.
 	if (OperationInformation->KernelHandle)
 		return OB_PREOP_SUCCESS;
 
-	// Get target process
+	// Get target process.
 	if (OperationInformation->ObjectType == *PsProcessType)
 		process = OperationInformation->Object;
 	else if (OperationInformation->ObjectType == *PsThreadType)
 		process = IoThreadToProcess(OperationInformation->Object);
 	else
-		return OB_PREOP_SUCCESS; // Shouldn't ever happen
+		return OB_PREOP_SUCCESS; // Shouldn't ever happen.
 
 	// Allow process to open itself.
 	if (process == IoGetCurrentProcess())
 		return OB_PREOP_SUCCESS;
 
-	if (HzrIsProcessProtected(process, &processAccessBitsToClear, &threadAccessBitsToClear))
+	if (HsIsProcessProtected(process, &processAccessBitsToClear, &threadAccessBitsToClear))
 	{
 		ACCESS_MASK accessBitsToClear;
 
@@ -91,7 +88,7 @@ OB_PREOP_CALLBACK_STATUS HzrpObPreCallback(
 	return OB_PREOP_SUCCESS;
 }
 
-NTSTATUS HzrRegisterProtector()
+NTSTATUS HsRegisterProtector()
 {
 	NTSTATUS status;
 	OB_CALLBACK_REGISTRATION callbackRegistration;
@@ -99,12 +96,12 @@ NTSTATUS HzrRegisterProtector()
 
 	operationRegistration[0].ObjectType = PsProcessType;
 	operationRegistration[0].Operations = OB_OPERATION_HANDLE_CREATE | OB_OPERATION_HANDLE_DUPLICATE;
-	operationRegistration[0].PreOperation = HzrpObPreCallback;
+	operationRegistration[0].PreOperation = HspObPreCallback;
 	operationRegistration[0].PostOperation = NULL;
 
 	operationRegistration[1].ObjectType = PsThreadType;
 	operationRegistration[1].Operations = OB_OPERATION_HANDLE_CREATE | OB_OPERATION_HANDLE_DUPLICATE;
-	operationRegistration[1].PreOperation = HzrpObPreCallback;
+	operationRegistration[1].PreOperation = HspObPreCallback;
 	operationRegistration[1].PostOperation = NULL;
 
 	callbackRegistration.Version = OB_FLT_REGISTRATION_VERSION;
@@ -115,7 +112,7 @@ NTSTATUS HzrRegisterProtector()
 	RtlInitUnicodeString(&callbackRegistration.Altitude, L"40100.7");
 
 	FltInitializePushLock(&ObCallbackInstance.ProtectedProcessLock);
-	RtlInitializeGenericTableAvl(&ObCallbackInstance.ProtectedProcesses, AvlpCompareProcess, AvlAllocate, AvlFree, NULL);
+	RtlInitializeGenericTableAvl(&ObCallbackInstance.ProtectedProcesses, HspCompareProtectedProcess, AvlAllocate, AvlFree, NULL);
 
 	status = ObRegisterCallbacks(&callbackRegistration, &ObCallbackInstance.RegistrationHandle);
 
@@ -125,24 +122,24 @@ NTSTATUS HzrRegisterProtector()
 	return status;
 }
 
-VOID HzrUnRegisterProtector()
+VOID HsUnRegisterProtector()
 {
 	ObUnRegisterCallbacks(ObCallbackInstance.RegistrationHandle);
 
+	// If ObUnRegisterCallbacks waits for callbacks to finish processing
+	// there is no need to lock here.
 	FltAcquirePushLockExclusive(&ObCallbackInstance.ProtectedProcessLock);
-
 	AvlDeleteAllElements(&ObCallbackInstance.ProtectedProcesses);
-
 	FltReleasePushLock(&ObCallbackInstance.ProtectedProcessLock);
 	FltDeletePushLock(&ObCallbackInstance.ProtectedProcessLock);
 }
 
-VOID HzrAddProtectedProcess(
+VOID HsProtectProcess(
 	_In_ PEPROCESS Process,
 	_In_ ACCESS_MASK ProcessAccessBitsToClear,
 	_In_ ACCESS_MASK ThreadAccessBitsToClear)
 {
-	PROTECTED_PROCESS protectedProcess;
+	HSP_PROTECTED_PROCESS protectedProcess;
 
 	protectedProcess.Process = Process;
 	protectedProcess.ProcessAccessBitsToClear = ProcessAccessBitsToClear;
@@ -153,34 +150,32 @@ VOID HzrAddProtectedProcess(
 	RtlInsertElementGenericTableAvl(
 		&ObCallbackInstance.ProtectedProcesses,
 		&protectedProcess,
-		sizeof(PROTECTED_PROCESS),
+		sizeof(HSP_PROTECTED_PROCESS),
 		NULL);
 
 	FltReleasePushLock(&ObCallbackInstance.ProtectedProcessLock);
 }
 
-VOID HzrRemoveProtectedProcess(
+VOID HsUnProtectProcess(
 	_In_ PEPROCESS Process)
 {
-	PROTECTED_PROCESS protectedProcess;
+	HSP_PROTECTED_PROCESS protectedProcess;
 
 	protectedProcess.Process = Process;
 
 	FltAcquirePushLockExclusive(&ObCallbackInstance.ProtectedProcessLock);
-
 	RtlDeleteElementGenericTableAvl(&ObCallbackInstance.ProtectedProcesses, &protectedProcess);
-
 	FltReleasePushLock(&ObCallbackInstance.ProtectedProcessLock);
 }
 
-BOOLEAN HzrIsProcessProtected(
+BOOLEAN HsIsProcessProtected(
 	_In_ PEPROCESS Process,
 	_Out_ PACCESS_MASK ProcessAccessBitsToClear,
 	_Out_ PACCESS_MASK ThreadAccessBitsToClear)
 {
 	BOOLEAN found;
-	PROTECTED_PROCESS searchKey;
-	PPROTECTED_PROCESS protectedProcess;
+	HSP_PROTECTED_PROCESS searchKey;
+	PHSP_PROTECTED_PROCESS protectedProcess;
 
 	searchKey.Process = Process;
 
@@ -201,4 +196,19 @@ BOOLEAN HzrIsProcessProtected(
 	FltReleasePushLock(&ObCallbackInstance.ProtectedProcessLock);
 
 	return found;
+}
+
+RTL_GENERIC_COMPARE_RESULTS HspCompareProtectedProcess(
+	_In_ PRTL_AVL_TABLE Table,
+	_In_ PHSP_PROTECTED_PROCESS Lhs,
+	_In_ PHSP_PROTECTED_PROCESS Rhs)
+{
+	UNREFERENCED_PARAMETER(Table);
+
+	if (Lhs->Process < Rhs->Process)
+		return GenericLessThan;
+	else if (Lhs->Process > Rhs->Process)
+		return GenericGreaterThan;
+	else
+		return GenericEqual;
 }

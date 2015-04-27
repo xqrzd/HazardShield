@@ -23,29 +23,47 @@
 
 #include <fltKernel.h>
 
-typedef struct _PROTECTED_PROCESS {
-	PEPROCESS Process;
-	ACCESS_MASK ProcessAccessBitsToClear;
-	ACCESS_MASK ThreadAccessBitsToClear;
-} PROTECTED_PROCESS, *PPROTECTED_PROCESS;
-
-NTSTATUS HzrRegisterProtector(
+/// <summary>
+/// Starts filtering process and thread access rights.
+/// </summary>
+NTSTATUS HsRegisterProtector(
 	);
 
-VOID HzrUnRegisterProtector(
+/// <summary>
+/// Stops process and thread access rights filtering.
+/// </summary>
+VOID HsUnRegisterProtector(
 	);
 
-VOID HzrAddProtectedProcess(
+/// <summary>
+/// Marks a process as protected. When this process or its threads are opened, the
+/// given access rights will be cleared. Call HsUnProtectProcess when the process
+/// no longer needs protection, or when it exits.
+/// </summary>
+/// <param name="Process">Pointer to the process object to protect.</param>
+/// <param name="ProcessAccessBitsToClear">Process access rights to clear.</param>
+/// <param name="ThreadAccessBitsToClear">Thread access rights to clear.</param>
+VOID HsProtectProcess(
 	_In_ PEPROCESS Process,
 	_In_ ACCESS_MASK ProcessAccessBitsToClear,
 	_In_ ACCESS_MASK ThreadAccessBitsToClear
 	);
 
-VOID HzrRemoveProtectedProcess(
+/// <summary>
+/// Removes a process from the list of protected processes.
+/// </summary>
+/// <param name="Process">Pointer to the process object to unprotect.</param>
+VOID HsUnProtectProcess(
 	_In_ PEPROCESS Process
 	);
 
-BOOLEAN HzrIsProcessProtected(
+/// <summary>
+/// Returns TRUE if the given process is protected, otherwise FALSE.
+/// </summary>
+/// <param name="Process">Pointer to a process object.</param>
+/// <param name="ProcessAccessBitsToClear">Process access rights to clear.</param>
+/// <param name="ThreadAccessBitsToClear">Thread access rights to clear.</param>
+BOOLEAN HsIsProcessProtected(
 	_In_ PEPROCESS Process,
 	_Out_ PACCESS_MASK ProcessAccessBitsToClear,
 	_Out_ PACCESS_MASK ThreadAccessBitsToClear
