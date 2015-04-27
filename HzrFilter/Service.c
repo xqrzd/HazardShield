@@ -51,7 +51,7 @@ NTSTATUS HsScanFileUserMode(
 	NTSTATUS status;
 	BUFFER_INFO bufferInfo;
 
-	// Allocate space for the FILE_SCAN_INFO header, the file data, file path, and a NULL terminator for the file path.
+	// Allocate space for the FILE_SCAN_INFO header, the file data, file path and a NULL terminator.
 	bufferInfo.BufferSize = sizeof(FILE_SCAN_INFO) + BufferSize + FilePath->Length + sizeof(WCHAR);
 	bufferInfo.Buffer = ExAllocatePoolWithTag(PagedPool, bufferInfo.BufferSize, SERVICE_BUFFER_TAG);
 
@@ -97,8 +97,9 @@ NTSTATUS HspSendMessage(
 	NTSTATUS status;
 	ULONG handle;
 
-	// Create a handle for the client to send back to the driver, in order to retrieve the buffer contents
+	// Create a handle for the client to access the buffer contents.
 	status = HndCreateHandle(HandleSystem, BufferInfo, &handle);
+
 	if (NT_SUCCESS(status))
 	{
 		DRIVER_REQUEST request;
@@ -117,7 +118,8 @@ NTSTATUS HspSendMessage(
 			&replyLength,
 			NULL);
 
-		// The handle isn't needed after FltSendMessage returns, since the client will have responded
+		// FltSendMessage waits for a reply, so by this point
+		// the user-app will be done with the handle.
 		HndReleaseHandle(HandleSystem, handle);
 	}
 
