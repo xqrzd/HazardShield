@@ -23,7 +23,7 @@
 #define HANDLE_TABLE_TAG 'tHzH'
 
 FORCEINLINE BOOLEAN HndpFindAvailableHandle(
-	_In_ PHANDLE_SYSTEM HandleSystem,
+	_In_ PHS_HANDLE_SYSTEM HandleSystem,
 	_Out_ PULONG Handle)
 {
 	ULONG i;
@@ -41,18 +41,20 @@ FORCEINLINE BOOLEAN HndpFindAvailableHandle(
 }
 
 FORCEINLINE NTSTATUS HndpGrowTable(
-	_Inout_ PHANDLE_SYSTEM HandleSystem)
+	_Inout_ PHS_HANDLE_SYSTEM HandleSystem,
+	_Out_ PULONG NextFreeHandle)
 {
 	NTSTATUS status;
-	PVOID oldTable = HandleSystem->ObjectTable;
+	PVOID oldTable;
 	PVOID newTable;
 	SIZE_T oldTableSize;
 	SIZE_T newTableSize;
 
-	// Double table size.
+	oldTable = HandleSystem->ObjectTable;
 	oldTableSize = HandleSystem->MaxHandles * sizeof(PVOID);
-	newTableSize = oldTableSize * 2;
 
+	// Double table size.
+	newTableSize = oldTableSize * 2;
 	newTable = ExAllocatePoolWithTag(PagedPool, newTableSize, HANDLE_TABLE_TAG);
 
 	if (newTable)
@@ -60,13 +62,19 @@ FORCEINLINE NTSTATUS HndpGrowTable(
 		// Copy previous table entries.
 		RtlCopyMemory(newTable, oldTable, oldTableSize);
 
+		// Delete old table.
+		ExFreePoolWithTag(oldTable, HANDLE_TABLE_TAG);
+
 		// Zero out new table entries.
 		RtlZeroMemory(RtlOffsetToPointer(newTable, oldTableSize), oldTableSize);
 
+		// Next free handle is the old capacity.
+		// Ex. If the old table had 3 handles, the
+		// next free handle would be index[3].
+		*NextFreeHandle = HandleSystem->MaxHandles;
+
 		HandleSystem->ObjectTable = newTable;
 		HandleSystem->MaxHandles *= 2;
-
-		ExFreePoolWithTag(oldTable, HANDLE_TABLE_TAG);
 
 		status = STATUS_SUCCESS;
 	}
@@ -76,8 +84,8 @@ FORCEINLINE NTSTATUS HndpGrowTable(
 	return status;
 }
 
-NTSTATUS HndInitialize(
-	_In_ PHANDLE_SYSTEM HandleSystem,
+NTSTATUS HsInitializeHandleSystem(
+	_In_ PHS_HANDLE_SYSTEM HandleSystem,
 	_In_ ULONG InitialHandleCount)
 {
 	NTSTATUS status;
@@ -99,44 +107,41 @@ NTSTATUS HndInitialize(
 	return status;
 }
 
-VOID HndFree(
-	_In_ PHANDLE_SYSTEM HandleSystem)
+VOID HsDeleteHandleSystem(
+	_In_ PHS_HANDLE_SYSTEM HandleSystem)
 {
 	ExFreePoolWithTag(HandleSystem->ObjectTable, HANDLE_TABLE_TAG);
 	FltDeletePushLock(&HandleSystem->ObjectTableLock);
 }
 
-NTSTATUS HndCreateHandle(
-	_In_ PHANDLE_SYSTEM HandleSystem,
+NTSTATUS HsCreateHandle(
+	_In_ PHS_HANDLE_SYSTEM HandleSystem,
 	_In_ PVOID Object,
 	_Out_ PULONG Handle)
 {
 	NTSTATUS status;
+	ULONG handle;
 
 	if (!Object)
 		return STATUS_INVALID_PARAMETER;
 
 	FltAcquirePushLockExclusive(&HandleSystem->ObjectTableLock);
 
-FindHandle:
-	if (HndpFindAvailableHandle(HandleSystem, Handle))
+	if (HndpFindAvailableHandle(HandleSystem, &handle))
 	{
-		HandleSystem->ObjectTable[*Handle] = Object;
-
 		status = STATUS_SUCCESS;
 	}
 	else
 	{
 		DbgPrint("Need to grow handle table [Current size: %u]", HandleSystem->MaxHandles);
 
-		status = HndpGrowTable(HandleSystem);
+		status = HndpGrowTable(HandleSystem, &handle);
+	}
 
-		if (NT_SUCCESS(status))
-		{
-			// Push locks cannot be acquired recursively, so use
-			// goto instead of calling HndCreateHandle again.
-			goto FindHandle;
-		}
+	if (NT_SUCCESS(status))
+	{
+		HandleSystem->ObjectTable[handle] = Object;
+		*Handle = handle;
 	}
 
 	FltReleasePushLock(&HandleSystem->ObjectTableLock);
@@ -144,8 +149,8 @@ FindHandle:
 	return status;
 }
 
-NTSTATUS HndLookupObject(
-	_In_ PHANDLE_SYSTEM HandleSystem,
+NTSTATUS HsLookupObjectByHandle(
+	_In_ PHS_HANDLE_SYSTEM HandleSystem,
 	_In_ ULONG Handle,
 	_Out_ PVOID* Object)
 {
@@ -175,8 +180,8 @@ NTSTATUS HndLookupObject(
 	return status;
 }
 
-VOID HndReleaseHandle(
-	_In_ PHANDLE_SYSTEM HandleSystem,
+VOID HsDeleteHandle(
+	_In_ PHS_HANDLE_SYSTEM HandleSystem,
 	_In_ ULONG Handle)
 {
 	if (Handle < HandleSystem->MaxHandles)

@@ -92,7 +92,7 @@ typedef struct _SERVICE_REQUEST_PROTECT_PROCESS {
 /// <param name="BufferSize">The size of Buffer, in bytes.</param>
 /// <param name="Response">The response from the user-application.</param>
 NTSTATUS HsScanFileUserMode(
-	_In_ PHANDLE_SYSTEM HandleSystem,
+	_In_ PHS_HANDLE_SYSTEM HandleSystem,
 	_In_ PFLT_FILTER Filter,
 	_In_ PFLT_PORT* ClientPort,
 	_In_ UCHAR FileAccess,

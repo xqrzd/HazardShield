@@ -30,7 +30,7 @@ struct {
 	PEPROCESS ClientProcess;
 	BOOLEAN AllowUnload;
 
-	HANDLE_SYSTEM HandleSystem;
+	HS_HANDLE_SYSTEM HandleSystem;
 } FilterData;
 
 CONST FLT_OPERATION_REGISTRATION Callbacks[] = {
@@ -204,7 +204,7 @@ NTSTATUS DriverEntry(
 
 					if (NT_SUCCESS(status))
 					{
-						status = HndInitialize(&FilterData.HandleSystem, INITIAL_HANDLE_COUNT);
+						status = HsInitializeHandleSystem(&FilterData.HandleSystem, INITIAL_HANDLE_COUNT);
 
 						if (NT_SUCCESS(status))
 							status = PsSetCreateProcessNotifyRoutineEx(HzrCreateProcessNotifyEx, FALSE);
@@ -234,7 +234,7 @@ NTSTATUS HzrFilterUnload(
 		HsUnRegisterProtector();
 
 		HsDeleteBehaviorSystem();
-		HndFree(&FilterData.HandleSystem);
+		HsDeleteHandleSystem(&FilterData.HandleSystem);
 
 		return STATUS_SUCCESS;
 	}
@@ -313,7 +313,7 @@ NTSTATUS HzrFilterClientMessage(
 		PBUFFER_INFO bufferInfo;
 
 		// Lookup the buffer the client is requesting.
-		status = HndLookupObject(&FilterData.HandleSystem, request->Handle, &bufferInfo);
+		status = HsLookupObjectByHandle(&FilterData.HandleSystem, request->Handle, &bufferInfo);
 		if (NT_SUCCESS(status))
 		{
 			if (bufferInfo->BufferSize > OutputBufferLength)

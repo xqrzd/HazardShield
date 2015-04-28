@@ -31,7 +31,7 @@
 /// <param name="BufferInfo">The buffer to send.</param>
 /// <param name="Response">The response from the user-application.</param>
 NTSTATUS HspSendMessage(
-	_In_ PHANDLE_SYSTEM HandleSystem,
+	_In_ PHS_HANDLE_SYSTEM HandleSystem,
 	_In_ PFLT_FILTER Filter,
 	_In_ PFLT_PORT* ClientPort,
 	_In_ PBUFFER_INFO BufferInfo,
@@ -39,7 +39,7 @@ NTSTATUS HspSendMessage(
 	);
 
 NTSTATUS HsScanFileUserMode(
-	_In_ PHANDLE_SYSTEM HandleSystem,
+	_In_ PHS_HANDLE_SYSTEM HandleSystem,
 	_In_ PFLT_FILTER Filter,
 	_In_ PFLT_PORT* ClientPort,
 	_In_ UCHAR FileAccess,
@@ -88,7 +88,7 @@ NTSTATUS HsScanFileUserMode(
 }
 
 NTSTATUS HspSendMessage(
-	_In_ PHANDLE_SYSTEM HandleSystem,
+	_In_ PHS_HANDLE_SYSTEM HandleSystem,
 	_In_ PFLT_FILTER Filter,
 	_In_ PFLT_PORT* ClientPort,
 	_In_ PBUFFER_INFO BufferInfo,
@@ -98,7 +98,7 @@ NTSTATUS HspSendMessage(
 	ULONG handle;
 
 	// Create a handle for the client to access the buffer contents.
-	status = HndCreateHandle(HandleSystem, BufferInfo, &handle);
+	status = HsCreateHandle(HandleSystem, BufferInfo, &handle);
 
 	if (NT_SUCCESS(status))
 	{
@@ -120,7 +120,7 @@ NTSTATUS HspSendMessage(
 
 		// FltSendMessage waits for a reply, so by this point
 		// the user-app will be done with the handle.
-		HndReleaseHandle(HandleSystem, handle);
+		HsDeleteHandle(HandleSystem, handle);
 	}
 
 	return status;
