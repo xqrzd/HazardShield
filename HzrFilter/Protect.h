@@ -37,7 +37,7 @@ VOID HsUnRegisterProtector(
 
 /// <summary>
 /// Marks a process as protected. When this process or its threads are opened, the
-/// given access rights will be cleared. Call HsUnProtectProcess when the process
+/// given access rights will be stripped. Call HsUnProtectProcess when the process
 /// no longer needs protection, or when it exits.
 /// </summary>
 /// <param name="Process">Pointer to the process object to protect.</param>
