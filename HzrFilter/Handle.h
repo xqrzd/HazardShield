@@ -61,7 +61,7 @@ VOID HsDeleteHandleSystem(
 /// Creates a handle, which can be used to reference the given object.
 /// </summary>
 /// <param name="HandleSystem">Pointer to a HANDLE_SYSTEM.</param>
-/// <param name="Object">The object this handle references.</param>
+/// <param name="Object">The object this handle references. The object cannot be NULL.</param>
 /// <param name="Handle">The handle which can be used to lookup the object.</param>
 NTSTATUS HsCreateHandle(
 	_In_ PHS_HANDLE_SYSTEM HandleSystem,

@@ -22,6 +22,12 @@
 
 #define HANDLE_TABLE_TAG 'tHzH'
 
+/// <summary>
+/// Finds an available handle.
+/// </summary>
+/// <param name="HandleSystem">Pointer to a HANDLE_SYSTEM.</param>
+/// <param name="Handle">The next available handle.</param>
+/// <returns>TRUE if an available handle is found, otherwise FALSE.</returns>
 FORCEINLINE BOOLEAN HndpFindAvailableHandle(
 	_In_ PHS_HANDLE_SYSTEM HandleSystem,
 	_Out_ PULONG Handle)
@@ -40,6 +46,11 @@ FORCEINLINE BOOLEAN HndpFindAvailableHandle(
 	return FALSE;
 }
 
+/// <summary>
+/// Doubles the capacity of the given HANDLE_SYSTEM.
+/// </summary>
+/// <param name="HandleSystem">Pointer to a HANDLE_SYSTEM.</param>
+/// <param name="NextFreeHandle">The next available handle.</param>
 FORCEINLINE NTSTATUS HndpGrowTable(
 	_Inout_ PHS_HANDLE_SYSTEM HandleSystem,
 	_Out_ PULONG NextFreeHandle)
