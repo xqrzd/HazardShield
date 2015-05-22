@@ -28,72 +28,20 @@
 /// <param name="HandleSystem">Pointer to a HANDLE_SYSTEM.</param>
 /// <param name="Handle">The next available handle.</param>
 /// <returns>TRUE if an available handle is found, otherwise FALSE.</returns>
-FORCEINLINE BOOLEAN HndpFindAvailableHandle(
+BOOLEAN HndpFindAvailableHandle(
 	_In_ PHS_HANDLE_SYSTEM HandleSystem,
-	_Out_ PULONG Handle)
-{
-	ULONG i;
-
-	for (i = 0; i < HandleSystem->MaxHandles; i++)
-	{
-		if (HandleSystem->ObjectTable[i] == NULL)
-		{
-			*Handle = i;
-			return TRUE;
-		}
-	}
-
-	return FALSE;
-}
+	_Out_ PULONG Handle
+	);
 
 /// <summary>
 /// Doubles the capacity of the given HANDLE_SYSTEM.
 /// </summary>
 /// <param name="HandleSystem">Pointer to a HANDLE_SYSTEM.</param>
 /// <param name="NextFreeHandle">The next available handle.</param>
-FORCEINLINE NTSTATUS HndpGrowTable(
+NTSTATUS HndpGrowTable(
 	_Inout_ PHS_HANDLE_SYSTEM HandleSystem,
-	_Out_ PULONG NextFreeHandle)
-{
-	NTSTATUS status;
-	PVOID oldTable;
-	PVOID newTable;
-	SIZE_T oldTableSize;
-	SIZE_T newTableSize;
-
-	oldTable = HandleSystem->ObjectTable;
-	oldTableSize = HandleSystem->MaxHandles * sizeof(PVOID);
-
-	// Double table size.
-	newTableSize = oldTableSize * 2;
-	newTable = ExAllocatePoolWithTag(PagedPool, newTableSize, HANDLE_TABLE_TAG);
-
-	if (newTable)
-	{
-		// Copy previous table entries.
-		RtlCopyMemory(newTable, oldTable, oldTableSize);
-
-		// Delete old table.
-		ExFreePoolWithTag(oldTable, HANDLE_TABLE_TAG);
-
-		// Zero out new table entries.
-		RtlZeroMemory(RtlOffsetToPointer(newTable, oldTableSize), oldTableSize);
-
-		// Next free handle is the old capacity.
-		// Ex. If the old table had 3 handles, the
-		// next free handle would be index[3].
-		*NextFreeHandle = HandleSystem->MaxHandles;
-
-		HandleSystem->ObjectTable = newTable;
-		HandleSystem->MaxHandles *= 2;
-
-		status = STATUS_SUCCESS;
-	}
-	else
-		status = STATUS_INSUFFICIENT_RESOURCES;
-
-	return status;
-}
+	_Out_ PULONG NextFreeHandle
+	);
 
 NTSTATUS HsInitializeHandleSystem(
 	_In_ PHS_HANDLE_SYSTEM HandleSystem,
@@ -203,4 +151,66 @@ VOID HsDeleteHandle(
 
 		FltReleasePushLock(&HandleSystem->ObjectTableLock);
 	}
+}
+
+BOOLEAN HndpFindAvailableHandle(
+	_In_ PHS_HANDLE_SYSTEM HandleSystem,
+	_Out_ PULONG Handle)
+{
+	ULONG i;
+
+	for (i = 0; i < HandleSystem->MaxHandles; i++)
+	{
+		if (HandleSystem->ObjectTable[i] == NULL)
+		{
+			*Handle = i;
+			return TRUE;
+		}
+	}
+
+	return FALSE;
+}
+
+NTSTATUS HndpGrowTable(
+	_Inout_ PHS_HANDLE_SYSTEM HandleSystem,
+	_Out_ PULONG NextFreeHandle)
+{
+	NTSTATUS status;
+	PVOID oldTable;
+	PVOID newTable;
+	SIZE_T oldTableSize;
+	SIZE_T newTableSize;
+
+	oldTable = HandleSystem->ObjectTable;
+	oldTableSize = HandleSystem->MaxHandles * sizeof(PVOID);
+
+	// Double table size.
+	newTableSize = oldTableSize * 2;
+	newTable = ExAllocatePoolWithTag(PagedPool, newTableSize, HANDLE_TABLE_TAG);
+
+	if (newTable)
+	{
+		// Copy previous table entries.
+		RtlCopyMemory(newTable, oldTable, oldTableSize);
+
+		// Delete old table.
+		ExFreePoolWithTag(oldTable, HANDLE_TABLE_TAG);
+
+		// Zero out new table entries.
+		RtlZeroMemory(RtlOffsetToPointer(newTable, oldTableSize), oldTableSize);
+
+		// Next free handle is the old capacity.
+		// Ex. If the old table had 3 handles, the
+		// next free handle would be index[3].
+		*NextFreeHandle = HandleSystem->MaxHandles;
+
+		HandleSystem->ObjectTable = newTable;
+		HandleSystem->MaxHandles *= 2;
+
+		status = STATUS_SUCCESS;
+	}
+	else
+		status = STATUS_INSUFFICIENT_RESOURCES;
+
+	return status;
 }
