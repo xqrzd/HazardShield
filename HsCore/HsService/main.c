@@ -1,3 +1,3 @@
-void main()
+void __cdecl main()
 {
 }
