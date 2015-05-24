@@ -24,6 +24,7 @@
 #define HZR_CTX_INSTANCE_TAG 'iCzH'
 #define HZR_CTX_STREAM_TAG 'sCzH'
 #define HZR_CTX_STREAMHANDLE_TAG 'hCzH'
+#define HZR_CTX_SECTION_TAG 'nCzH'
 
 VOID HzrFilterInstanceContextCleanup(
 	_In_ PFLT_CONTEXT Context,
@@ -31,6 +32,11 @@ VOID HzrFilterInstanceContextCleanup(
 	);
 
 VOID HzrFilterStreamContextCleanup(
+	_In_ PFLT_CONTEXT Context,
+	_In_ FLT_CONTEXT_TYPE ContextType
+	);
+
+VOID HspFilterSectionContextCleanup(
 	_In_ PFLT_CONTEXT Context,
 	_In_ FLT_CONTEXT_TYPE ContextType
 	);
@@ -56,6 +62,13 @@ const FLT_CONTEXT_REGISTRATION ContextRegistration[] = {
 		NULL,
 		sizeof(FILTER_STREAMHANDLE_CONTEXT),
 		HZR_CTX_STREAMHANDLE_TAG
+	},
+	{
+		FLT_SECTION_CONTEXT,
+		0,
+		HspFilterSectionContextCleanup,
+		sizeof(HS_SECTION_CONTEXT),
+		HZR_CTX_SECTION_TAG
 	},
 
 	{ FLT_CONTEXT_END }
@@ -89,4 +102,14 @@ VOID HzrFilterStreamContextCleanup(
 	UNREFERENCED_PARAMETER(ContextType);
 
 	FltDeletePushLock(&context->ScanLock);
+}
+
+VOID HspFilterSectionContextCleanup(
+	_In_ PFLT_CONTEXT Context,
+	_In_ FLT_CONTEXT_TYPE ContextType)
+{
+	// TODO: cleanup here.
+
+	UNREFERENCED_PARAMETER(Context);
+	UNREFERENCED_PARAMETER(ContextType);
 }

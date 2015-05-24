@@ -71,7 +71,7 @@ CONST FLT_OPERATION_REGISTRATION Callbacks[] = {
 CONST FLT_REGISTRATION FilterRegistration = {
 	sizeof(FLT_REGISTRATION),	// Size
 	FLT_REGISTRATION_VERSION,	// Version
-	FLTFL_REGISTRATION_DO_NOT_SUPPORT_SERVICE_STOP,	// Flags
+	0,	// Flags, FLTFL_REGISTRATION_DO_NOT_SUPPORT_SERVICE_STOP
 
 	ContextRegistration,		// Context
 	Callbacks,					// Operation callbacks
@@ -118,6 +118,8 @@ NTSTATUS HzrFilterInstanceSetup(
 
 		if (NT_SUCCESS(status))
 		{
+			FltRegisterForDataScan(FltObjects->Instance);
+
 			if (VolumeDeviceType == FILE_DEVICE_DISK_FILE_SYSTEM &&
 				VolumeFilesystemType == FLT_FSTYPE_NTFS)
 			{
