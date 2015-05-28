@@ -166,6 +166,11 @@
   <ItemGroup>
     <ResourceCompile Include="HsCore.rc" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\phlib\phlib.vcxproj">
+      <Project>{477d0215-f252-41a1-874b-f27e3ea1ed17}</Project>
+    </ProjectReference>
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

@@ -47,9 +47,15 @@ extern ULONG PhMaxSizeUnit;
 // Internal CRT routines needed for floating-point conversion
 
 errno_t __cdecl _cfltcvt_l(double *arg, char *buffer, size_t sizeInBytes,
-    int format, int precision, int caps, _locale_t plocinfo);
+	int format, int precision, int caps, _locale_t plocinfo)
+{
+	return 0;
+}
 
-void __cdecl _cropzeros_l(char *_Buf, _locale_t _Locale);
+void __cdecl _cropzeros_l(char *_Buf, _locale_t _Locale)
+{
+}
+
 void __cdecl _forcdecpt_l(char *_Buf, _locale_t _Locale);
 
 // Keep in sync with PhSizeUnitNames
