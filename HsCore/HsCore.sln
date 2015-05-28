@@ -7,6 +7,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "HsCore", "HsCore\HsCore.vcx
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "HsService", "HsService\HsService.vcxproj", "{9393AB8E-ABFD-4783-BF3A-464FD966C465}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "phlib", "phlib\phlib.vcxproj", "{477D0215-F252-41A1-874B-F27E3EA1ED17}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -31,6 +33,14 @@ Global
 		{9393AB8E-ABFD-4783-BF3A-464FD966C465}.Release|Win32.Build.0 = Release|Win32
 		{9393AB8E-ABFD-4783-BF3A-464FD966C465}.Release|x64.ActiveCfg = Release|x64
 		{9393AB8E-ABFD-4783-BF3A-464FD966C465}.Release|x64.Build.0 = Release|x64
+		{477D0215-F252-41A1-874B-F27E3EA1ED17}.Debug|Win32.ActiveCfg = Debug|Win32
+		{477D0215-F252-41A1-874B-F27E3EA1ED17}.Debug|Win32.Build.0 = Debug|Win32
+		{477D0215-F252-41A1-874B-F27E3EA1ED17}.Debug|x64.ActiveCfg = Debug|x64
+		{477D0215-F252-41A1-874B-F27E3EA1ED17}.Debug|x64.Build.0 = Debug|x64
+		{477D0215-F252-41A1-874B-F27E3EA1ED17}.Release|Win32.ActiveCfg = Release|Win32
+		{477D0215-F252-41A1-874B-F27E3EA1ED17}.Release|Win32.Build.0 = Release|Win32
+		{477D0215-F252-41A1-874B-F27E3EA1ED17}.Release|x64.ActiveCfg = Release|x64
+		{477D0215-F252-41A1-874B-F27E3EA1ED17}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

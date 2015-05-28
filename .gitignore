@@ -10,3 +10,6 @@
 *.aps
 *.sdf
 *.opensdf
+
+# phlib
+HsCore/phlib/obj/
