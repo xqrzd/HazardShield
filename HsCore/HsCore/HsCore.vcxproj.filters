@@ -8,21 +8,35 @@
     <Filter Include="NTFS">
       <UniqueIdentifier>{2b9f8a3a-e309-483f-b7fc-c2db5fc14847}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Scanner">
+      <UniqueIdentifier>{82e5a463-da7e-46ad-99ef-bf3f7e0f8d7a}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Ntfs.h">
       <Filter>NTFS</Filter>
     </ClInclude>
     <ClInclude Include="resource.h" />
+    <ClInclude Include="Scanner.h">
+      <Filter>Scanner</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Ntfs.c">
       <Filter>NTFS</Filter>
+    </ClCompile>
+    <ClCompile Include="Scanner.c">
+      <Filter>Scanner</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="HsCore.rc">
       <Filter>Resource Files</Filter>
     </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Exports.def">
+      <Filter>Resource Files</Filter>
+    </None>
   </ItemGroup>
 </Project>
