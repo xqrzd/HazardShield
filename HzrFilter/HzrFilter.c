@@ -20,18 +20,7 @@
 
 #include "HzrFilter.h"
 
-UNICODE_STRING PortName = RTL_CONSTANT_STRING(L"\\HzrFilterPort");
-
-struct {
-	PFLT_FILTER Filter;
-
-	PFLT_PORT ServerPort;
-	PFLT_PORT ClientPort;
-	PEPROCESS ClientProcess;
-	BOOLEAN AllowUnload;
-
-	HS_HANDLE_SYSTEM HandleSystem;
-} FilterData;
+HS_FILTER_GLOBAL_DATA GlobalData;
 
 CONST FLT_OPERATION_REGISTRATION Callbacks[] = {
 	{
@@ -164,62 +153,50 @@ NTSTATUS DriverEntry(
 
 	HsInitializeBehaviorSystem();
 
-	status = FltRegisterFilter(DriverObject, &FilterRegistration, &FilterData.Filter);
+	InitializeListHead(&GlobalData.ScanContextList);
+	FltInitializePushLock(&GlobalData.ScanContextListLock);
+
+	DbgPrint("Command size: %u", sizeof(HS_SERVICE_COMMAND));
+
+	status = FltRegisterFilter(
+		DriverObject,
+		&FilterRegistration,
+		&GlobalData.Filter);
+
+	if (!NT_SUCCESS(status))
+		return status;
+
+	status = HsFilterCreateCommunicationPort();
+
+	if (!NT_SUCCESS(status))
+		goto End;
+
+	status = FltStartFiltering(GlobalData.Filter);
+
+	if (!NT_SUCCESS(status))
+		goto End;
+
+	status = HsRegisterProtector();
 
 	if (NT_SUCCESS(status))
+		GlobalData.RegisteredObCallback = TRUE;
+	else
+		goto End;
+
+	status = PsSetCreateProcessNotifyRoutineEx(HzrCreateProcessNotifyEx, FALSE);
+
+	if (NT_SUCCESS(status))
+		GlobalData.RegisteredProcessCallback = TRUE;
+	else
+		goto End;
+
+End:
+	if (!NT_SUCCESS(status))
 	{
-		PSECURITY_DESCRIPTOR securityDescriptor;
+		// If any of the above calls failed, call the unload routine
+		// to cleanup before exiting.
 
-		// Only allow admins or system to access the driver.
-		status = FltBuildDefaultSecurityDescriptor(&securityDescriptor, FLT_PORT_ALL_ACCESS);
-		if (NT_SUCCESS(status))
-		{
-			OBJECT_ATTRIBUTES objectAttributes;
-
-			InitializeObjectAttributes(
-				&objectAttributes,
-				&PortName,
-				OBJ_CASE_INSENSITIVE | OBJ_KERNEL_HANDLE,
-				NULL,
-				securityDescriptor);
-
-			// Create communication port so the user-mode app can access the driver.
-			status = FltCreateCommunicationPort(
-				FilterData.Filter,
-				&FilterData.ServerPort,
-				&objectAttributes,
-				NULL,
-				HzrFilterPortConnect,
-				HzrFilterPortDisconnect,
-				HzrFilterClientMessage,
-				1);
-
-			FltFreeSecurityDescriptor(securityDescriptor);
-
-			if (NT_SUCCESS(status))
-			{
-				status = FltStartFiltering(FilterData.Filter);
-
-				if (NT_SUCCESS(status))
-				{
-					status = HsRegisterProtector();
-
-					if (NT_SUCCESS(status))
-					{
-						status = HsInitializeHandleSystem(&FilterData.HandleSystem, INITIAL_HANDLE_COUNT);
-
-						if (NT_SUCCESS(status))
-							status = PsSetCreateProcessNotifyRoutineEx(HzrCreateProcessNotifyEx, FALSE);
-					}
-				}
-			}
-
-			if (!NT_SUCCESS(status))
-				FltCloseCommunicationPort(FilterData.ServerPort);
-		}
-
-		if (!NT_SUCCESS(status))
-			FltUnregisterFilter(FilterData.Filter);
+		HzrFilterUnload(FLTFL_FILTER_UNLOAD_MANDATORY);
 	}
 
 	return status;
@@ -228,134 +205,27 @@ NTSTATUS DriverEntry(
 NTSTATUS HzrFilterUnload(
 	_In_ FLT_FILTER_UNLOAD_FLAGS Flags)
 {
-	if (FlagOn(Flags, FLTFL_FILTER_UNLOAD_MANDATORY) || FilterData.AllowUnload)
+	if (FlagOn(Flags, FLTFL_FILTER_UNLOAD_MANDATORY) || GlobalData.AllowUnload)
 	{
-		FltCloseCommunicationPort(FilterData.ServerPort);
-		FltUnregisterFilter(FilterData.Filter);
-		PsSetCreateProcessNotifyRoutineEx(HzrCreateProcessNotifyEx, TRUE);
-		HsUnRegisterProtector();
+		if (GlobalData.ServerPort)
+			FltCloseCommunicationPort(GlobalData.ServerPort);
+
+		if (GlobalData.Filter)
+			FltUnregisterFilter(GlobalData.Filter);
+
+		if (GlobalData.RegisteredProcessCallback)
+			PsSetCreateProcessNotifyRoutineEx(HzrCreateProcessNotifyEx, TRUE);
+
+		if (GlobalData.RegisteredObCallback)
+			HsUnRegisterProtector();
 
 		HsDeleteBehaviorSystem();
-		HsDeleteHandleSystem(&FilterData.HandleSystem);
+		FltDeletePushLock(&GlobalData.ScanContextListLock);
 
 		return STATUS_SUCCESS;
 	}
 
 	return STATUS_ACCESS_DENIED;
-}
-
-NTSTATUS HzrFilterPortConnect(
-	_In_ PFLT_PORT ClientPort,
-	_In_opt_ PVOID ServerPortCookie,
-	_In_reads_bytes_opt_(SizeOfContext) PVOID ConnectionContext,
-	_In_ ULONG SizeOfContext,
-	_Outptr_result_maybenull_ PVOID *ConnectionCookie)
-{
-	UNREFERENCED_PARAMETER(ServerPortCookie);
-	UNREFERENCED_PARAMETER(ConnectionContext);
-	UNREFERENCED_PARAMETER(SizeOfContext);
-	UNREFERENCED_PARAMETER(ConnectionCookie);
-
-	// Only allow SYSTEM processes to connect.
-	if (PsGetCurrentProcessSessionId() != 0)
-		return STATUS_ACCESS_DENIED;
-
-	FilterData.ClientProcess = IoGetCurrentProcess();
-	FilterData.ClientPort = ClientPort;
-
-	HsProtectProcess(FilterData.ClientProcess, (ACCESS_MASK)-1, (ACCESS_MASK)-1);
-
-	return STATUS_SUCCESS;
-}
-
-VOID HzrFilterPortDisconnect(
-	_In_opt_ PVOID ConnectionCookie)
-{
-	UNREFERENCED_PARAMETER(ConnectionCookie);
-
-	// This call sets FilterData.ClientPort to NULL
-	FltCloseClientPort(FilterData.Filter, &FilterData.ClientPort);
-
-	FilterData.ClientProcess = NULL;
-}
-
-NTSTATUS HzrFilterClientMessage(
-	_In_ PVOID PortCookie,
-	_In_opt_ PVOID InputBuffer,
-	_In_ ULONG InputBufferLength,
-	_Out_opt_ PVOID OutputBuffer,
-	_In_ ULONG OutputBufferLength,
-	_Out_ PULONG ReturnOutputBufferLength)
-{
-	NTSTATUS status = STATUS_INVALID_PARAMETER;
-	UCHAR capturedInput[sizeof(PVOID) * 4];
-	ULONG command;
-
-	UNREFERENCED_PARAMETER(PortCookie);
-
-	if (InputBuffer == NULL || InputBufferLength == 0 || InputBufferLength > sizeof(capturedInput))
-		return STATUS_INVALID_PARAMETER;
-
-	// The filter manager calls ProbeForRead/Write on the user buffers, however
-	// they must still be accessed in a try/except, to avoid potential access violations.
-	__try
-	{
-		RtlCopyMemory(capturedInput, InputBuffer, InputBufferLength);
-	}
-	__except (EXCEPTION_EXECUTE_HANDLER)
-	{
-		return GetExceptionCode();
-	}
-
-	command = *(PULONG)capturedInput;
-
-	if (command == DRV_CMD_GET_BUFFER)
-	{
-		PSERVICE_REQUEST_BUFFER request = (PSERVICE_REQUEST_BUFFER)capturedInput;
-		PBUFFER_INFO bufferInfo;
-
-		// Lookup the buffer the client is requesting.
-		status = HsLookupObjectByHandle(&FilterData.HandleSystem, request->Handle, &bufferInfo);
-		if (NT_SUCCESS(status))
-		{
-			if (bufferInfo->BufferSize > OutputBufferLength)
-				return STATUS_INVALID_PARAMETER;
-
-			__try
-			{
-				RtlCopyMemory(OutputBuffer, bufferInfo->Buffer, bufferInfo->BufferSize);
-			}
-			__except (EXCEPTION_EXECUTE_HANDLER)
-			{
-				return GetExceptionCode();
-			}
-
-			*ReturnOutputBufferLength = bufferInfo->BufferSize;
-		}
-	}
-	else if (command == DRV_CMD_PROTECT_PROCESS)
-	{
-		PSERVICE_REQUEST_PROTECT_PROCESS request = (PSERVICE_REQUEST_PROTECT_PROCESS)capturedInput;
-		PEPROCESS process;
-
-		status = PsLookupProcessByProcessId((HANDLE)request->ProcessId, &process);
-
-		if (NT_SUCCESS(status))
-		{
-			HsProtectProcess(
-				process,
-				request->ProcessAccessBitsToClear,
-				request->ThreadAccessBitsToClear);
-
-			ObDereferenceObject(process);
-		}
-	}
-	else if (command == DRV_CMD_ALLOW_UNLOAD)
-	{
-		FilterData.AllowUnload = TRUE;
-	}
-
-	return status;
 }
 
 FLT_POSTOP_CALLBACK_STATUS HzrFilterPostCreate(
@@ -563,24 +433,28 @@ FLT_PREOP_CALLBACK_STATUS HzrFilterPreAcquireForSectionSynchronization(
 	if (FlagOn(Data->Iopb->Parameters.AcquireForSectionSynchronization.PageProtection, PAGE_EXECUTE) &&
 		Data->Iopb->Parameters.AcquireForSectionSynchronization.SyncType == SyncTypeCreateSection &&
 		!HzrFilterIsPrefetchContextPresent(FltObjects->Instance, FltObjects->FileObject) &&
-		IoGetCurrentProcess() != FilterData.ClientProcess)
+		IoGetCurrentProcess() != GlobalData.ClientProcess)
 	{
-		NTSTATUS status;
-		SERVICE_RESPONSE response;
+		UCHAR response;
 
-		status = HzrFilterScanStream(FltObjects->Instance, FltObjects->FileObject, FILE_ACCESS_EXECUTE, &response);
+		HsFilterScanFile(FltObjects, &response);
 
-		if (NT_SUCCESS(status))
-		{
-			if (FlagOn(response.Flags, RESPONSE_FLAG_BLOCK_OPERATION))
-			{
-				Data->IoStatus.Status = STATUS_ACCESS_DENIED;
-				Data->IoStatus.Information = 0;
+		//NTSTATUS status;
+		//SERVICE_RESPONSE response;
 
-				// Stop processing for the operation and assign final NTSTATUS value.
-				return FLT_PREOP_COMPLETE;
-			}
-		}
+		//status = HzrFilterScanStream(FltObjects->Instance, FltObjects->FileObject, FILE_ACCESS_EXECUTE, &response);
+
+		//if (NT_SUCCESS(status))
+		//{
+		//	if (FlagOn(response.Flags, RESPONSE_FLAG_BLOCK_OPERATION))
+		//	{
+		//		Data->IoStatus.Status = STATUS_ACCESS_DENIED;
+		//		Data->IoStatus.Information = 0;
+
+		//		// Stop processing for the operation and assign final NTSTATUS value.
+		//		return FLT_PREOP_COMPLETE;
+		//	}
+		//}
 	}
 
 	// Pass the I/O operation through without calling the minifilter's postoperation callback on completion.
@@ -664,134 +538,197 @@ FLT_PREOP_CALLBACK_STATUS HzrFilterPreCleanup(
 	return FLT_PREOP_SUCCESS_NO_CALLBACK;
 }
 
-NTSTATUS HzrFilterScanStream(
-	_In_ PFLT_INSTANCE Instance,
-	_In_ PFILE_OBJECT FileObject,
-	_In_ UCHAR FileAccess,
-	_Out_ PSERVICE_RESPONSE Response)
+NTSTATUS HsFilterScanFile(
+	_In_ PCFLT_RELATED_OBJECTS FltObjects,
+	_Out_ PUCHAR ResponseFlags)
 {
 	NTSTATUS status;
-	PFILTER_STREAM_CONTEXT streamContext;
+	HS_SCAN_CONTEXT scanContext;
+	HS_SCANNER_NOTIFICATION notification;
+	ULONG replyLength;
 
-	status = FltGetStreamContext(Instance, FileObject, &streamContext);
+	scanContext.Instance = FltObjects->Instance;
+	scanContext.FileObject = FltObjects->FileObject;
+	scanContext.SectionContext = NULL;
+
+	FltAcquirePushLockExclusive(&GlobalData.ScanContextListLock);
+
+	// Set a scan id and insert it into the global list.
+
+	scanContext.ScanId = (++GlobalData.NextScanContextId);
+	InsertTailList(&GlobalData.ScanContextList, &scanContext.List);
+
+	FltReleasePushLock(&GlobalData.ScanContextListLock);
+
+	// Send notification to user-mode service.
+
+	notification.ScanReason = HsScanOnPeOpen;
+	notification.ScanId = scanContext.ScanId;
+	replyLength = sizeof(UCHAR);
+
+	status = FltSendMessage(
+		GlobalData.Filter,
+		&GlobalData.ClientPort,
+		&notification,
+		sizeof(notification),
+		ResponseFlags,
+		&replyLength,
+		NULL);
 
 	if (NT_SUCCESS(status))
 	{
-		FltAcquirePushLockExclusive(&streamContext->ScanLock);
+		DbgPrint("Success!, %u", *ResponseFlags);
 
-		// TODO: Check if the stream is already infected here.
-		if (FlagOn(streamContext->Flags, STREAM_FLAG_MODIFIED) ||
-			FlagOn(streamContext->Flags, STREAM_FLAG_NOT_SCANNED))
+		// If the user-mode application created a section, clean
+		// it up here. Note that the user-mode app is responsible
+		// for closing SectionHandle.
+
+		if (scanContext.SectionContext)
 		{
-			status = HzrFilterScanFile(Instance, FileObject, FileAccess, Response);
-
-			if (NT_SUCCESS(status))
-			{
-				if (FlagOn(Response->Flags, RESPONSE_FLAG_BLOCK_OPERATION))
-				{
-					RtlInterlockedSetBits(&streamContext->Flags, STREAM_FLAG_INFECTED);
-				}
-
-				if (FlagOn(Response->Flags, RESPONSE_FLAG_DELETE))
-				{
-					RtlInterlockedSetBits(&streamContext->Flags, STREAM_FLAG_DELETE);
-				}
-
-				if (FlagOn(Response->Flags, RESPONSE_FLAG_WHITELIST))
-				{
-					RtlInterlockedClearBits(&streamContext->Flags, STREAM_FLAG_MODIFIED);
-					RtlInterlockedClearBits(&streamContext->Flags, STREAM_FLAG_NOT_SCANNED);
-				}
-			}
+			HsReleaseSectionContext(scanContext.SectionContext);
 		}
-		else
-		{
-			// Redo this.
-			// Hack-fix relies on STREAM_FLAG_INFECTED == 1
-			Response->Flags = BooleanFlagOn(streamContext->Flags, STREAM_FLAG_INFECTED);
-		}
-
-		FltReleasePushLock(&streamContext->ScanLock);
-		FltReleaseContext(streamContext);
 	}
 	else
-		DbgPrint("HzrFilterScanStream::FltGetStreamContext failed %X", status);
+		DbgPrint("FltSendMessage failed %X", status);
+
+	// FltSendMessage waits for a response, so by this point the
+	// user-application will be done with the scan context.
+
+	FltAcquirePushLockExclusive(&GlobalData.ScanContextListLock);
+	RemoveEntryList(&scanContext.List);
+	FltReleasePushLock(&GlobalData.ScanContextListLock);
 
 	return status;
 }
 
-// TODO: On Windows8+, use FltCreateSectionForDataScan instead of FltReadFile
-NTSTATUS HzrFilterScanFile(
-	_In_ PFLT_INSTANCE Instance,
-	_In_ PFILE_OBJECT FileObject,
-	_In_ UCHAR FileAccess,
-	_Out_ PSERVICE_RESPONSE Response)
-{
-	NTSTATUS status;
-	LARGE_INTEGER fileSize;
-
-	status = HzrFilterGetFileSize(Instance, FileObject, &fileSize);
-	if (NT_SUCCESS(status))
-	{
-		if (fileSize.QuadPart <= MAX_FILE_SCAN_SIZE)
-		{
-			POBJECT_NAME_INFORMATION fullFilePath;
-
-			status = IoQueryFileDosDeviceName(FileObject, &fullFilePath);
-			if (NT_SUCCESS(status))
-			{
-				PVOID buffer;
-
-				buffer = ExAllocatePoolWithTag(PagedPool, fileSize.LowPart, HZR_FILE_TAG);
-				if (buffer)
-				{
-					LARGE_INTEGER byteOffset;
-
-					byteOffset.QuadPart = 0;
-
-					status = FltReadFile(
-						Instance,
-						FileObject,
-						&byteOffset,
-						fileSize.LowPart,
-						buffer,
-						0, NULL, NULL, NULL);
-
-					if (NT_SUCCESS(status))
-					{
-						status = HsScanFileUserMode(
-							&FilterData.HandleSystem,
-							FilterData.Filter,
-							&FilterData.ClientPort,
-							FileAccess,
-							&fullFilePath->Name,
-							buffer,
-							fileSize.LowPart,
-							Response);
-					}
-					else
-						DbgPrint("HzrFilterScanFile: FltReadFile failed %X", status);
-
-					ExFreePoolWithTag(buffer, HZR_FILE_TAG);
-				}
-				else
-					status = STATUS_INSUFFICIENT_RESOURCES;
-
-				ExFreePool(fullFilePath);
-			}
-			else
-				DbgPrint("HzrFilterScanFile: IoQueryFileDosDeviceName failed %X", status);
-		}
-		else
-		{
-			status = STATUS_FILE_TOO_LARGE;
-		}
-	}
-	else
-		DbgPrint("HzrFilterScanFile: HzrFilterGetFileSize failed %X", status);
-
-	return status;
-}
+//NTSTATUS HzrFilterScanStream(
+//	_In_ PFLT_INSTANCE Instance,
+//	_In_ PFILE_OBJECT FileObject,
+//	_In_ UCHAR FileAccess,
+//	_Out_ PSERVICE_RESPONSE Response)
+//{
+//	NTSTATUS status;
+//	PFILTER_STREAM_CONTEXT streamContext;
+//
+//	status = FltGetStreamContext(Instance, FileObject, &streamContext);
+//
+//	if (NT_SUCCESS(status))
+//	{
+//		FltAcquirePushLockExclusive(&streamContext->ScanLock);
+//
+//		// TODO: Check if the stream is already infected here.
+//		if (FlagOn(streamContext->Flags, STREAM_FLAG_MODIFIED) ||
+//			FlagOn(streamContext->Flags, STREAM_FLAG_NOT_SCANNED))
+//		{
+//			status = HzrFilterScanFile(Instance, FileObject, FileAccess, Response);
+//
+//			if (NT_SUCCESS(status))
+//			{
+//				if (FlagOn(Response->Flags, RESPONSE_FLAG_BLOCK_OPERATION))
+//				{
+//					RtlInterlockedSetBits(&streamContext->Flags, STREAM_FLAG_INFECTED);
+//				}
+//
+//				if (FlagOn(Response->Flags, RESPONSE_FLAG_DELETE))
+//				{
+//					RtlInterlockedSetBits(&streamContext->Flags, STREAM_FLAG_DELETE);
+//				}
+//
+//				if (FlagOn(Response->Flags, RESPONSE_FLAG_WHITELIST))
+//				{
+//					RtlInterlockedClearBits(&streamContext->Flags, STREAM_FLAG_MODIFIED);
+//					RtlInterlockedClearBits(&streamContext->Flags, STREAM_FLAG_NOT_SCANNED);
+//				}
+//			}
+//		}
+//		else
+//		{
+//			// Redo this.
+//			// Hack-fix relies on STREAM_FLAG_INFECTED == 1
+//			Response->Flags = BooleanFlagOn(streamContext->Flags, STREAM_FLAG_INFECTED);
+//		}
+//
+//		FltReleasePushLock(&streamContext->ScanLock);
+//		FltReleaseContext(streamContext);
+//	}
+//	else
+//		DbgPrint("HzrFilterScanStream::FltGetStreamContext failed %X", status);
+//
+//	return status;
+//}
+//
+//// TODO: On Windows8+, use FltCreateSectionForDataScan instead of FltReadFile
+//NTSTATUS HzrFilterScanFile(
+//	_In_ PFLT_INSTANCE Instance,
+//	_In_ PFILE_OBJECT FileObject,
+//	_In_ UCHAR FileAccess,
+//	_Out_ PSERVICE_RESPONSE Response)
+//{
+//	NTSTATUS status;
+//	LARGE_INTEGER fileSize;
+//
+//	status = HzrFilterGetFileSize(Instance, FileObject, &fileSize);
+//	if (NT_SUCCESS(status))
+//	{
+//		if (fileSize.QuadPart <= MAX_FILE_SCAN_SIZE)
+//		{
+//			POBJECT_NAME_INFORMATION fullFilePath;
+//
+//			status = IoQueryFileDosDeviceName(FileObject, &fullFilePath);
+//			if (NT_SUCCESS(status))
+//			{
+//				PVOID buffer;
+//
+//				buffer = ExAllocatePoolWithTag(PagedPool, fileSize.LowPart, HZR_FILE_TAG);
+//				if (buffer)
+//				{
+//					LARGE_INTEGER byteOffset;
+//
+//					byteOffset.QuadPart = 0;
+//
+//					status = FltReadFile(
+//						Instance,
+//						FileObject,
+//						&byteOffset,
+//						fileSize.LowPart,
+//						buffer,
+//						0, NULL, NULL, NULL);
+//
+//					if (NT_SUCCESS(status))
+//					{
+//						status = HsScanFileUserMode(
+//							&FilterData.HandleSystem,
+//							FilterData.Filter,
+//							&FilterData.ClientPort,
+//							FileAccess,
+//							&fullFilePath->Name,
+//							buffer,
+//							fileSize.LowPart,
+//							Response);
+//					}
+//					else
+//						DbgPrint("HzrFilterScanFile: FltReadFile failed %X", status);
+//
+//					ExFreePoolWithTag(buffer, HZR_FILE_TAG);
+//				}
+//				else
+//					status = STATUS_INSUFFICIENT_RESOURCES;
+//
+//				ExFreePool(fullFilePath);
+//			}
+//			else
+//				DbgPrint("HzrFilterScanFile: IoQueryFileDosDeviceName failed %X", status);
+//		}
+//		else
+//		{
+//			status = STATUS_FILE_TOO_LARGE;
+//		}
+//	}
+//	else
+//		DbgPrint("HzrFilterScanFile: HzrFilterGetFileSize failed %X", status);
+//
+//	return status;
+//}
 
 NTSTATUS HzrFilterDeleteFile(
 	_In_ PFLT_INSTANCE Instance,

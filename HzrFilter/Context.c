@@ -108,8 +108,29 @@ VOID HspFilterSectionContextCleanup(
 	_In_ PFLT_CONTEXT Context,
 	_In_ FLT_CONTEXT_TYPE ContextType)
 {
-	// TODO: cleanup here.
+	PHS_SECTION_CONTEXT sectionContext = Context;
 
-	UNREFERENCED_PARAMETER(Context);
 	UNREFERENCED_PARAMETER(ContextType);
+
+	DbgPrint("Cleanup section context!");
+
+	ObDereferenceObject(sectionContext->SectionObject);
+}
+
+NTSTATUS HsReleaseSectionContext(
+	_In_ PHS_SECTION_CONTEXT SectionContext)
+{
+	NTSTATUS status;
+
+	status = FltCloseSectionForDataScan(SectionContext);
+
+	if (!NT_SUCCESS(status))
+		DbgPrint("FltCloseSectionForDataScan failed %X", status);
+
+	// The user-mode application is responsible for closing SectionHandle.
+	// The section cleanup routine will dereference the SectionObject.
+
+	FltReleaseContext(SectionContext);
+
+	return status;
 }

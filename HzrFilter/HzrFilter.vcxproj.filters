@@ -30,12 +30,6 @@
     <ClCompile Include="Context.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Handle.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Service.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Utility.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -43,6 +37,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Behavior.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Communication.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -59,12 +56,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="HzrFilter.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Handle.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Service.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Utility.h">

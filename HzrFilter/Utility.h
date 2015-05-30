@@ -23,6 +23,8 @@
 
 #include <fltKernel.h>
 
+#define LIST_FOR_EACH_SAFE(Current, Next, Head) for (Current = (Head)->Flink, Next = Current->Flink; Current != (Head); Current = Next, Next = Current->Flink)
+
 typedef struct _NTFS_CACHE_ENTRY {
 	FILE_INTERNAL_INFORMATION FileId;
 	BOOLEAN Infected;

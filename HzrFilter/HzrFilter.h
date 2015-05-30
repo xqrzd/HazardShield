@@ -21,16 +21,73 @@
 #ifndef HZRFILTER_H
 #define HZRFILTER_H
 
+// Warning C4201: nonstandard extension used : nameless struct/union
+#pragma warning (disable: 4201)
+
 #include <fltKernel.h>
 #include "Behavior.h"
 #include "Context.h"
-#include "Handle.h"
 #include "Protect.h"
-#include "Service.h"
 #include "Utility.h"
 
 #define MAX_FILE_SCAN_SIZE 8388608 // 8 MB
 #define INITIAL_HANDLE_COUNT 16
+
+typedef struct _HS_FILTER_GLOBAL_DATA {
+	PFLT_FILTER Filter;
+
+	PFLT_PORT ServerPort;
+	PFLT_PORT ClientPort;
+	PEPROCESS ClientProcess;
+
+	LONGLONG NextScanContextId;
+	EX_PUSH_LOCK ScanContextListLock;
+	LIST_ENTRY ScanContextList;
+
+	BOOLEAN AllowUnload;
+	BOOLEAN RegisteredObCallback;
+	BOOLEAN RegisteredProcessCallback;
+} HS_FILTER_GLOBAL_DATA, *PHS_FILTER_GLOBAL_DATA;
+
+typedef struct _HS_SCAN_CONTEXT {
+	PFLT_INSTANCE Instance;
+	PFILE_OBJECT FileObject;
+	PHS_SECTION_CONTEXT SectionContext;
+
+	LONGLONG ScanId;
+	LIST_ENTRY List;
+} HS_SCAN_CONTEXT, *PHS_SCAN_CONTEXT;
+
+typedef enum _HS_SCAN_REASON {
+	HsScanOnPeOpen
+} HS_SCAN_REASON;
+
+typedef struct _HS_SCANNER_NOTIFICATION {
+	HS_SCAN_REASON ScanReason;
+	LONGLONG ScanId;
+} HS_SCANNER_NOTIFICATION, *PHS_SCANNER_NOTIFICATION;
+
+typedef enum _HS_COMMAND {
+	HsCmdCreateSectionForDataScan
+} HS_COMMAND;
+
+typedef struct _HS_SERVICE_COMMAND {
+	HS_COMMAND Command;
+
+	union
+	{
+		struct {
+			LONGLONG ScanId;
+		} CreateSectionForDataScan;
+
+		struct {
+			LONGLONG ScanId;
+		} CloseSectionForDataScan;
+
+	};
+} HS_SERVICE_COMMAND, *PHS_SERVICE_COMMAND;
+
+extern HS_FILTER_GLOBAL_DATA GlobalData;
 
 ULONG PsGetCurrentProcessSessionId(
 	);
@@ -50,27 +107,6 @@ NTSTATUS HzrFilterInstanceSetup(
 
 NTSTATUS HzrFilterUnload(
 	_In_ FLT_FILTER_UNLOAD_FLAGS Flags
-	);
-
-NTSTATUS HzrFilterPortConnect(
-	_In_ PFLT_PORT ClientPort,
-	_In_opt_ PVOID ServerPortCookie,
-	_In_reads_bytes_opt_(SizeOfContext) PVOID ConnectionContext,
-	_In_ ULONG SizeOfContext,
-	_Outptr_result_maybenull_ PVOID *ConnectionCookie
-	);
-
-VOID HzrFilterPortDisconnect(
-	_In_opt_ PVOID ConnectionCookie
-	);
-
-NTSTATUS HzrFilterClientMessage(
-	_In_ PVOID PortCookie,
-	_In_opt_ PVOID InputBuffer,
-	_In_ ULONG InputBufferLength,
-	_Out_opt_ PVOID OutputBuffer,
-	_In_ ULONG OutputBufferLength,
-	_Out_ PULONG ReturnOutputBufferLength
 	);
 
 NTSTATUS HzrFilterInstanceQueryTeardown(
@@ -109,19 +145,24 @@ FLT_PREOP_CALLBACK_STATUS HzrFilterPreCleanup(
 	_Flt_CompletionContext_Outptr_ PVOID *CompletionContext
 	);
 
-NTSTATUS HzrFilterScanStream(
-	_In_ PFLT_INSTANCE Instance,
-	_In_ PFILE_OBJECT FileObject,
-	_In_ UCHAR FileAccess,
-	_Out_ PSERVICE_RESPONSE Response
+NTSTATUS HsFilterScanFile(
+	_In_ PCFLT_RELATED_OBJECTS FltObjects,
+	_Out_ PUCHAR ResponseFlags
 	);
 
-NTSTATUS HzrFilterScanFile(
-	_In_ PFLT_INSTANCE Instance,
-	_In_ PFILE_OBJECT FileObject,
-	_In_ UCHAR FileAccess,
-	_Out_ PSERVICE_RESPONSE Response
-	);
+//NTSTATUS HzrFilterScanStream(
+//	_In_ PFLT_INSTANCE Instance,
+//	_In_ PFILE_OBJECT FileObject,
+//	_In_ UCHAR FileAccess,
+//	_Out_ PSERVICE_RESPONSE Response
+//	);
+//
+//NTSTATUS HzrFilterScanFile(
+//	_In_ PFLT_INSTANCE Instance,
+//	_In_ PFILE_OBJECT FileObject,
+//	_In_ UCHAR FileAccess,
+//	_Out_ PSERVICE_RESPONSE Response
+//	);
 
 NTSTATUS HzrFilterDeleteFile(
 	_In_ PFLT_INSTANCE Instance,
@@ -150,6 +191,16 @@ VOID HzrCreateProcessNotifyEx(
 	_Inout_ PEPROCESS Process,
 	_In_ HANDLE ProcessId,
 	_Inout_opt_ PPS_CREATE_NOTIFY_INFO CreateInfo
+	);
+
+// Communication
+
+NTSTATUS HsFilterCreateCommunicationPort(
+	);
+
+NTSTATUS HspHandleCmdCreateSectionForDataScan(
+	_Inout_ PHS_SCAN_CONTEXT ScanContext,
+	_Out_ PHANDLE SectionHandle
 	);
 
 #endif

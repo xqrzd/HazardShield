@@ -50,4 +50,8 @@ typedef struct _HS_SECTION_CONTEXT {
 	PVOID SectionObject;
 } HS_SECTION_CONTEXT, *PHS_SECTION_CONTEXT;
 
+NTSTATUS HsReleaseSectionContext(
+	_In_ PHS_SECTION_CONTEXT SectionContext
+	);
+
 #endif

@@ -5,8 +5,22 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="Driver">
+      <UniqueIdentifier>{b856b754-7092-4c57-bd0d-2fab47fb60ea}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.c" />
+    <ClCompile Include="KhsUser.c">
+      <Filter>Driver</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="KhsUser.h">
+      <Filter>Driver</Filter>
+    </ClInclude>
+    <ClInclude Include="KhspUser.h">
+      <Filter>Driver</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
