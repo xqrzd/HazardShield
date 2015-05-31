@@ -31,7 +31,9 @@
 #include "Utility.h"
 
 #define MAX_FILE_SCAN_SIZE 8388608 // 8 MB
-#define INITIAL_HANDLE_COUNT 16
+
+#define RESPONSE_FLAG_BLOCK_OPERATION 0x1
+#define RESPONSE_FLAG_DELETE 0x2
 
 typedef struct _HS_FILTER_GLOBAL_DATA {
 	PFLT_FILTER Filter;
@@ -146,23 +148,19 @@ FLT_PREOP_CALLBACK_STATUS HzrFilterPreCleanup(
 	);
 
 NTSTATUS HsFilterScanFile(
-	_In_ PCFLT_RELATED_OBJECTS FltObjects,
+	_In_ PFLT_INSTANCE Instance,
+	_In_ PFILE_OBJECT FileObject,
+	_In_ HS_SCAN_REASON ScanReason,
 	_Out_ PUCHAR ResponseFlags
 	);
 
-//NTSTATUS HzrFilterScanStream(
-//	_In_ PFLT_INSTANCE Instance,
-//	_In_ PFILE_OBJECT FileObject,
-//	_In_ UCHAR FileAccess,
-//	_Out_ PSERVICE_RESPONSE Response
-//	);
-//
-//NTSTATUS HzrFilterScanFile(
-//	_In_ PFLT_INSTANCE Instance,
-//	_In_ PFILE_OBJECT FileObject,
-//	_In_ UCHAR FileAccess,
-//	_Out_ PSERVICE_RESPONSE Response
-//	);
+NTSTATUS HsFilterScanStream(
+	_In_ PFLT_INSTANCE Instance,
+	_In_ PFILE_OBJECT FileObject,
+	_In_ PFILTER_STREAM_CONTEXT StreamContext,
+	_In_ HS_SCAN_REASON ScanReason,
+	_Out_ PBOOLEAN Infected
+	);
 
 NTSTATUS HzrFilterDeleteFile(
 	_In_ PFLT_INSTANCE Instance,
