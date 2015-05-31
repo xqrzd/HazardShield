@@ -638,7 +638,6 @@
             this.Name = "FrmMain";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "Hazard Shield 3 Beta";
-            this.FormClosed += new System.Windows.Forms.FormClosedEventHandler(this.FrmMain_FormClosed);
             ((System.ComponentModel.ISupportInitialize)(this.PanelMainTab)).EndInit();
             this.PanelMainTab.ResumeLayout(false);
             this.PanelMainTab.PerformLayout();

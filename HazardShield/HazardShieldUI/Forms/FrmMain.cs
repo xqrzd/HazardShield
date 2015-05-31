@@ -37,16 +37,12 @@ namespace HazardShieldUI.Forms
     public partial class FrmMain : Form
     {
         Language CurrentLanguage;
-        GuiProtector UiProtector;
         List<DatabaseUpdateLabel> DatabaseUpdateLabels;
         Freshclam FreshclamWrapper;
         Scanner _scanner;
 
         public FrmMain()
         {
-            UiProtector = new GuiProtector();
-            UiProtector.StartProtection();
-
             InitializeComponent();
 
             ApplyStyle(PaletteModeManager.Office2010Blue);
@@ -208,11 +204,6 @@ namespace HazardShieldUI.Forms
         private void BtnUpdatesCheck_SizeChanged(object sender, EventArgs e)
         {
             BtnUpdateDownload.Location = new Point(BtnUpdateCheck.Location.X + BtnUpdateCheck.Size.Width + 8, BtnUpdateCheck.Location.Y);
-        }
-
-        private void FrmMain_FormClosed(object sender, FormClosedEventArgs e)
-        {
-            UiProtector.DisableProtection();
         }
 
         #region Updates
