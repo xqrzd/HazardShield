@@ -434,7 +434,7 @@ FLT_PREOP_CALLBACK_STATUS HzrFilterPreAcquireForSectionSynchronization(
 	{
 		NTSTATUS status;
 		PFILTER_STREAM_CONTEXT streamContext;
-		BOOLEAN infected = FALSE;
+		BOOLEAN infected;
 
 		status = FltGetStreamContext(
 			FltObjects->Instance,
@@ -459,17 +459,14 @@ FLT_PREOP_CALLBACK_STATUS HzrFilterPreAcquireForSectionSynchronization(
 				&FltObjects->FileObject->FileName);
 		}
 
-		if (NT_SUCCESS(status))
+		if (NT_SUCCESS(status) && infected)
 		{
-			if (infected)
-			{
-				Data->IoStatus.Status = STATUS_VIRUS_INFECTED;
-				Data->IoStatus.Information = 0;
+			Data->IoStatus.Status = STATUS_VIRUS_INFECTED;
+			Data->IoStatus.Information = 0;
 
-				// Stop processing for the operation and assign a final NTSTATUS value.
+			// Stop processing for the operation and assign a final NTSTATUS value.
 
-				return FLT_PREOP_COMPLETE;
-			}
+			return FLT_PREOP_COMPLETE;
 		}
 	}
 
