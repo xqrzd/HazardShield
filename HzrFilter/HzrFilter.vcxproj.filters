@@ -36,9 +36,6 @@
     <ClCompile Include="Protect.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Behavior.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Communication.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -62,9 +59,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Protect.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Behavior.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

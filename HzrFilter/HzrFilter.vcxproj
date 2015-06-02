@@ -51,7 +51,6 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Behavior.c" />
     <ClCompile Include="Communication.c" />
     <ClCompile Include="Protect.c" />
     <ClCompile Include="Utility.c" />
@@ -276,7 +275,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Context.h" />
-    <ClInclude Include="Behavior.h" />
     <ClInclude Include="HzrFilter.h" />
     <ClInclude Include="Protect.h" />
     <ClInclude Include="resource.h" />

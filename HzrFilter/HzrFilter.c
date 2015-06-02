@@ -151,8 +151,6 @@ NTSTATUS DriverEntry(
 
 	UNREFERENCED_PARAMETER(RegistryPath);
 
-	HsInitializeBehaviorSystem();
-
 	InitializeListHead(&GlobalData.ScanContextList);
 	FltInitializePushLock(&GlobalData.ScanContextListLock);
 
@@ -217,7 +215,6 @@ NTSTATUS HzrFilterUnload(
 		if (GlobalData.RegisteredObCallback)
 			HsUnRegisterProtector();
 
-		HsDeleteBehaviorSystem();
 		FltDeletePushLock(&GlobalData.ScanContextListLock);
 
 		return STATUS_SUCCESS;
@@ -387,17 +384,10 @@ FLT_PREOP_CALLBACK_STATUS HzrFilterPreWrite(
 	_In_ PCFLT_RELATED_OBJECTS FltObjects,
 	_Flt_CompletionContext_Outptr_ PVOID *CompletionContext)
 {
+	UNREFERENCED_PARAMETER(Data);
 	UNREFERENCED_PARAMETER(CompletionContext);
 
 	HzrFilterSetStreamFlags(FltObjects->Instance, FltObjects->FileObject, STREAM_FLAG_MODIFIED);
-
-	if (HsMonitorPreWrite(Data, FltObjects))
-	{
-		DbgPrint("Preventing write %wZ", &FltObjects->FileObject->FileName);
-		HzrFilterSetStreamFlags(FltObjects->Instance, FltObjects->FileObject, STREAM_FLAG_INFECTED | STREAM_FLAG_DELETE);
-
-		ZwTerminateProcess(ZwCurrentProcess(), STATUS_VIRUS_INFECTED);
-	}
 
 	return FLT_PREOP_SUCCESS_NO_CALLBACK;
 }
@@ -434,7 +424,7 @@ FLT_PREOP_CALLBACK_STATUS HzrFilterPreAcquireForSectionSynchronization(
 	{
 		NTSTATUS status;
 		PFILTER_STREAM_CONTEXT streamContext;
-		BOOLEAN infected;
+		BOOLEAN infected = FALSE;
 
 		status = FltGetStreamContext(
 			FltObjects->Instance,
@@ -809,8 +799,6 @@ VOID HzrCreateProcessNotifyEx(
 	_Inout_opt_ PPS_CREATE_NOTIFY_INFO CreateInfo)
 {
 	UNREFERENCED_PARAMETER(ProcessId);
-
-	HsMonitorCreateProcessNotifyEx(Process, CreateInfo);
 
 	if (!CreateInfo)
 	{

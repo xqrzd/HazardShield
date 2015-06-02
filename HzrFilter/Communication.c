@@ -115,7 +115,7 @@ VOID HspFilterPortDisconnect(
 {
 	UNREFERENCED_PARAMETER(ConnectionCookie);
 
-	// This call sets FilterData.ClientPort to NULL
+	// This call sets FilterData.ClientPort to NULL.
 	FltCloseClientPort(GlobalData.Filter, &GlobalData.ClientPort);
 
 	GlobalData.ClientProcess = NULL;

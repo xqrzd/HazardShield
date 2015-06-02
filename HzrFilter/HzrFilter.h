@@ -25,7 +25,6 @@
 #pragma warning (disable: 4201)
 
 #include <fltKernel.h>
-#include "Behavior.h"
 #include "Context.h"
 #include "Protect.h"
 #include "Utility.h"
