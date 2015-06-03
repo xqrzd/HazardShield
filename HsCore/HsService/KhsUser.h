@@ -24,12 +24,23 @@
 
 #define KHS_PORT_NAME L"\\HzrFilterPort"
 
+typedef struct _HS_FILE_INFO {
+	PVOID Buffer;
+	SIZE_T BufferSize;
+} HS_FILE_INFO, *PHS_FILE_INFO;
+
+typedef NTSTATUS(NTAPI *PHS_SCAN_FILE_ROUTINE)(
+	_In_ PHS_FILE_INFO FileInfo,
+	_Out_ PUCHAR ResponseFlags
+	);
+
 HRESULT KhsConnect(
 	_In_ LPCWSTR PortName
 	);
 
 NTSTATUS KhsStartFiltering(
-	_In_ DWORD NumberOfScanThreads
+	_In_ DWORD NumberOfScanThreads,
+	_In_ PHS_SCAN_FILE_ROUTINE FileScanRoutine
 	);
 
 VOID KhsDisconnect(

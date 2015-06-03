@@ -27,7 +27,13 @@ NTSTATUS NTAPI KhspUserScanWorker(
 	);
 
 NTSTATUS KhspHandleScanMessage(
-	_In_ PHS_DRIVER_NOTIFICATION Notification
+	_In_ PHS_SCANNER_NOTIFICATION Notification,
+	_Out_ PUCHAR ResponseFlags
+	);
+
+NTSTATUS KhspHandleScanPeOpen(
+	_In_ LONGLONG ScanId,
+	_Out_ PUCHAR ResponseFlags
 	);
 
 HRESULT KhspFilterReplyMessage(
@@ -42,6 +48,8 @@ HRESULT KhspCreateSectionForDataScan(
 
 HANDLE HsKhsPortHandle;
 HANDLE HsKhsCompletionPort;
+
+PHS_SCAN_FILE_ROUTINE HsFileScanRoutine;
 
 HRESULT KhsConnect(
 	_In_ LPCWSTR PortName)
@@ -66,10 +74,13 @@ HRESULT KhsConnect(
 }
 
 NTSTATUS KhsStartFiltering(
-	_In_ DWORD NumberOfScanThreads)
+	_In_ DWORD NumberOfScanThreads,
+	_In_ PHS_SCAN_FILE_ROUTINE FileScanRoutine)
 {
 	if (!HsKhsPortHandle)
 		return STATUS_INVALID_HANDLE;
+
+	HsFileScanRoutine = FileScanRoutine;
 
 	HsKhsCompletionPort = CreateIoCompletionPort(
 		HsKhsPortHandle,
@@ -105,6 +116,8 @@ VOID KhsDisconnect()
 
 	HsKhsPortHandle = NULL;
 	HsKhsCompletionPort = NULL;
+
+	HsFileScanRoutine = NULL;
 }
 
 NTSTATUS NTAPI KhspUserScanWorker(
@@ -119,10 +132,12 @@ NTSTATUS NTAPI KhspUserScanWorker(
 	while (TRUE)
 	{
 		HRESULT result;
+		NTSTATUS status;
 		BOOL success;
 		DWORD outSize;
 		ULONG_PTR key;
 		LPOVERLAPPED overlapped;
+		UCHAR responseFlags;
 
 		result = FilterGetMessage(
 			HsKhsPortHandle,
@@ -148,21 +163,49 @@ NTSTATUS NTAPI KhspUserScanWorker(
 
 		notification = CONTAINING_RECORD(overlapped, HS_DRIVER_NOTIFICATION, Overlapped);
 
-		KhspHandleScanMessage(notification);
+		status = KhspHandleScanMessage(
+			&notification->Notification,
+			&responseFlags);
+
+		if (!NT_SUCCESS(status))
+		{
+			// If the callback fails, return no flags to the driver,
+			// which will allow the operation to pass through.
+
+			responseFlags = 0;
+		}
+
+		KhspFilterReplyMessage(&notification->MessageHeader, responseFlags);
 	}
 
 	return STATUS_SUCCESS;
 }
 
 NTSTATUS KhspHandleScanMessage(
-	_In_ PHS_DRIVER_NOTIFICATION Notification)
+	_In_ PHS_SCANNER_NOTIFICATION Notification,
+	_Out_ PUCHAR ResponseFlags)
 {
+	switch (Notification->ScanReason)
+	{
+	case HsScanOnPeOpen:
+		return KhspHandleScanPeOpen(Notification->ScanId, ResponseFlags);
+	}
+
+	return STATUS_INVALID_PARAMETER;
+}
+
+NTSTATUS KhspHandleScanPeOpen(
+	_In_ LONGLONG ScanId,
+	_Out_ PUCHAR ResponseFlags)
+{
+	NTSTATUS status = STATUS_UNSUCCESSFUL;
 	HRESULT result;
 	HANDLE sectionHandle;
 
-	result = KhspCreateSectionForDataScan(
-		Notification->Notification.ScanId,
-		&sectionHandle);
+	if (!HsFileScanRoutine)
+		return STATUS_NO_CALLBACK_ACTIVE;
+
+	result = KhspCreateSectionForDataScan(ScanId, &sectionHandle);
 
 	if (SUCCEEDED(result))
 	{
@@ -177,15 +220,25 @@ NTSTATUS KhspHandleScanMessage(
 
 		if (address)
 		{
+			MEMORY_BASIC_INFORMATION basicInfo;
+
+			if (VirtualQuery(address, &basicInfo, sizeof(basicInfo)))
+			{
+				HS_FILE_INFO fileInfo;
+
+				fileInfo.Buffer = address;
+				fileInfo.BufferSize = basicInfo.RegionSize;
+
+				status = HsFileScanRoutine(&fileInfo, ResponseFlags);
+			}
+
 			UnmapViewOfFile(address);
 		}
 
 		CloseHandle(sectionHandle);
 	}
 
-	KhspFilterReplyMessage(&Notification->MessageHeader, 0);
-
-	return STATUS_SUCCESS;
+	return status;
 }
 
 HRESULT KhspFilterReplyMessage(
