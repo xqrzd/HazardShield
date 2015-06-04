@@ -69,7 +69,8 @@ typedef struct _HS_SCANNER_NOTIFICATION {
 } HS_SCANNER_NOTIFICATION, *PHS_SCANNER_NOTIFICATION;
 
 typedef enum _HS_COMMAND {
-	HsCmdCreateSectionForDataScan
+	HsCmdCreateSectionForDataScan,
+	HsCmdQueryFileName
 } HS_COMMAND;
 
 typedef struct _HS_SERVICE_COMMAND {
@@ -83,7 +84,7 @@ typedef struct _HS_SERVICE_COMMAND {
 
 		struct {
 			LONGLONG ScanId;
-		} CloseSectionForDataScan;
+		} QueryFileName;
 
 	};
 } HS_SERVICE_COMMAND, *PHS_SERVICE_COMMAND;

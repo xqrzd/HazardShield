@@ -210,6 +210,53 @@ NTSTATUS HspFilterClientMessage(
 
 		break;
 	}
+	case HsCmdQueryFileName:
+	{
+		PHS_SCAN_CONTEXT scanContext;
+		POBJECT_NAME_INFORMATION filePath;
+
+		status = HspGetScanContextSynchronized(
+			request.QueryFileName.ScanId,
+			&scanContext);
+
+		if (!NT_SUCCESS(status))
+		{
+			DbgPrint("Unable to find scan context! ScanId: %lld",
+				request.QueryFileName.ScanId);
+
+			return status;
+		}
+
+		status = IoQueryFileDosDeviceName(scanContext->FileObject, &filePath);
+
+		if (!NT_SUCCESS(status))
+		{
+			DbgPrint("IoQueryFileDosDeviceName failed %X for ScanId: %lld",
+				status,
+				request.QueryFileName.ScanId);
+
+			return status;
+		}
+
+		if (OutputBuffer && OutputBufferLength >= filePath->Name.Length)
+		{
+			__try
+			{
+				RtlCopyMemory(OutputBuffer, filePath->Name.Buffer, filePath->Name.Length);
+				*ReturnOutputBufferLength = filePath->Name.Length;
+			}
+			__except (EXCEPTION_EXECUTE_HANDLER)
+			{
+				status = GetExceptionCode();
+			}
+		}
+		else
+			status = STATUS_INSUFFICIENT_RESOURCES;
+
+		ExFreePool(filePath);
+
+		break;
+	}
 	}
 
 	return status;
