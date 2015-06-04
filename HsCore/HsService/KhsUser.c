@@ -46,6 +46,12 @@ HRESULT KhspCreateSectionForDataScan(
 	_Out_ PHANDLE SectionHandle
 	);
 
+HRESULT KhspQueryFileName(
+	_In_ LONGLONG ScanId,
+	_In_ USHORT FileNameSizeInBytes,
+	_Out_ PWSTR FileName
+	);
+
 HANDLE HsKhsPortHandle;
 HANDLE HsKhsCompletionPort;
 
@@ -281,6 +287,31 @@ HRESULT KhspCreateSectionForDataScan(
 
 	if (SUCCEEDED(result))
 		*SectionHandle = sectionHandle;
+
+	return result;
+}
+
+HRESULT KhspQueryFileName(
+	_In_ LONGLONG ScanId,
+	_In_ USHORT FileNameSizeInBytes,
+	_Out_ PWSTR FileName)
+{
+	HRESULT result;
+	DWORD bytesReturned;
+
+	struct
+	{
+		ULONG Command;
+		LONGLONG ScanId;
+	} input = { HsCmdQueryFileName, ScanId };
+
+	result = FilterSendMessage(
+		HsKhsPortHandle,
+		&input,
+		sizeof(input),
+		FileName,
+		FileNameSizeInBytes,
+		&bytesReturned);
 
 	return result;
 }

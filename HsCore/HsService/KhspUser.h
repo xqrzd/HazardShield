@@ -36,7 +36,8 @@ typedef struct _HS_DRIVER_NOTIFICATION {
 } HS_DRIVER_NOTIFICATION, *PHS_DRIVER_NOTIFICATION;
 
 typedef enum _HS_COMMAND {
-	HsCmdCreateSectionForDataScan
+	HsCmdCreateSectionForDataScan,
+	HsCmdQueryFileName
 } HS_COMMAND;
 
 typedef struct _HS_SERVICE_RESPONSE {
