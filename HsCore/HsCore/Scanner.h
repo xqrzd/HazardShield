@@ -21,6 +21,38 @@
 #pragma once
 
 #include "ph.h"
+#include "clamav.h"
+
+typedef struct _HS_SCANNER {
+	struct cl_engine* ClamAvEngine;
+	ULONG Signatures;
+} HS_SCANNER, *PHS_SCANNER;
 
 BOOLEAN HsInit(
+	);
+
+BOOLEAN HsCreateScanner(
+	_Out_ PHS_SCANNER* Scanner
+	);
+
+VOID HsDeleteScanner(
+	_In_ PHS_SCANNER Scanner
+	);
+
+cl_error_t HsLoadClamAvDatabase(
+	_In_ PHS_SCANNER Scanner,
+	_In_ PSTR Path,
+	_In_ ULONG DatabaseOptions
+	);
+
+cl_error_t HsCompileClamAvDatabase(
+	_In_ PHS_SCANNER Scanner
+	);
+
+cl_error_t HsScanBuffer(
+	_In_ PHS_SCANNER Scanner,
+	_In_ PVOID Buffer,
+	_In_ SIZE_T Length,
+	_In_ ULONG ScanOptions,
+	_Out_ PCHAR* VirusName
 	);
