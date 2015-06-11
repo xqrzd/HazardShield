@@ -213,36 +213,44 @@ NTSTATUS KhspHandleScanPeOpen(
 
 	result = KhspCreateSectionForDataScan(ScanId, &sectionHandle);
 
-	if (SUCCEEDED(result))
+	if (!SUCCEEDED(result))
+		return status;
+
+	PVOID address;
+
+	address = MapViewOfFile(
+		sectionHandle,
+		FILE_MAP_READ,
+		0,
+		0,
+		0);
+
+	if (address)
 	{
-		PVOID address;
+		MEMORY_BASIC_INFORMATION basicInfo;
 
-		address = MapViewOfFile(
-			sectionHandle,
-			FILE_MAP_READ,
-			0,
-			0,
-			0);
-
-		if (address)
+		if (VirtualQuery(address, &basicInfo, sizeof(basicInfo)))
 		{
-			MEMORY_BASIC_INFORMATION basicInfo;
+			HS_FILE_INFO fileInfo;
+			WCHAR filePath[MAX_PATH];
 
-			if (VirtualQuery(address, &basicInfo, sizeof(basicInfo)))
+			fileInfo.Buffer = address;
+			fileInfo.BufferSize = basicInfo.RegionSize;
+
+			if (SUCCEEDED(KhspQueryFileName(ScanId, sizeof(filePath), filePath)))
 			{
-				HS_FILE_INFO fileInfo;
-
-				fileInfo.Buffer = address;
-				fileInfo.BufferSize = basicInfo.RegionSize;
-
-				status = HsFileScanRoutine(&fileInfo, ResponseFlags);
+				fileInfo.FilePath = filePath;
 			}
+			else
+				fileInfo.FilePath = NULL;
 
-			UnmapViewOfFile(address);
+			status = HsFileScanRoutine(&fileInfo, ResponseFlags);
 		}
 
-		CloseHandle(sectionHandle);
+		UnmapViewOfFile(address);
 	}
+
+	CloseHandle(sectionHandle);
 
 	return status;
 }
@@ -310,8 +318,14 @@ HRESULT KhspQueryFileName(
 		&input,
 		sizeof(input),
 		FileName,
-		FileNameSizeInBytes,
+		FileNameSizeInBytes - sizeof(WCHAR),
 		&bytesReturned);
+
+	if (SUCCEEDED(result))
+	{
+		// Add NULL terminator to file name.
+		FileName[bytesReturned / sizeof(WCHAR)] = L'\0';
+	}
 
 	return result;
 }

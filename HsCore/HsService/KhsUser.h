@@ -27,6 +27,7 @@
 typedef struct _HS_FILE_INFO {
 	PVOID Buffer;
 	SIZE_T BufferSize;
+	PWSTR FilePath;
 } HS_FILE_INFO, *PHS_FILE_INFO;
 
 typedef NTSTATUS(NTAPI *PHS_SCAN_FILE_ROUTINE)(
