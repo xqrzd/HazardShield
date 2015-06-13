@@ -39,6 +39,10 @@ struct {
 	PVOID RegistrationHandle;
 } ObCallbackInstance;
 
+/// <summary>
+/// This routine is called by the operating system
+/// when a process or thread handle operation occurs.
+/// </summary>
 OB_PREOP_CALLBACK_STATUS HspObPreCallback(
 	_In_ PVOID RegistrationContext,
 	_Inout_ POB_PRE_OPERATION_INFORMATION OperationInformation)
@@ -74,7 +78,7 @@ OB_PREOP_CALLBACK_STATUS HspObPreCallback(
 		else
 			accessBitsToClear = threadAccessBitsToClear;
 
-		// Remove access flags
+		// Remove access flags.
 		if (OperationInformation->Operation == OB_OPERATION_HANDLE_CREATE)
 		{
 			OperationInformation->Parameters->CreateHandleInformation.DesiredAccess &= ~accessBitsToClear;
@@ -88,6 +92,9 @@ OB_PREOP_CALLBACK_STATUS HspObPreCallback(
 	return OB_PREOP_SUCCESS;
 }
 
+/// <summary>
+/// Starts filtering process and thread access rights.
+/// </summary>
 NTSTATUS HsRegisterProtector()
 {
 	NTSTATUS status;
@@ -112,7 +119,13 @@ NTSTATUS HsRegisterProtector()
 	RtlInitUnicodeString(&callbackRegistration.Altitude, L"40100.7");
 
 	FltInitializePushLock(&ObCallbackInstance.ProtectedProcessLock);
-	RtlInitializeGenericTableAvl(&ObCallbackInstance.ProtectedProcesses, HspCompareProtectedProcess, AvlAllocate, AvlFree, NULL);
+
+	RtlInitializeGenericTableAvl(
+		&ObCallbackInstance.ProtectedProcesses,
+		HspCompareProtectedProcess,
+		AvlAllocate,
+		AvlFree,
+		NULL);
 
 	status = ObRegisterCallbacks(&callbackRegistration, &ObCallbackInstance.RegistrationHandle);
 
@@ -122,18 +135,30 @@ NTSTATUS HsRegisterProtector()
 	return status;
 }
 
+/// <summary>
+/// Stops process and thread access rights filtering.
+/// </summary>
 VOID HsUnRegisterProtector()
 {
 	ObUnRegisterCallbacks(ObCallbackInstance.RegistrationHandle);
 
 	// If ObUnRegisterCallbacks waits for callbacks to finish processing
 	// there is no need to lock here.
+
 	FltAcquirePushLockExclusive(&ObCallbackInstance.ProtectedProcessLock);
 	AvlDeleteAllElements(&ObCallbackInstance.ProtectedProcesses);
 	FltReleasePushLock(&ObCallbackInstance.ProtectedProcessLock);
 	FltDeletePushLock(&ObCallbackInstance.ProtectedProcessLock);
 }
 
+/// <summary>
+/// Marks a process as protected. When this process or its threads are opened, the
+/// given access rights will be stripped. Call HsUnProtectProcess when the process
+/// no longer needs protection, or when it exits.
+/// </summary>
+/// <param name="Process">Pointer to the process object to protect.</param>
+/// <param name="ProcessAccessBitsToClear">Process access rights to clear.</param>
+/// <param name="ThreadAccessBitsToClear">Thread access rights to clear.</param>
 VOID HsProtectProcess(
 	_In_ PEPROCESS Process,
 	_In_ ACCESS_MASK ProcessAccessBitsToClear,
@@ -156,6 +181,10 @@ VOID HsProtectProcess(
 	FltReleasePushLock(&ObCallbackInstance.ProtectedProcessLock);
 }
 
+/// <summary>
+/// Removes a process from the list of protected processes.
+/// </summary>
+/// <param name="Process">Pointer to the process object to unprotect.</param>
 VOID HsUnProtectProcess(
 	_In_ PEPROCESS Process)
 {
@@ -168,6 +197,12 @@ VOID HsUnProtectProcess(
 	FltReleasePushLock(&ObCallbackInstance.ProtectedProcessLock);
 }
 
+/// <summary>
+/// Returns TRUE if the given process is protected, otherwise FALSE.
+/// </summary>
+/// <param name="Process">Pointer to a process object.</param>
+/// <param name="ProcessAccessBitsToClear">Process access rights to clear.</param>
+/// <param name="ThreadAccessBitsToClear">Thread access rights to clear.</param>
 BOOLEAN HsIsProcessProtected(
 	_In_ PEPROCESS Process,
 	_Out_ PACCESS_MASK ProcessAccessBitsToClear,
