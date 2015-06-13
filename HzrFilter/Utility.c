@@ -24,28 +24,6 @@
 
 #define AVL_ENTRY_TAG 'vAzH'
 
-NTSTATUS HzrFilterGetFileSize(
-	_In_ PFLT_INSTANCE Instance,
-	_In_ PFILE_OBJECT FileObject,
-	_Out_ PLARGE_INTEGER Size)
-{
-	NTSTATUS status;
-	FILE_STANDARD_INFORMATION standardInfo;
-
-	status = FltQueryInformationFile(
-		Instance,
-		FileObject,
-		&standardInfo,
-		sizeof(FILE_STANDARD_INFORMATION),
-		FileStandardInformation,
-		NULL);
-
-	if (NT_SUCCESS(status))
-		*Size = standardInfo.EndOfFile;
-
-	return status;
-}
-
 NTSTATUS HzrFilterGetFileId64(
 	_In_ PFLT_INSTANCE Instance,
 	_In_ PFILE_OBJECT FileObject,
@@ -111,17 +89,6 @@ BOOLEAN HzrFilterIsPrefetchContextPresent(
 	return prefetchOpen;
 }
 
-// TODO: Use MdlMappingNoExecute on Windows 8+
-PVOID HzrFilterGetBuffer(
-	_In_ PVOID Buffer,
-	_In_ PMDL MdlAddress)
-{
-	if (MdlAddress)
-		return MmGetSystemAddressForMdlSafe(MdlAddress, NormalPagePriority);
-	else
-		return Buffer;
-}
-
 PVOID NTAPI AvlAllocate(
 	_In_ PRTL_AVL_TABLE Table,
 	_In_ CLONG ByteSize)
@@ -168,27 +135,4 @@ VOID AvlDeleteAllElements(
 		entry = RtlGetElementGenericTableAvl(Table, 0);
 		RtlDeleteElementGenericTableAvl(Table, entry);
 	}
-}
-
-BOOLEAN HzrGetFileNameFromPath(
-	_In_ PCUNICODE_STRING FilePath,
-	_Out_ PUNICODE_STRING FileName)
-{
-	USHORT i;
-
-	for (i = FilePath->Length / sizeof(WCHAR) - 1; i > 0; i--)
-	{
-		if (FilePath->Buffer[i] == L'\\')
-		{
-			i++; // Skip over the forward slash.
-
-			FileName->Buffer = &FilePath->Buffer[i];
-			FileName->Length = FilePath->Length - (i * sizeof(WCHAR));
-			FileName->MaximumLength = FileName->Length;
-
-			return TRUE;
-		}
-	}
-
-	return FALSE;
 }

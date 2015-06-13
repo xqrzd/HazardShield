@@ -30,12 +30,6 @@ typedef struct _NTFS_CACHE_ENTRY {
 	BOOLEAN Infected;
 } NTFS_CACHE_ENTRY, *PNTFS_CACHE_ENTRY;
 
-NTSTATUS HzrFilterGetFileSize(
-	_In_ PFLT_INSTANCE Instance,
-	_In_ PFILE_OBJECT FileObject,
-	_Out_ PLARGE_INTEGER Size
-	);
-
 NTSTATUS HzrFilterGetFileId64(
 	_In_ PFLT_INSTANCE Instance,
 	_In_ PFILE_OBJECT FileObject,
@@ -50,11 +44,6 @@ BOOLEAN HzrFilterIsPrefetchEcpPresent(
 BOOLEAN HzrFilterIsPrefetchContextPresent(
 	_In_ PFLT_INSTANCE Instance,
 	_In_ PFILE_OBJECT FileObject
-	);
-
-PVOID HzrFilterGetBuffer(
-	_In_ PVOID Buffer,
-	_In_ PMDL MdlAddress
 	);
 
 PVOID NTAPI AvlAllocate(
@@ -75,11 +64,6 @@ RTL_GENERIC_COMPARE_RESULTS AvlCompareNtfsEntry(
 
 VOID AvlDeleteAllElements(
 	_In_ PRTL_AVL_TABLE Table
-	);
-
-BOOLEAN HzrGetFileNameFromPath(
-	_In_ PCUNICODE_STRING FilePath,
-	_Out_ PUNICODE_STRING FileName
 	);
 
 #endif

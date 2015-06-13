@@ -77,8 +77,6 @@ CONST FLT_REGISTRATION FilterRegistration = {
 	NULL	// NormalizeNameComponent
 };
 
-#define HZR_FILE_TAG 'iFzH'
-
 NTSTATUS HzrFilterInstanceSetup(
 	_In_ PCFLT_RELATED_OBJECTS FltObjects,
 	_In_ FLT_INSTANCE_SETUP_FLAGS Flags,
