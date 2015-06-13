@@ -86,7 +86,7 @@ VOID HzrFilterInstanceContextCleanup(
 	{
 		FltAcquirePushLockExclusive(&context->CacheLock);
 
-		AvlDeleteAllElements(&context->AvlCacheTable);
+		HsAvlDeleteAllElements(&context->AvlCacheTable);
 
 		FltReleasePushLock(&context->CacheLock);
 		FltDeletePushLock(&context->CacheLock);

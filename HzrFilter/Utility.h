@@ -30,39 +30,65 @@ typedef struct _NTFS_CACHE_ENTRY {
 	BOOLEAN Infected;
 } NTFS_CACHE_ENTRY, *PNTFS_CACHE_ENTRY;
 
-NTSTATUS HzrFilterGetFileId64(
+/// <summary>
+/// Gets an 8-byte file reference number for the file. This number
+/// is assigned by the file system and is file-system-specific.
+/// https://msdn.microsoft.com/en-us/library/windows/hardware/ff540318.aspx
+/// </summary>
+/// <param name="Instance">Opaque instance pointer for the caller.</param>
+/// <param name="FileObject">File object pointer for the file.</param>
+/// <param name="FileId">An 8-byte file reference number for the file.</param>
+NTSTATUS HsFilterGetFileId64(
 	_In_ PFLT_INSTANCE Instance,
 	_In_ PFILE_OBJECT FileObject,
 	_Out_ PFILE_INTERNAL_INFORMATION FileId
 	);
 
-BOOLEAN HzrFilterIsPrefetchEcpPresent(
+/// <summary>
+/// Returns TRUE if the prefetcher performed the open request.
+/// https://msdn.microsoft.com/en-us/library/windows/hardware/ff551843.aspx
+/// </summary>
+/// <param name="Filter">An opaque filter pointer to the minifilter driver.</param>
+/// <param name="Data">
+/// A pointer to a callback-data object of type FLT_CALLBACK_DATA,
+/// which represents the create operation.
+/// </param>
+BOOLEAN HsFilterIsPrefetchEcpPresent(
 	_In_ PFLT_FILTER Filter,
 	_In_ PFLT_CALLBACK_DATA Data
 	);
 
-BOOLEAN HzrFilterIsPrefetchContextPresent(
+/// <summary>
+/// Returns TRUE if the given file was opened by the prefetcher.
+/// </summary>
+/// <param name="Instance">Opaque instance pointer for the caller.</param>
+/// <param name="FileObject">File object pointer for the file.</param>
+BOOLEAN HsFilterIsPrefetchContextPresent(
 	_In_ PFLT_INSTANCE Instance,
 	_In_ PFILE_OBJECT FileObject
 	);
 
-PVOID NTAPI AvlAllocate(
+PVOID HsAvlAllocate(
 	_In_ PRTL_AVL_TABLE Table,
 	_In_ CLONG ByteSize
 	);
 
-VOID NTAPI AvlFree(
+VOID HsAvlFree(
 	_In_ PRTL_AVL_TABLE Table,
-	_In_ __drv_freesMem(Mem) _Post_invalid_ PVOID Entry
+	_In_ __drv_freesMem(Mem) _Post_invalid_ PVOID Buffer
 	);
 
-RTL_GENERIC_COMPARE_RESULTS AvlCompareNtfsEntry(
+RTL_GENERIC_COMPARE_RESULTS HsAvlCompareNtfsEntry(
 	_In_ PRTL_AVL_TABLE Table,
 	_In_ PVOID Lhs,
 	_In_ PVOID Rhs
 	);
 
-VOID AvlDeleteAllElements(
+/// <summary>
+/// Deletes all elements in the given AVL tree.
+/// </summary>
+/// <param name="Table">The table to clear.</param>
+VOID HsAvlDeleteAllElements(
 	_In_ PRTL_AVL_TABLE Table
 	);
 

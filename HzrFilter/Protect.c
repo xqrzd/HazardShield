@@ -123,8 +123,8 @@ NTSTATUS HsRegisterProtector()
 	RtlInitializeGenericTableAvl(
 		&ObCallbackInstance.ProtectedProcesses,
 		HspCompareProtectedProcess,
-		AvlAllocate,
-		AvlFree,
+		HsAvlAllocate,
+		HsAvlFree,
 		NULL);
 
 	status = ObRegisterCallbacks(&callbackRegistration, &ObCallbackInstance.RegistrationHandle);
@@ -146,7 +146,7 @@ VOID HsUnRegisterProtector()
 	// there is no need to lock here.
 
 	FltAcquirePushLockExclusive(&ObCallbackInstance.ProtectedProcessLock);
-	AvlDeleteAllElements(&ObCallbackInstance.ProtectedProcesses);
+	HsAvlDeleteAllElements(&ObCallbackInstance.ProtectedProcesses);
 	FltReleasePushLock(&ObCallbackInstance.ProtectedProcessLock);
 	FltDeletePushLock(&ObCallbackInstance.ProtectedProcessLock);
 }

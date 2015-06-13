@@ -111,7 +111,7 @@ NTSTATUS HzrFilterInstanceSetup(
 				VolumeFilesystemType == FLT_FSTYPE_NTFS)
 			{
 				FltInitializePushLock(&context->CacheLock);
-				RtlInitializeGenericTableAvl(&context->AvlCacheTable, AvlCompareNtfsEntry, AvlAllocate, AvlFree, NULL);
+				RtlInitializeGenericTableAvl(&context->AvlCacheTable, HsAvlCompareNtfsEntry, HsAvlAllocate, HsAvlFree, NULL);
 
 				context->CacheSupported = TRUE;
 			}
@@ -271,7 +271,7 @@ FLT_POSTOP_CALLBACK_STATUS HzrFilterPostCreate(
 
 	// TODO: Check encrypted files here.
 
-	if (HzrFilterIsPrefetchEcpPresent(FltObjects->Filter, Data))
+	if (HsFilterIsPrefetchEcpPresent(FltObjects->Filter, Data))
 	{
 		PFILTER_STREAMHANDLE_CONTEXT streamHandleContext;
 
@@ -417,7 +417,7 @@ FLT_PREOP_CALLBACK_STATUS HzrFilterPreAcquireForSectionSynchronization(
 
 	if (FlagOn(Data->Iopb->Parameters.AcquireForSectionSynchronization.PageProtection, PAGE_EXECUTE) &&
 		Data->Iopb->Parameters.AcquireForSectionSynchronization.SyncType == SyncTypeCreateSection &&
-		!HzrFilterIsPrefetchContextPresent(FltObjects->Instance, FltObjects->FileObject) &&
+		!HsFilterIsPrefetchContextPresent(FltObjects->Instance, FltObjects->FileObject) &&
 		IoGetCurrentProcess() != GlobalData.ClientProcess)
 	{
 		NTSTATUS status;
@@ -709,7 +709,7 @@ NTSTATUS HzrFilterGetFileCacheStatus(
 		{
 			FILE_INTERNAL_INFORMATION fileId;
 
-			status = HzrFilterGetFileId64(Instance, FileObject, &fileId);
+			status = HsFilterGetFileId64(Instance, FileObject, &fileId);
 
 			if (NT_SUCCESS(status))
 			{
@@ -755,7 +755,7 @@ NTSTATUS HzrFilterSyncCache(
 		{
 			NTFS_CACHE_ENTRY entry;
 
-			status = HzrFilterGetFileId64(Instance, FileObject, &entry.FileId);
+			status = HsFilterGetFileId64(Instance, FileObject, &entry.FileId);
 
 			if (NT_SUCCESS(status))
 			{
