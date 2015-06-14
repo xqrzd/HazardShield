@@ -19,20 +19,19 @@
 */
 
 #include <initguid.h>
-#include "Context.h"
 #include "Utility.h"
 
-#define AVL_ENTRY_TAG 'vAzH'
+#define HS_AVL_ENTRY_TAG 'vAzH'
 
 /// <summary>
 /// Gets an 8-byte file reference number for the file. This number
 /// is assigned by the file system and is file-system-specific.
-/// https://msdn.microsoft.com/en-us/library/windows/hardware/ff540318(v=vs.85).aspx
+/// https://msdn.microsoft.com/en-us/library/windows/hardware/ff540318.aspx
 /// </summary>
 /// <param name="Instance">Opaque instance pointer for the caller.</param>
 /// <param name="FileObject">File object pointer for the file.</param>
 /// <param name="FileId">An 8-byte file reference number for the file.</param>
-NTSTATUS HsFilterGetFileId64(
+NTSTATUS HsGetFileId64(
 	_In_ PFLT_INSTANCE Instance,
 	_In_ PFILE_OBJECT FileObject,
 	_Out_ PFILE_INTERNAL_INFORMATION FileId)
@@ -55,7 +54,7 @@ NTSTATUS HsFilterGetFileId64(
 /// A pointer to a callback-data object of type FLT_CALLBACK_DATA,
 /// which represents the create operation.
 /// </param>
-BOOLEAN HsFilterIsPrefetchEcpPresent(
+BOOLEAN HsIsPrefetchEcpPresent(
 	_In_ PFLT_FILTER Filter,
 	_In_ PFLT_CALLBACK_DATA Data)
 {
@@ -84,40 +83,13 @@ BOOLEAN HsFilterIsPrefetchEcpPresent(
 	return FALSE;
 }
 
-/// <summary>
-/// Returns TRUE if the given file was opened by the prefetcher.
-/// </summary>
-/// <param name="Instance">Opaque instance pointer for the caller.</param>
-/// <param name="FileObject">File object pointer for the file.</param>
-BOOLEAN HsFilterIsPrefetchContextPresent(
-	_In_ PFLT_INSTANCE Instance,
-	_In_ PFILE_OBJECT FileObject)
-{
-	NTSTATUS status;
-	PFILTER_STREAMHANDLE_CONTEXT context;
-	BOOLEAN prefetchOpen = FALSE;
-
-	status = FltGetStreamHandleContext(
-		Instance,
-		FileObject,
-		&context);
-
-	if (NT_SUCCESS(status))
-	{
-		prefetchOpen = context->PrefetchOpen;
-		FltReleaseContext(context);
-	}
-
-	return prefetchOpen;
-}
-
 PVOID HsAvlAllocate(
 	_In_ PRTL_AVL_TABLE Table,
 	_In_ CLONG ByteSize)
 {
 	UNREFERENCED_PARAMETER(Table);
 
-	return ExAllocatePoolWithTag(PagedPool, ByteSize, AVL_ENTRY_TAG);
+	return ExAllocatePoolWithTag(PagedPool, ByteSize, HS_AVL_ENTRY_TAG);
 }
 
 VOID HsAvlFree(
@@ -126,7 +98,7 @@ VOID HsAvlFree(
 {
 	UNREFERENCED_PARAMETER(Table);
 
-	ExFreePoolWithTag(Buffer, AVL_ENTRY_TAG);
+	ExFreePoolWithTag(Buffer, HS_AVL_ENTRY_TAG);
 }
 
 RTL_GENERIC_COMPARE_RESULTS HsAvlCompareNtfsEntry(
@@ -134,8 +106,8 @@ RTL_GENERIC_COMPARE_RESULTS HsAvlCompareNtfsEntry(
 	_In_ PVOID Lhs,
 	_In_ PVOID Rhs)
 {
-	PNTFS_CACHE_ENTRY lhs = (PNTFS_CACHE_ENTRY)Lhs;
-	PNTFS_CACHE_ENTRY rhs = (PNTFS_CACHE_ENTRY)Rhs;
+	PHS_NTFS_CACHE_ENTRY lhs = Lhs;
+	PHS_NTFS_CACHE_ENTRY rhs = Rhs;
 
 	UNREFERENCED_PARAMETER(Table);
 

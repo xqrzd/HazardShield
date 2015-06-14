@@ -25,31 +25,46 @@
 
 extern const FLT_CONTEXT_REGISTRATION ContextRegistration[];
 
-typedef struct _FILTER_INSTANCE_CONTEXT {
+typedef struct _HS_INSTANCE_CONTEXT {
 	RTL_AVL_TABLE  AvlCacheTable;
 	EX_PUSH_LOCK CacheLock;
 	BOOLEAN CacheSupported;
-} FILTER_INSTANCE_CONTEXT, *PFILTER_INSTANCE_CONTEXT;
+} HS_INSTANCE_CONTEXT, *PHS_INSTANCE_CONTEXT;
 
-#define STREAM_FLAG_INFECTED 0x1
-#define STREAM_FLAG_DELETE 0x2
-#define STREAM_FLAG_MODIFIED 0x4
-#define STREAM_FLAG_SCANNED 0x8
+#define HS_STREAM_FLAG_INFECTED 0x1
+#define HS_STREAM_FLAG_DELETE 0x2
+#define HS_STREAM_FLAG_MODIFIED 0x4
+#define HS_STREAM_FLAG_SCANNED 0x8
 
-typedef struct _FILTER_STREAM_CONTEXT {
+typedef struct _HS_STREAM_CONTEXT {
 	ULONG Flags;
 	EX_PUSH_LOCK ScanLock;
-} FILTER_STREAM_CONTEXT, *PFILTER_STREAM_CONTEXT;
+} HS_STREAM_CONTEXT, *PHS_STREAM_CONTEXT;
 
-typedef struct _FILTER_STREAMHANDLE_CONTEXT {
+typedef struct _HS_STREAMHANDLE_CONTEXT {
 	BOOLEAN PrefetchOpen;
-} FILTER_STREAMHANDLE_CONTEXT, *PFILTER_STREAMHANDLE_CONTEXT;
+} HS_STREAMHANDLE_CONTEXT, *PHS_STREAMHANDLE_CONTEXT;
 
 typedef struct _HS_SECTION_CONTEXT {
 	HANDLE SectionHandle;
 	PVOID SectionObject;
 } HS_SECTION_CONTEXT, *PHS_SECTION_CONTEXT;
 
+/// <summary>
+/// Returns TRUE if the given file is owned by the prefetcher.
+/// </summary>
+/// <param name="Instance">Opaque instance pointer for the caller.</param>
+/// <param name="FileObject">File object pointer for the file.</param>
+BOOLEAN HsIsPrefetchContextPresent(
+	_In_ PFLT_INSTANCE Instance,
+	_In_ PFILE_OBJECT FileObject
+	);
+
+/// <summary>
+/// Releases a section context. Note that this does
+/// not close the section handle.
+/// </summary>
+/// <param name="SectionContext">Pointer to the context.</param>
 NTSTATUS HsReleaseSectionContext(
 	_In_ PHS_SECTION_CONTEXT SectionContext
 	);

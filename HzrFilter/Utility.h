@@ -25,10 +25,10 @@
 
 #define LIST_FOR_EACH_SAFE(Current, Next, Head) for (Current = (Head)->Flink, Next = Current->Flink; Current != (Head); Current = Next, Next = Current->Flink)
 
-typedef struct _NTFS_CACHE_ENTRY {
+typedef struct _HS_NTFS_CACHE_ENTRY {
 	FILE_INTERNAL_INFORMATION FileId;
 	BOOLEAN Infected;
-} NTFS_CACHE_ENTRY, *PNTFS_CACHE_ENTRY;
+} HS_NTFS_CACHE_ENTRY, *PHS_NTFS_CACHE_ENTRY;
 
 /// <summary>
 /// Gets an 8-byte file reference number for the file. This number
@@ -38,7 +38,7 @@ typedef struct _NTFS_CACHE_ENTRY {
 /// <param name="Instance">Opaque instance pointer for the caller.</param>
 /// <param name="FileObject">File object pointer for the file.</param>
 /// <param name="FileId">An 8-byte file reference number for the file.</param>
-NTSTATUS HsFilterGetFileId64(
+NTSTATUS HsGetFileId64(
 	_In_ PFLT_INSTANCE Instance,
 	_In_ PFILE_OBJECT FileObject,
 	_Out_ PFILE_INTERNAL_INFORMATION FileId
@@ -53,19 +53,9 @@ NTSTATUS HsFilterGetFileId64(
 /// A pointer to a callback-data object of type FLT_CALLBACK_DATA,
 /// which represents the create operation.
 /// </param>
-BOOLEAN HsFilterIsPrefetchEcpPresent(
+BOOLEAN HsIsPrefetchEcpPresent(
 	_In_ PFLT_FILTER Filter,
 	_In_ PFLT_CALLBACK_DATA Data
-	);
-
-/// <summary>
-/// Returns TRUE if the given file was opened by the prefetcher.
-/// </summary>
-/// <param name="Instance">Opaque instance pointer for the caller.</param>
-/// <param name="FileObject">File object pointer for the file.</param>
-BOOLEAN HsFilterIsPrefetchContextPresent(
-	_In_ PFLT_INSTANCE Instance,
-	_In_ PFILE_OBJECT FileObject
 	);
 
 PVOID HsAvlAllocate(

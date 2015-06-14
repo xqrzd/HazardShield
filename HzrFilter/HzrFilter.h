@@ -157,7 +157,7 @@ NTSTATUS HsFilterScanFile(
 NTSTATUS HsFilterScanStream(
 	_In_ PFLT_INSTANCE Instance,
 	_In_ PFILE_OBJECT FileObject,
-	_In_ PFILTER_STREAM_CONTEXT StreamContext,
+	_In_ PHS_STREAM_CONTEXT StreamContext,
 	_In_ HS_SCAN_REASON ScanReason,
 	_Out_ PBOOLEAN Infected
 	);
@@ -182,7 +182,7 @@ NTSTATUS HzrFilterGetFileCacheStatus(
 NTSTATUS HzrFilterSyncCache(
 	_In_ PFLT_INSTANCE Instance,
 	_In_ PFILE_OBJECT FileObject,
-	_In_ PFILTER_STREAM_CONTEXT StreamContext
+	_In_ PHS_STREAM_CONTEXT StreamContext
 	);
 
 VOID HzrCreateProcessNotifyEx(
@@ -194,11 +194,6 @@ VOID HzrCreateProcessNotifyEx(
 // Communication
 
 NTSTATUS HsFilterCreateCommunicationPort(
-	);
-
-NTSTATUS HspHandleCmdCreateSectionForDataScan(
-	_Inout_ PHS_SCAN_CONTEXT ScanContext,
-	_Out_ PHANDLE SectionHandle
 	);
 
 #endif

@@ -21,22 +21,22 @@
 #include "Context.h"
 #include "Utility.h"
 
-#define HZR_CTX_INSTANCE_TAG 'iCzH'
-#define HZR_CTX_STREAM_TAG 'sCzH'
-#define HZR_CTX_STREAMHANDLE_TAG 'hCzH'
-#define HZR_CTX_SECTION_TAG 'nCzH'
+#define HS_CTX_INSTANCE_TAG 'iCzH'
+#define HS_CTX_STREAM_TAG 'sCzH'
+#define HS_CTX_STREAMHANDLE_TAG 'hCzH'
+#define HS_CTX_SECTION_TAG 'nCzH'
 
-VOID HzrFilterInstanceContextCleanup(
+VOID HspInstanceContextCleanup(
 	_In_ PFLT_CONTEXT Context,
 	_In_ FLT_CONTEXT_TYPE ContextType
 	);
 
-VOID HzrFilterStreamContextCleanup(
+VOID HspStreamContextCleanup(
 	_In_ PFLT_CONTEXT Context,
 	_In_ FLT_CONTEXT_TYPE ContextType
 	);
 
-VOID HspFilterSectionContextCleanup(
+VOID HspSectionContextCleanup(
 	_In_ PFLT_CONTEXT Context,
 	_In_ FLT_CONTEXT_TYPE ContextType
 	);
@@ -45,66 +45,64 @@ const FLT_CONTEXT_REGISTRATION ContextRegistration[] = {
 	{
 		FLT_INSTANCE_CONTEXT,
 		0,
-		HzrFilterInstanceContextCleanup,
-		sizeof(FILTER_INSTANCE_CONTEXT),
-		HZR_CTX_INSTANCE_TAG
+		HspInstanceContextCleanup,
+		sizeof(HS_INSTANCE_CONTEXT),
+		HS_CTX_INSTANCE_TAG
 	},
 	{
 		FLT_STREAM_CONTEXT,
 		0,
-		HzrFilterStreamContextCleanup,
-		sizeof(FILTER_STREAM_CONTEXT),
-		HZR_CTX_STREAM_TAG
+		HspStreamContextCleanup,
+		sizeof(HS_STREAM_CONTEXT),
+		HS_CTX_STREAM_TAG
 	},
 	{
 		FLT_STREAMHANDLE_CONTEXT,
 		0,
 		NULL,
-		sizeof(FILTER_STREAMHANDLE_CONTEXT),
-		HZR_CTX_STREAMHANDLE_TAG
+		sizeof(HS_STREAMHANDLE_CONTEXT),
+		HS_CTX_STREAMHANDLE_TAG
 	},
 	{
 		FLT_SECTION_CONTEXT,
 		0,
-		HspFilterSectionContextCleanup,
+		HspSectionContextCleanup,
 		sizeof(HS_SECTION_CONTEXT),
-		HZR_CTX_SECTION_TAG
+		HS_CTX_SECTION_TAG
 	},
 
 	{ FLT_CONTEXT_END }
 };
 
-VOID HzrFilterInstanceContextCleanup(
+VOID HspInstanceContextCleanup(
 	_In_ PFLT_CONTEXT Context,
 	_In_ FLT_CONTEXT_TYPE ContextType)
 {
-	PFILTER_INSTANCE_CONTEXT context = (PFILTER_INSTANCE_CONTEXT)Context;
+	PHS_INSTANCE_CONTEXT context = Context;
 
 	UNREFERENCED_PARAMETER(ContextType);
 
 	if (context->CacheSupported)
 	{
 		FltAcquirePushLockExclusive(&context->CacheLock);
-
 		HsAvlDeleteAllElements(&context->AvlCacheTable);
-
 		FltReleasePushLock(&context->CacheLock);
 		FltDeletePushLock(&context->CacheLock);
 	}
 }
 
-VOID HzrFilterStreamContextCleanup(
+VOID HspStreamContextCleanup(
 	_In_ PFLT_CONTEXT Context,
 	_In_ FLT_CONTEXT_TYPE ContextType)
 {
-	PFILTER_STREAM_CONTEXT context = (PFILTER_STREAM_CONTEXT)Context;
+	PHS_STREAM_CONTEXT context = Context;
 
 	UNREFERENCED_PARAMETER(ContextType);
 
 	FltDeletePushLock(&context->ScanLock);
 }
 
-VOID HspFilterSectionContextCleanup(
+VOID HspSectionContextCleanup(
 	_In_ PFLT_CONTEXT Context,
 	_In_ FLT_CONTEXT_TYPE ContextType)
 {
@@ -112,11 +110,41 @@ VOID HspFilterSectionContextCleanup(
 
 	UNREFERENCED_PARAMETER(ContextType);
 
-	DbgPrint("Cleanup section context!");
-
 	ObDereferenceObject(sectionContext->SectionObject);
 }
 
+/// <summary>
+/// Returns TRUE if the given file is owned by the prefetcher.
+/// </summary>
+/// <param name="Instance">Opaque instance pointer for the caller.</param>
+/// <param name="FileObject">File object pointer for the file.</param>
+BOOLEAN HsIsPrefetchContextPresent(
+	_In_ PFLT_INSTANCE Instance,
+	_In_ PFILE_OBJECT FileObject)
+{
+	NTSTATUS status;
+	PHS_STREAMHANDLE_CONTEXT context;
+	BOOLEAN prefetchOpen = FALSE;
+
+	status = FltGetStreamHandleContext(
+		Instance,
+		FileObject,
+		&context);
+
+	if (NT_SUCCESS(status))
+	{
+		prefetchOpen = context->PrefetchOpen;
+		FltReleaseContext(context);
+	}
+
+	return prefetchOpen;
+}
+
+/// <summary>
+/// Releases a section context. Note that this does
+/// not close the section handle.
+/// </summary>
+/// <param name="SectionContext">Pointer to the context.</param>
 NTSTATUS HsReleaseSectionContext(
 	_In_ PHS_SECTION_CONTEXT SectionContext)
 {
@@ -128,7 +156,7 @@ NTSTATUS HsReleaseSectionContext(
 		DbgPrint("FltCloseSectionForDataScan failed %X", status);
 
 	// The user-mode application is responsible for closing SectionHandle.
-	// The section cleanup routine will dereference the SectionObject.
+	// The section cleanup routine will dereference SectionObject.
 
 	FltReleaseContext(SectionContext);
 

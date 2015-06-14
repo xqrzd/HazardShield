@@ -48,6 +48,11 @@ NTSTATUS HspGetScanContextSynchronized(
 	_Out_ PHS_SCAN_CONTEXT* ScanContext
 	);
 
+NTSTATUS HspHandleCmdCreateSectionForDataScan(
+	_Inout_ PHS_SCAN_CONTEXT ScanContext,
+	_Out_ PHANDLE SectionHandle
+	);
+
 NTSTATUS HsFilterCreateCommunicationPort()
 {
 	NTSTATUS status;

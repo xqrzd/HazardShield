@@ -84,14 +84,14 @@ NTSTATUS HzrFilterInstanceSetup(
 	_In_ FLT_FILESYSTEM_TYPE VolumeFilesystemType)
 {
 	NTSTATUS status;
-	PFILTER_INSTANCE_CONTEXT context;
+	PHS_INSTANCE_CONTEXT context;
 
 	UNREFERENCED_PARAMETER(Flags);
 
 	status = FltAllocateContext(
 		FltObjects->Filter,
 		FLT_INSTANCE_CONTEXT,
-		sizeof(FILTER_INSTANCE_CONTEXT),
+		sizeof(HS_INSTANCE_CONTEXT),
 		PagedPool,
 		&context);
 
@@ -271,13 +271,13 @@ FLT_POSTOP_CALLBACK_STATUS HzrFilterPostCreate(
 
 	// TODO: Check encrypted files here.
 
-	if (HsFilterIsPrefetchEcpPresent(FltObjects->Filter, Data))
+	if (HsIsPrefetchEcpPresent(FltObjects->Filter, Data))
 	{
-		PFILTER_STREAMHANDLE_CONTEXT streamHandleContext;
+		PHS_STREAMHANDLE_CONTEXT streamHandleContext;
 
 		status = FltAllocateContext(FltObjects->Filter,
 			FLT_STREAMHANDLE_CONTEXT,
-			sizeof(FILTER_STREAMHANDLE_CONTEXT),
+			sizeof(HS_STREAMHANDLE_CONTEXT),
 			PagedPool,
 			&streamHandleContext);
 
@@ -302,7 +302,7 @@ FLT_POSTOP_CALLBACK_STATUS HzrFilterPostCreate(
 	}
 	else
 	{
-		PFILTER_STREAM_CONTEXT streamContext;
+		PHS_STREAM_CONTEXT streamContext;
 		BOOLEAN infected = FALSE;
 
 		// Check to see if there's already a stream context.
@@ -310,7 +310,7 @@ FLT_POSTOP_CALLBACK_STATUS HzrFilterPostCreate(
 
 		if (NT_SUCCESS(status))
 		{
-			infected = BooleanFlagOn(streamContext->Flags, STREAM_FLAG_INFECTED);
+			infected = BooleanFlagOn(streamContext->Flags, HS_STREAM_FLAG_INFECTED);
 
 			if (infected)
 				DbgPrint("Blocking create on infected stream context %wZ", &FltObjects->FileObject->FileName);
@@ -322,7 +322,7 @@ FLT_POSTOP_CALLBACK_STATUS HzrFilterPostCreate(
 			status = FltAllocateContext(
 				FltObjects->Filter,
 				FLT_STREAM_CONTEXT,
-				sizeof(FILTER_STREAM_CONTEXT),
+				sizeof(HS_STREAM_CONTEXT),
 				PagedPool,
 				&streamContext);
 
@@ -337,11 +337,11 @@ FLT_POSTOP_CALLBACK_STATUS HzrFilterPostCreate(
 
 				if (NT_SUCCESS(HzrFilterGetFileCacheStatus(FltObjects->Instance, FltObjects->FileObject, &infected)))
 				{
-					streamContext->Flags = STREAM_FLAG_SCANNED;
+					streamContext->Flags = HS_STREAM_FLAG_SCANNED;
 
 					if (infected)
 					{
-						streamContext->Flags &= STREAM_FLAG_INFECTED;
+						streamContext->Flags &= HS_STREAM_FLAG_INFECTED;
 						DbgPrint("Blocking create on infected cached file %wZ", &FltObjects->FileObject->FileName);
 					}
 				}
@@ -385,7 +385,7 @@ FLT_PREOP_CALLBACK_STATUS HzrFilterPreWrite(
 	UNREFERENCED_PARAMETER(Data);
 	UNREFERENCED_PARAMETER(CompletionContext);
 
-	HzrFilterSetStreamFlags(FltObjects->Instance, FltObjects->FileObject, STREAM_FLAG_MODIFIED);
+	HzrFilterSetStreamFlags(FltObjects->Instance, FltObjects->FileObject, HS_STREAM_FLAG_MODIFIED);
 
 	return FLT_PREOP_SUCCESS_NO_CALLBACK;
 }
@@ -402,7 +402,7 @@ FLT_PREOP_CALLBACK_STATUS HzrFilterPreSetInformation(
 	if (fileInformationClass == FileEndOfFileInformation ||
 		fileInformationClass == FileValidDataLengthInformation)
 	{
-		HzrFilterSetStreamFlags(FltObjects->Instance, FltObjects->FileObject, STREAM_FLAG_MODIFIED);
+		HzrFilterSetStreamFlags(FltObjects->Instance, FltObjects->FileObject, HS_STREAM_FLAG_MODIFIED);
 	}
 
 	return FLT_PREOP_SUCCESS_NO_CALLBACK;
@@ -417,11 +417,11 @@ FLT_PREOP_CALLBACK_STATUS HzrFilterPreAcquireForSectionSynchronization(
 
 	if (FlagOn(Data->Iopb->Parameters.AcquireForSectionSynchronization.PageProtection, PAGE_EXECUTE) &&
 		Data->Iopb->Parameters.AcquireForSectionSynchronization.SyncType == SyncTypeCreateSection &&
-		!HsFilterIsPrefetchContextPresent(FltObjects->Instance, FltObjects->FileObject) &&
+		!HsIsPrefetchContextPresent(FltObjects->Instance, FltObjects->FileObject) &&
 		IoGetCurrentProcess() != GlobalData.ClientProcess)
 	{
 		NTSTATUS status;
-		PFILTER_STREAM_CONTEXT streamContext;
+		PHS_STREAM_CONTEXT streamContext;
 		BOOLEAN infected = FALSE;
 
 		status = FltGetStreamContext(
@@ -470,8 +470,8 @@ FLT_PREOP_CALLBACK_STATUS HzrFilterPreCleanup(
 	_Flt_CompletionContext_Outptr_ PVOID *CompletionContext)
 {
 	NTSTATUS status;
-	PFILTER_STREAMHANDLE_CONTEXT streamHandleContext;
-	PFILTER_STREAM_CONTEXT streamContext;
+	PHS_STREAMHANDLE_CONTEXT streamHandleContext;
+	PHS_STREAM_CONTEXT streamContext;
 	ULONG_PTR stackLow;
 	ULONG_PTR stackHigh;
 
@@ -514,7 +514,7 @@ FLT_PREOP_CALLBACK_STATUS HzrFilterPreCleanup(
 
 	if (NT_SUCCESS(status))
 	{
-		if (FlagOn(streamContext->Flags, STREAM_FLAG_MODIFIED))
+		if (FlagOn(streamContext->Flags, HS_STREAM_FLAG_MODIFIED))
 		{
 			// Scan write here.
 		}
@@ -522,13 +522,13 @@ FLT_PREOP_CALLBACK_STATUS HzrFilterPreCleanup(
 		// Only update the cache if the file has been scanned and
 		// it hasn't been modified since.
 
-		if (FlagOn(streamContext->Flags, STREAM_FLAG_SCANNED) &&
-			!FlagOn(streamContext->Flags, STREAM_FLAG_MODIFIED))
+		if (FlagOn(streamContext->Flags, HS_STREAM_FLAG_SCANNED) &&
+			!FlagOn(streamContext->Flags, HS_STREAM_FLAG_MODIFIED))
 		{
 			HzrFilterSyncCache(FltObjects->Instance, FltObjects->FileObject, streamContext);
 		}
 
-		if (FlagOn(streamContext->Flags, STREAM_FLAG_DELETE))
+		if (FlagOn(streamContext->Flags, HS_STREAM_FLAG_DELETE))
 		{
 			HzrFilterDeleteFile(FltObjects->Instance, FltObjects->FileObject);
 		}
@@ -607,7 +607,7 @@ NTSTATUS HsFilterScanFile(
 NTSTATUS HsFilterScanStream(
 	_In_ PFLT_INSTANCE Instance,
 	_In_ PFILE_OBJECT FileObject,
-	_In_ PFILTER_STREAM_CONTEXT StreamContext,
+	_In_ PHS_STREAM_CONTEXT StreamContext,
 	_In_ HS_SCAN_REASON ScanReason,
 	_Out_ PBOOLEAN Infected)
 {
@@ -617,10 +617,10 @@ NTSTATUS HsFilterScanStream(
 
 	// Only scan the file if it hasn't already been scanned, or
 	// if it has been modified. There is no need to check if it's
-	// infected, as a file cannot be infected but not scanned.
+	// infected, as a file cannot be infected and not scanned.
 
-	if (FlagOn(StreamContext->Flags, STREAM_FLAG_MODIFIED) ||
-		!FlagOn(StreamContext->Flags, STREAM_FLAG_SCANNED))
+	if (FlagOn(StreamContext->Flags, HS_STREAM_FLAG_MODIFIED) ||
+		!FlagOn(StreamContext->Flags, HS_STREAM_FLAG_SCANNED))
 	{
 		UCHAR responseFlags;
 
@@ -628,12 +628,12 @@ NTSTATUS HsFilterScanStream(
 
 		if (NT_SUCCESS(status))
 		{
-			RtlInterlockedSetBits(&StreamContext->Flags, STREAM_FLAG_SCANNED);
-			RtlInterlockedClearBits(&StreamContext->Flags, STREAM_FLAG_MODIFIED);
+			RtlInterlockedSetBits(&StreamContext->Flags, HS_STREAM_FLAG_SCANNED);
+			RtlInterlockedClearBits(&StreamContext->Flags, HS_STREAM_FLAG_MODIFIED);
 
 			if (FlagOn(responseFlags, RESPONSE_FLAG_BLOCK_OPERATION))
 			{
-				RtlInterlockedSetBits(&StreamContext->Flags, STREAM_FLAG_INFECTED);
+				RtlInterlockedSetBits(&StreamContext->Flags, HS_STREAM_FLAG_INFECTED);
 				*Infected = TRUE;
 			}
 			else
@@ -641,7 +641,7 @@ NTSTATUS HsFilterScanStream(
 
 			if (FlagOn(responseFlags, RESPONSE_FLAG_DELETE))
 			{
-				RtlInterlockedSetBits(&StreamContext->Flags, STREAM_FLAG_DELETE);
+				RtlInterlockedSetBits(&StreamContext->Flags, HS_STREAM_FLAG_DELETE);
 			}
 		}
 	}
@@ -649,7 +649,7 @@ NTSTATUS HsFilterScanStream(
 	{
 		// This stream doesn't need to be scanned.
 
-		*Infected = BooleanFlagOn(StreamContext->Flags, STREAM_FLAG_INFECTED);
+		*Infected = BooleanFlagOn(StreamContext->Flags, HS_STREAM_FLAG_INFECTED);
 		status = STATUS_SUCCESS;
 	}
 
@@ -680,7 +680,7 @@ NTSTATUS HzrFilterSetStreamFlags(
 	_In_ ULONG FlagsToSet)
 {
 	NTSTATUS status;
-	PFILTER_STREAM_CONTEXT streamContext;
+	PHS_STREAM_CONTEXT streamContext;
 
 	status = FltGetStreamContext(Instance, FileObject, &streamContext);
 	if (NT_SUCCESS(status))
@@ -699,7 +699,7 @@ NTSTATUS HzrFilterGetFileCacheStatus(
 	_Out_ PBOOLEAN Infected)
 {
 	NTSTATUS status;
-	PFILTER_INSTANCE_CONTEXT instanceContext;
+	PHS_INSTANCE_CONTEXT instanceContext;
 
 	status = FltGetInstanceContext(Instance, &instanceContext);
 
@@ -709,11 +709,11 @@ NTSTATUS HzrFilterGetFileCacheStatus(
 		{
 			FILE_INTERNAL_INFORMATION fileId;
 
-			status = HsFilterGetFileId64(Instance, FileObject, &fileId);
+			status = HsGetFileId64(Instance, FileObject, &fileId);
 
 			if (NT_SUCCESS(status))
 			{
-				PNTFS_CACHE_ENTRY entry;
+				PHS_NTFS_CACHE_ENTRY entry;
 
 				FltAcquirePushLockShared(&instanceContext->CacheLock);
 
@@ -742,10 +742,10 @@ NTSTATUS HzrFilterGetFileCacheStatus(
 NTSTATUS HzrFilterSyncCache(
 	_In_ PFLT_INSTANCE Instance,
 	_In_ PFILE_OBJECT FileObject,
-	_In_ PFILTER_STREAM_CONTEXT StreamContext)
+	_In_ PHS_STREAM_CONTEXT StreamContext)
 {
 	NTSTATUS status;
-	PFILTER_INSTANCE_CONTEXT instanceContext;
+	PHS_INSTANCE_CONTEXT instanceContext;
 
 	status = FltGetInstanceContext(Instance, &instanceContext);
 
@@ -753,13 +753,13 @@ NTSTATUS HzrFilterSyncCache(
 	{
 		if (instanceContext->CacheSupported)
 		{
-			NTFS_CACHE_ENTRY entry;
+			HS_NTFS_CACHE_ENTRY entry;
 
-			status = HsFilterGetFileId64(Instance, FileObject, &entry.FileId);
+			status = HsGetFileId64(Instance, FileObject, &entry.FileId);
 
 			if (NT_SUCCESS(status))
 			{
-				PNTFS_CACHE_ENTRY tableEntry;
+				PHS_NTFS_CACHE_ENTRY tableEntry;
 				BOOLEAN inserted;
 
 				FltAcquirePushLockExclusive(&instanceContext->CacheLock);
@@ -767,12 +767,12 @@ NTSTATUS HzrFilterSyncCache(
 				tableEntry = RtlInsertElementGenericTableAvl(
 					&instanceContext->AvlCacheTable,
 					&entry,
-					sizeof(NTFS_CACHE_ENTRY),
+					sizeof(HS_NTFS_CACHE_ENTRY),
 					&inserted);
 
 				if (tableEntry)
 				{
-					tableEntry->Infected = BooleanFlagOn(StreamContext->Flags, STREAM_FLAG_INFECTED);
+					tableEntry->Infected = BooleanFlagOn(StreamContext->Flags, HS_STREAM_FLAG_INFECTED);
 				}
 
 				FltReleasePushLock(&instanceContext->CacheLock);
