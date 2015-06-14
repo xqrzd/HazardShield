@@ -42,6 +42,12 @@ CONST FLT_OPERATION_REGISTRATION Callbacks[] = {
 		NULL
 	},
 	{
+		IRP_MJ_FILE_SYSTEM_CONTROL,
+		0,
+		HsPreFsControl,
+		NULL
+	},
+	{
 		IRP_MJ_CLEANUP,
 		0,
 		HsPreCleanup,
@@ -428,6 +434,31 @@ FLT_PREOP_CALLBACK_STATUS HsPreSetInformation(
 			FltObjects->Instance,
 			FltObjects->FileObject,
 			HS_STREAM_FLAG_MODIFIED);
+	}
+
+	return FLT_PREOP_SUCCESS_NO_CALLBACK;
+}
+
+FLT_PREOP_CALLBACK_STATUS HsPreFsControl(
+	_Inout_ PFLT_CALLBACK_DATA Data,
+	_In_ PCFLT_RELATED_OBJECTS FltObjects,
+	_Flt_CompletionContext_Outptr_ PVOID* CompletionContext)
+{
+	UNREFERENCED_PARAMETER(CompletionContext);
+
+	switch (Data->Iopb->Parameters.FileSystemControl.Common.FsControlCode)
+	{
+	case FSCTL_OFFLOAD_WRITE:
+	case FSCTL_WRITE_RAW_ENCRYPTED:
+	case FSCTL_SET_ZERO_DATA:
+	{
+		HsSetStreamContextFlags(
+			FltObjects->Instance,
+			FltObjects->FileObject,
+			HS_STREAM_FLAG_MODIFIED);
+
+		break;
+	}
 	}
 
 	return FLT_PREOP_SUCCESS_NO_CALLBACK;
