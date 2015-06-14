@@ -26,7 +26,7 @@
 extern const FLT_CONTEXT_REGISTRATION ContextRegistration[];
 
 typedef struct _HS_INSTANCE_CONTEXT {
-	RTL_AVL_TABLE  AvlCacheTable;
+	RTL_AVL_TABLE  CacheTable;
 	EX_PUSH_LOCK CacheLock;
 	BOOLEAN CacheSupported;
 } HS_INSTANCE_CONTEXT, *PHS_INSTANCE_CONTEXT;

@@ -85,7 +85,7 @@ VOID HspInstanceContextCleanup(
 	if (context->CacheSupported)
 	{
 		FltAcquirePushLockExclusive(&context->CacheLock);
-		HsAvlDeleteAllElements(&context->AvlCacheTable);
+		HsAvlDeleteAllElements(&context->CacheTable);
 		FltReleasePushLock(&context->CacheLock);
 		FltDeletePushLock(&context->CacheLock);
 	}

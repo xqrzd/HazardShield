@@ -27,30 +27,30 @@ CONST FLT_OPERATION_REGISTRATION Callbacks[] = {
 		IRP_MJ_CREATE,
 		0,
 		NULL,
-		HzrFilterPostCreate
+		HsPostCreate
 	},
 	{
 		IRP_MJ_WRITE,
 		0,
-		HzrFilterPreWrite,
+		HsPreWrite,
 		NULL
 	},
 	{
 		IRP_MJ_SET_INFORMATION,
 		0,
-		HzrFilterPreSetInformation,
+		HsPreSetInformation,
 		NULL
 	},
 	{
 		IRP_MJ_CLEANUP,
 		0,
-		HzrFilterPreCleanup,
+		HsPreCleanup,
 		NULL
 	},
 	{
 		IRP_MJ_ACQUIRE_FOR_SECTION_SYNCHRONIZATION,
 		0,
-		HzrFilterPreAcquireForSectionSynchronization,
+		HsPreAcquireForSectionSynchronization,
 		NULL
 	},
 
@@ -61,85 +61,17 @@ CONST FLT_REGISTRATION FilterRegistration = {
 	sizeof(FLT_REGISTRATION),	// Size
 	FLT_REGISTRATION_VERSION,	// Version
 	0,	// Flags, FLTFL_REGISTRATION_DO_NOT_SUPPORT_SERVICE_STOP
-
-	ContextRegistration,		// Context
-	Callbacks,					// Operation callbacks
-
-	HzrFilterUnload,			// MiniFilterUnload
-
-	HzrFilterInstanceSetup,				// InstanceSetup
-	HzrFilterInstanceQueryTeardown,		// InstanceQueryTeardown
-	NULL,								// InstanceTeardownStart
-	NULL,								// InstanceTeardownComplete
-
+	ContextRegistration,	// Context
+	Callbacks,				// Operation callbacks
+	HsFilterUnload,			// MiniFilterUnload
+	HsInstanceSetup,		// InstanceSetup
+	HsInstanceQueryTeardown,// InstanceQueryTeardown
+	NULL,	// InstanceTeardownStart
+	NULL,	// InstanceTeardownComplete
 	NULL,	// GenerateFileName
 	NULL,	// GenerateDestinationFileName
 	NULL	// NormalizeNameComponent
 };
-
-NTSTATUS HzrFilterInstanceSetup(
-	_In_ PCFLT_RELATED_OBJECTS FltObjects,
-	_In_ FLT_INSTANCE_SETUP_FLAGS Flags,
-	_In_ DEVICE_TYPE VolumeDeviceType,
-	_In_ FLT_FILESYSTEM_TYPE VolumeFilesystemType)
-{
-	NTSTATUS status;
-	PHS_INSTANCE_CONTEXT context;
-
-	UNREFERENCED_PARAMETER(Flags);
-
-	status = FltAllocateContext(
-		FltObjects->Filter,
-		FLT_INSTANCE_CONTEXT,
-		sizeof(HS_INSTANCE_CONTEXT),
-		PagedPool,
-		&context);
-
-	if (NT_SUCCESS(status))
-	{
-		status = FltSetInstanceContext(
-			FltObjects->Instance,
-			FLT_SET_CONTEXT_KEEP_IF_EXISTS,
-			context,
-			NULL);
-
-		if (NT_SUCCESS(status))
-		{
-			FltRegisterForDataScan(FltObjects->Instance);
-
-			if (VolumeDeviceType == FILE_DEVICE_DISK_FILE_SYSTEM &&
-				VolumeFilesystemType == FLT_FSTYPE_NTFS)
-			{
-				FltInitializePushLock(&context->CacheLock);
-				RtlInitializeGenericTableAvl(&context->AvlCacheTable, HsAvlCompareNtfsEntry, HsAvlAllocate, HsAvlFree, NULL);
-
-				context->CacheSupported = TRUE;
-			}
-			else
-				context->CacheSupported = FALSE;
-		}
-		else
-			DbgPrint("HzrFilterInstanceSetup::FltSetInstanceContext failed %X", status);
-
-		// Always release the context.
-		FltReleaseContext(context);
-	}
-	else
-		DbgPrint("HzrFilterInstanceSetup::FltAllocateContext failed %X", status);
-
-	// Only attach to the volume if the instance context was set.
-	return NT_SUCCESS(status) ? STATUS_SUCCESS : STATUS_FLT_DO_NOT_ATTACH;
-}
-
-NTSTATUS HzrFilterInstanceQueryTeardown(
-	_In_ PCFLT_RELATED_OBJECTS FltObjects,
-	_In_ FLT_INSTANCE_QUERY_TEARDOWN_FLAGS Flags)
-{
-	UNREFERENCED_PARAMETER(FltObjects);
-	UNREFERENCED_PARAMETER(Flags);
-
-	return STATUS_SUCCESS;
-}
 
 NTSTATUS DriverEntry(
 	_In_ PDRIVER_OBJECT DriverObject,
@@ -177,7 +109,7 @@ NTSTATUS DriverEntry(
 	else
 		goto End;
 
-	status = PsSetCreateProcessNotifyRoutineEx(HzrCreateProcessNotifyEx, FALSE);
+	status = PsSetCreateProcessNotifyRoutineEx(HsCreateProcessNotifyEx, FALSE);
 
 	if (NT_SUCCESS(status))
 		GlobalData.RegisteredProcessCallback = TRUE;
@@ -190,13 +122,13 @@ End:
 		// If any of the above calls failed, call the unload routine
 		// to cleanup before exiting.
 
-		HzrFilterUnload(FLTFL_FILTER_UNLOAD_MANDATORY);
+		HsFilterUnload(FLTFL_FILTER_UNLOAD_MANDATORY);
 	}
 
 	return status;
 }
 
-NTSTATUS HzrFilterUnload(
+NTSTATUS HsFilterUnload(
 	_In_ FLT_FILTER_UNLOAD_FLAGS Flags)
 {
 	if (FlagOn(Flags, FLTFL_FILTER_UNLOAD_MANDATORY) || GlobalData.AllowUnload)
@@ -208,7 +140,7 @@ NTSTATUS HzrFilterUnload(
 			FltUnregisterFilter(GlobalData.Filter);
 
 		if (GlobalData.RegisteredProcessCallback)
-			PsSetCreateProcessNotifyRoutineEx(HzrCreateProcessNotifyEx, TRUE);
+			PsSetCreateProcessNotifyRoutineEx(HsCreateProcessNotifyEx, TRUE);
 
 		if (GlobalData.RegisteredObCallback)
 			HsUnRegisterProtector();
@@ -221,7 +153,76 @@ NTSTATUS HzrFilterUnload(
 	return STATUS_ACCESS_DENIED;
 }
 
-FLT_POSTOP_CALLBACK_STATUS HzrFilterPostCreate(
+NTSTATUS HsInstanceSetup(
+	_In_ PCFLT_RELATED_OBJECTS FltObjects,
+	_In_ FLT_INSTANCE_SETUP_FLAGS Flags,
+	_In_ DEVICE_TYPE VolumeDeviceType,
+	_In_ FLT_FILESYSTEM_TYPE VolumeFilesystemType)
+{
+	NTSTATUS status;
+	PHS_INSTANCE_CONTEXT instanceContext;
+
+	UNREFERENCED_PARAMETER(Flags);
+
+	status = FltAllocateContext(
+		FltObjects->Filter,
+		FLT_INSTANCE_CONTEXT,
+		sizeof(HS_INSTANCE_CONTEXT),
+		PagedPool,
+		&instanceContext);
+
+	if (NT_SUCCESS(status))
+	{
+		status = FltSetInstanceContext(
+			FltObjects->Instance,
+			FLT_SET_CONTEXT_KEEP_IF_EXISTS,
+			instanceContext,
+			NULL);
+
+		if (NT_SUCCESS(status))
+		{
+			FltRegisterForDataScan(FltObjects->Instance);
+
+			if (VolumeDeviceType == FILE_DEVICE_DISK_FILE_SYSTEM &&
+				VolumeFilesystemType == FLT_FSTYPE_NTFS)
+			{
+				FltInitializePushLock(&instanceContext->CacheLock);
+
+				RtlInitializeGenericTableAvl(
+					&instanceContext->CacheTable,
+					HsAvlCompareNtfsEntry,
+					HsAvlAllocate,
+					HsAvlFree,
+					NULL);
+
+				instanceContext->CacheSupported = TRUE;
+			}
+			else
+				instanceContext->CacheSupported = FALSE;
+		}
+
+		// Always release the context, regardless of FltSetInstanceContext.
+		// If FltSetInstanceContext succeeds, it takes a reference, and if
+		// it fails, FltReleaseContext will delete the context.
+
+		FltReleaseContext(instanceContext);
+	}
+
+	// Only attach to the volume if the instance context was set.
+	return NT_SUCCESS(status) ? STATUS_SUCCESS : STATUS_FLT_DO_NOT_ATTACH;
+}
+
+NTSTATUS HsInstanceQueryTeardown(
+	_In_ PCFLT_RELATED_OBJECTS FltObjects,
+	_In_ FLT_INSTANCE_QUERY_TEARDOWN_FLAGS Flags)
+{
+	UNREFERENCED_PARAMETER(FltObjects);
+	UNREFERENCED_PARAMETER(Flags);
+
+	return STATUS_SUCCESS;
+}
+
+FLT_POSTOP_CALLBACK_STATUS HsPostCreate(
 	_Inout_ PFLT_CALLBACK_DATA Data,
 	_In_ PCFLT_RELATED_OBJECTS FltObjects,
 	_In_opt_ PVOID CompletionContext,
@@ -273,6 +274,10 @@ FLT_POSTOP_CALLBACK_STATUS HzrFilterPostCreate(
 
 	if (HsIsPrefetchEcpPresent(FltObjects->Filter, Data))
 	{
+		// This file was opened by the prefetcher. Attach a stream
+		// handle context and mark it as prefetcher opened, so that
+		// future I/O on this file is ignored.
+
 		PHS_STREAMHANDLE_CONTEXT streamHandleContext;
 
 		status = FltAllocateContext(FltObjects->Filter,
@@ -292,13 +297,12 @@ FLT_POSTOP_CALLBACK_STATUS HzrFilterPostCreate(
 				streamHandleContext,
 				NULL);
 
-			if (!NT_SUCCESS(status))
-				DbgPrint("HzrFilterPostCreate::FltSetStreamHandleContext failed %X", status);
+			// Always release the context, regardless of FltSetInstanceContext.
+			// If FltSetInstanceContext succeeds, it takes a reference, and if
+			// it fails, FltReleaseContext will delete the context.
 
 			FltReleaseContext(streamHandleContext);
 		}
-		else
-			DbgPrint("HzrFilterPostCreate::FltAllocateContext failed %X", status);
 	}
 	else
 	{
@@ -306,14 +310,21 @@ FLT_POSTOP_CALLBACK_STATUS HzrFilterPostCreate(
 		BOOLEAN infected = FALSE;
 
 		// Check to see if there's already a stream context.
-		status = FltGetStreamContext(FltObjects->Instance, FltObjects->FileObject, &streamContext);
+
+		status = FltGetStreamContext(
+			FltObjects->Instance,
+			FltObjects->FileObject,
+			&streamContext);
 
 		if (NT_SUCCESS(status))
 		{
 			infected = BooleanFlagOn(streamContext->Flags, HS_STREAM_FLAG_INFECTED);
 
 			if (infected)
-				DbgPrint("Blocking create on infected stream context %wZ", &FltObjects->FileObject->FileName);
+			{
+				DbgPrint("Blocking create on infected stream context %wZ",
+					&FltObjects->FileObject->FileName);
+			}
 
 			FltReleaseContext(streamContext);
 		}
@@ -333,16 +344,24 @@ FLT_POSTOP_CALLBACK_STATUS HzrFilterPostCreate(
 				streamContext->Flags = 0;
 				FltInitializePushLock(&streamContext->ScanLock);
 
-				// Don't store the return value, since even if the cache fails, the scanning should continue.
+				// Don't store the return value, since even if
+				// the cache fails, the scanning should continue.
 
-				if (NT_SUCCESS(HzrFilterGetFileCacheStatus(FltObjects->Instance, FltObjects->FileObject, &infected)))
+				if (NT_SUCCESS(HsGetFileCacheStatus(
+					FltObjects->Instance,
+					FltObjects->FileObject,
+					&infected)))
 				{
+					// Only scanned files are inserted into the cache.
+
 					streamContext->Flags = HS_STREAM_FLAG_SCANNED;
 
 					if (infected)
 					{
 						streamContext->Flags &= HS_STREAM_FLAG_INFECTED;
-						DbgPrint("Blocking create on infected cached file %wZ", &FltObjects->FileObject->FileName);
+
+						DbgPrint("Blocking create on infected cached file %wZ",
+							&FltObjects->FileObject->FileName);
 					}
 				}
 
@@ -354,16 +373,15 @@ FLT_POSTOP_CALLBACK_STATUS HzrFilterPostCreate(
 					NULL);
 
 				if (!NT_SUCCESS(status) && (status != STATUS_FLT_CONTEXT_ALREADY_DEFINED))
-					DbgPrint("HzrFilterPostCreate::FltSetStreamContext failed %X", status);
+					DbgPrint("HsPostCreate::FltSetStreamContext failed %X", status);
 
-				// Always release.
+				// Always release the context, regardless of FltSetInstanceContext.
+				// If FltSetInstanceContext succeeds, it takes a reference, and if
+				// it fails, FltReleaseContext will delete the context.
+
 				FltReleaseContext(streamContext);
 			}
-			else
-				DbgPrint("HzrFilterPostCreate::FltAllocateContext failed %X", status);
 		}
-		else
-			DbgPrint("HzrFilterPostCreate::FltGetStreamContext failed %X", status);
 
 		if (infected)
 		{
@@ -377,41 +395,48 @@ FLT_POSTOP_CALLBACK_STATUS HzrFilterPostCreate(
 	return FLT_POSTOP_FINISHED_PROCESSING;
 }
 
-FLT_PREOP_CALLBACK_STATUS HzrFilterPreWrite(
+FLT_PREOP_CALLBACK_STATUS HsPreWrite(
 	_Inout_ PFLT_CALLBACK_DATA Data,
 	_In_ PCFLT_RELATED_OBJECTS FltObjects,
-	_Flt_CompletionContext_Outptr_ PVOID *CompletionContext)
+	_Flt_CompletionContext_Outptr_ PVOID* CompletionContext)
 {
 	UNREFERENCED_PARAMETER(Data);
 	UNREFERENCED_PARAMETER(CompletionContext);
 
-	HzrFilterSetStreamFlags(FltObjects->Instance, FltObjects->FileObject, HS_STREAM_FLAG_MODIFIED);
+	HsSetStreamContextFlags(
+		FltObjects->Instance,
+		FltObjects->FileObject,
+		HS_STREAM_FLAG_MODIFIED);
 
 	return FLT_PREOP_SUCCESS_NO_CALLBACK;
 }
 
-FLT_PREOP_CALLBACK_STATUS HzrFilterPreSetInformation(
+FLT_PREOP_CALLBACK_STATUS HsPreSetInformation(
 	_Inout_ PFLT_CALLBACK_DATA Data,
 	_In_ PCFLT_RELATED_OBJECTS FltObjects,
-	_Flt_CompletionContext_Outptr_ PVOID *CompletionContext)
+	_Flt_CompletionContext_Outptr_ PVOID* CompletionContext)
 {
-	FILE_INFORMATION_CLASS fileInformationClass = Data->Iopb->Parameters.SetFileInformation.FileInformationClass;
+	FILE_INFORMATION_CLASS fileInformationClass =
+		Data->Iopb->Parameters.SetFileInformation.FileInformationClass;
 
 	UNREFERENCED_PARAMETER(CompletionContext);
 
 	if (fileInformationClass == FileEndOfFileInformation ||
 		fileInformationClass == FileValidDataLengthInformation)
 	{
-		HzrFilterSetStreamFlags(FltObjects->Instance, FltObjects->FileObject, HS_STREAM_FLAG_MODIFIED);
+		HsSetStreamContextFlags(
+			FltObjects->Instance,
+			FltObjects->FileObject,
+			HS_STREAM_FLAG_MODIFIED);
 	}
 
 	return FLT_PREOP_SUCCESS_NO_CALLBACK;
 }
 
-FLT_PREOP_CALLBACK_STATUS HzrFilterPreAcquireForSectionSynchronization(
+FLT_PREOP_CALLBACK_STATUS HsPreAcquireForSectionSynchronization(
 	_Inout_ PFLT_CALLBACK_DATA Data,
 	_In_ PCFLT_RELATED_OBJECTS FltObjects,
-	_Flt_CompletionContext_Outptr_ PVOID *CompletionContext)
+	_Flt_CompletionContext_Outptr_ PVOID* CompletionContext)
 {
 	UNREFERENCED_PARAMETER(CompletionContext);
 
@@ -464,10 +489,10 @@ FLT_PREOP_CALLBACK_STATUS HzrFilterPreAcquireForSectionSynchronization(
 	return FLT_PREOP_SUCCESS_NO_CALLBACK;
 }
 
-FLT_PREOP_CALLBACK_STATUS HzrFilterPreCleanup(
+FLT_PREOP_CALLBACK_STATUS HsPreCleanup(
 	_Inout_ PFLT_CALLBACK_DATA Data,
 	_In_ PCFLT_RELATED_OBJECTS FltObjects,
-	_Flt_CompletionContext_Outptr_ PVOID *CompletionContext)
+	_Flt_CompletionContext_Outptr_ PVOID* CompletionContext)
 {
 	NTSTATUS status;
 	PHS_STREAMHANDLE_CONTEXT streamHandleContext;
@@ -479,7 +504,11 @@ FLT_PREOP_CALLBACK_STATUS HzrFilterPreCleanup(
 	UNREFERENCED_PARAMETER(CompletionContext);
 
 	// Skip scan on prefetcher handles to avoid deadlocks.
-	status = FltGetStreamHandleContext(FltObjects->Instance, FltObjects->FileObject, &streamHandleContext);
+
+	status = FltGetStreamHandleContext(
+		FltObjects->Instance,
+		FltObjects->FileObject,
+		&streamHandleContext);
 
 	if (NT_SUCCESS(status))
 	{
@@ -491,7 +520,7 @@ FLT_PREOP_CALLBACK_STATUS HzrFilterPreCleanup(
 			// file object, that file object should no longer be
 			// considered prefetcher-opened.
 
-			FltDeleteStreamHandleContext(FltObjects->Instance, FltObjects->FileObject, NULL);
+			FltDeleteContext(streamHandleContext);
 
 			FltReleaseContext(streamHandleContext);
 
@@ -510,7 +539,10 @@ FLT_PREOP_CALLBACK_STATUS HzrFilterPreCleanup(
 
 	// TODO: Check for encrypted files.
 
-	status = FltGetStreamContext(FltObjects->Instance, FltObjects->FileObject, &streamContext);
+	status = FltGetStreamContext(
+		FltObjects->Instance,
+		FltObjects->FileObject,
+		&streamContext);
 
 	if (NT_SUCCESS(status))
 	{
@@ -525,12 +557,15 @@ FLT_PREOP_CALLBACK_STATUS HzrFilterPreCleanup(
 		if (FlagOn(streamContext->Flags, HS_STREAM_FLAG_SCANNED) &&
 			!FlagOn(streamContext->Flags, HS_STREAM_FLAG_MODIFIED))
 		{
-			HzrFilterSyncCache(FltObjects->Instance, FltObjects->FileObject, streamContext);
+			HsSyncCache(
+				FltObjects->Instance,
+				FltObjects->FileObject,
+				streamContext);
 		}
 
 		if (FlagOn(streamContext->Flags, HS_STREAM_FLAG_DELETE))
 		{
-			HzrFilterDeleteFile(FltObjects->Instance, FltObjects->FileObject);
+			HsDeleteFile(FltObjects->Instance, FltObjects->FileObject);
 		}
 
 		FltReleaseContext(streamContext);
@@ -631,7 +666,7 @@ NTSTATUS HsFilterScanStream(
 			RtlInterlockedSetBits(&StreamContext->Flags, HS_STREAM_FLAG_SCANNED);
 			RtlInterlockedClearBits(&StreamContext->Flags, HS_STREAM_FLAG_MODIFIED);
 
-			if (FlagOn(responseFlags, RESPONSE_FLAG_BLOCK_OPERATION))
+			if (FlagOn(responseFlags, HS_RESPONSE_FLAG_INFECTED))
 			{
 				RtlInterlockedSetBits(&StreamContext->Flags, HS_STREAM_FLAG_INFECTED);
 				*Infected = TRUE;
@@ -639,7 +674,7 @@ NTSTATUS HsFilterScanStream(
 			else
 				*Infected = FALSE;
 
-			if (FlagOn(responseFlags, RESPONSE_FLAG_DELETE))
+			if (FlagOn(responseFlags, HS_RESPONSE_FLAG_DELETE))
 			{
 				RtlInterlockedSetBits(&StreamContext->Flags, HS_STREAM_FLAG_DELETE);
 			}
@@ -658,7 +693,7 @@ NTSTATUS HsFilterScanStream(
 	return status;
 }
 
-NTSTATUS HzrFilterDeleteFile(
+NTSTATUS HsDeleteFile(
 	_In_ PFLT_INSTANCE Instance,
 	_In_ PFILE_OBJECT FileObject)
 {
@@ -674,15 +709,16 @@ NTSTATUS HzrFilterDeleteFile(
 		FileDispositionInformation);
 }
 
-NTSTATUS HzrFilterSetStreamFlags(
+NTSTATUS HsSetStreamContextFlags(
 	_In_ PFLT_INSTANCE Instance,
 	_In_ PFILE_OBJECT FileObject,
-	_In_ ULONG FlagsToSet)
+	_In_ LONG FlagsToSet)
 {
 	NTSTATUS status;
 	PHS_STREAM_CONTEXT streamContext;
 
 	status = FltGetStreamContext(Instance, FileObject, &streamContext);
+
 	if (NT_SUCCESS(status))
 	{
 		RtlInterlockedSetBits(&streamContext->Flags, FlagsToSet);
@@ -693,7 +729,7 @@ NTSTATUS HzrFilterSetStreamFlags(
 	return status;
 }
 
-NTSTATUS HzrFilterGetFileCacheStatus(
+NTSTATUS HsGetFileCacheStatus(
 	_In_ PFLT_INSTANCE Instance,
 	_In_ PFILE_OBJECT FileObject,
 	_Out_ PBOOLEAN Infected)
@@ -717,7 +753,10 @@ NTSTATUS HzrFilterGetFileCacheStatus(
 
 				FltAcquirePushLockShared(&instanceContext->CacheLock);
 
-				entry = RtlLookupElementGenericTableAvl(&instanceContext->AvlCacheTable, &fileId.IndexNumber.QuadPart);
+				entry = RtlLookupElementGenericTableAvl(
+					&instanceContext->CacheTable,
+					&fileId.IndexNumber.QuadPart);
+
 				if (entry)
 					*Infected = entry->Infected;
 				else
@@ -725,21 +764,17 @@ NTSTATUS HzrFilterGetFileCacheStatus(
 
 				FltReleasePushLock(&instanceContext->CacheLock);
 			}
-			else
-				DbgPrint("HzrFilterGetFileCacheStatus::HzrFilterGetFileId64 failed %X", status);
 		}
 		else
 			status = STATUS_NOT_SUPPORTED;
 
 		FltReleaseContext(instanceContext);
 	}
-	else
-		DbgPrint("HzrFilterGetFileCacheStatus::FltGetInstanceContext failed %X", status);
 
 	return status;
 }
 
-NTSTATUS HzrFilterSyncCache(
+NTSTATUS HsSyncCache(
 	_In_ PFLT_INSTANCE Instance,
 	_In_ PFILE_OBJECT FileObject,
 	_In_ PHS_STREAM_CONTEXT StreamContext)
@@ -765,33 +800,31 @@ NTSTATUS HzrFilterSyncCache(
 				FltAcquirePushLockExclusive(&instanceContext->CacheLock);
 
 				tableEntry = RtlInsertElementGenericTableAvl(
-					&instanceContext->AvlCacheTable,
+					&instanceContext->CacheTable,
 					&entry,
 					sizeof(HS_NTFS_CACHE_ENTRY),
 					&inserted);
 
 				if (tableEntry)
 				{
-					tableEntry->Infected = BooleanFlagOn(StreamContext->Flags, HS_STREAM_FLAG_INFECTED);
+					tableEntry->Infected = BooleanFlagOn(
+						StreamContext->Flags,
+						HS_STREAM_FLAG_INFECTED);
 				}
 
 				FltReleasePushLock(&instanceContext->CacheLock);
 			}
-			else
-				DbgPrint("HzrFilterSyncCache::HzrFilterGetFileId64 failed %X", status);
 		}
 		else
 			status = STATUS_NOT_SUPPORTED;
 
 		FltReleaseContext(instanceContext);
 	}
-	else
-		DbgPrint("HzrFilterSyncCache::FltGetInstanceContext failed %X", status);
 
 	return status;
 }
 
-VOID HzrCreateProcessNotifyEx(
+VOID HsCreateProcessNotifyEx(
 	_Inout_ PEPROCESS Process,
 	_In_ HANDLE ProcessId,
 	_Inout_opt_ PPS_CREATE_NOTIFY_INFO CreateInfo)

@@ -29,10 +29,8 @@
 #include "Protect.h"
 #include "Utility.h"
 
-#define MAX_FILE_SCAN_SIZE 8388608 // 8 MB
-
-#define RESPONSE_FLAG_BLOCK_OPERATION 0x1
-#define RESPONSE_FLAG_DELETE 0x2
+#define HS_RESPONSE_FLAG_INFECTED 0x1
+#define HS_RESPONSE_FLAG_DELETE 0x2
 
 typedef struct _HS_FILTER_GLOBAL_DATA {
 	PFLT_FILTER Filter;
@@ -100,51 +98,51 @@ NTSTATUS DriverEntry(
 	_In_ PUNICODE_STRING RegistryPath
 	);
 
-NTSTATUS HzrFilterInstanceSetup(
+NTSTATUS HsFilterUnload(
+	_In_ FLT_FILTER_UNLOAD_FLAGS Flags
+	);
+
+NTSTATUS HsInstanceSetup(
 	_In_ PCFLT_RELATED_OBJECTS FltObjects,
 	_In_ FLT_INSTANCE_SETUP_FLAGS Flags,
 	_In_ DEVICE_TYPE VolumeDeviceType,
 	_In_ FLT_FILESYSTEM_TYPE VolumeFilesystemType
 	);
 
-NTSTATUS HzrFilterUnload(
-	_In_ FLT_FILTER_UNLOAD_FLAGS Flags
-	);
-
-NTSTATUS HzrFilterInstanceQueryTeardown(
+NTSTATUS HsInstanceQueryTeardown(
 	_In_ PCFLT_RELATED_OBJECTS FltObjects,
 	_In_ FLT_INSTANCE_QUERY_TEARDOWN_FLAGS Flags
 	);
 
-FLT_POSTOP_CALLBACK_STATUS HzrFilterPostCreate(
+FLT_POSTOP_CALLBACK_STATUS HsPostCreate(
 	_Inout_ PFLT_CALLBACK_DATA Data,
 	_In_ PCFLT_RELATED_OBJECTS FltObjects,
 	_In_opt_ PVOID CompletionContext,
 	_In_ FLT_POST_OPERATION_FLAGS Flags
 	);
 
-FLT_PREOP_CALLBACK_STATUS HzrFilterPreWrite(
+FLT_PREOP_CALLBACK_STATUS HsPreWrite(
 	_Inout_ PFLT_CALLBACK_DATA Data,
 	_In_ PCFLT_RELATED_OBJECTS FltObjects,
-	_Flt_CompletionContext_Outptr_ PVOID *CompletionContext
+	_Flt_CompletionContext_Outptr_ PVOID* CompletionContext
 	);
 
-FLT_PREOP_CALLBACK_STATUS HzrFilterPreSetInformation(
+FLT_PREOP_CALLBACK_STATUS HsPreSetInformation(
 	_Inout_ PFLT_CALLBACK_DATA Data,
 	_In_ PCFLT_RELATED_OBJECTS FltObjects,
-	_Flt_CompletionContext_Outptr_ PVOID *CompletionContext
+	_Flt_CompletionContext_Outptr_ PVOID* CompletionContext
 	);
 
-FLT_PREOP_CALLBACK_STATUS HzrFilterPreAcquireForSectionSynchronization(
+FLT_PREOP_CALLBACK_STATUS HsPreAcquireForSectionSynchronization(
 	_Inout_ PFLT_CALLBACK_DATA Data,
 	_In_ PCFLT_RELATED_OBJECTS FltObjects,
-	_Flt_CompletionContext_Outptr_ PVOID *CompletionContext
+	_Flt_CompletionContext_Outptr_ PVOID* CompletionContext
 	);
 
-FLT_PREOP_CALLBACK_STATUS HzrFilterPreCleanup(
+FLT_PREOP_CALLBACK_STATUS HsPreCleanup(
 	_Inout_ PFLT_CALLBACK_DATA Data,
 	_In_ PCFLT_RELATED_OBJECTS FltObjects,
-	_Flt_CompletionContext_Outptr_ PVOID *CompletionContext
+	_Flt_CompletionContext_Outptr_ PVOID* CompletionContext
 	);
 
 NTSTATUS HsFilterScanFile(
@@ -162,30 +160,30 @@ NTSTATUS HsFilterScanStream(
 	_Out_ PBOOLEAN Infected
 	);
 
-NTSTATUS HzrFilterDeleteFile(
+NTSTATUS HsDeleteFile(
 	_In_ PFLT_INSTANCE Instance,
 	_In_ PFILE_OBJECT FileObject
 	);
 
-NTSTATUS HzrFilterSetStreamFlags(
+NTSTATUS HsSetStreamContextFlags(
 	_In_ PFLT_INSTANCE Instance,
 	_In_ PFILE_OBJECT FileObject,
-	_In_ ULONG FlagsToSet
+	_In_ LONG FlagsToSet
 	);
 
-NTSTATUS HzrFilterGetFileCacheStatus(
+NTSTATUS HsGetFileCacheStatus(
 	_In_ PFLT_INSTANCE Instance,
 	_In_ PFILE_OBJECT FileObject,
 	_Out_ PBOOLEAN Infected
 	);
 
-NTSTATUS HzrFilterSyncCache(
+NTSTATUS HsSyncCache(
 	_In_ PFLT_INSTANCE Instance,
 	_In_ PFILE_OBJECT FileObject,
 	_In_ PHS_STREAM_CONTEXT StreamContext
 	);
 
-VOID HzrCreateProcessNotifyEx(
+VOID HsCreateProcessNotifyEx(
 	_Inout_ PEPROCESS Process,
 	_In_ HANDLE ProcessId,
 	_Inout_opt_ PPS_CREATE_NOTIFY_INFO CreateInfo
