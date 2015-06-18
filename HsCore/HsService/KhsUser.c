@@ -22,36 +22,6 @@
 #include <fltUser.h>
 #include "KhspUser.h"
 
-NTSTATUS NTAPI KhspUserScanWorker(
-	_In_ PVOID Parameter
-	);
-
-NTSTATUS KhspHandleScanMessage(
-	_In_ PHS_SCANNER_NOTIFICATION Notification,
-	_Out_ PUCHAR ResponseFlags
-	);
-
-NTSTATUS KhspHandleScanPeOpen(
-	_In_ LONGLONG ScanId,
-	_Out_ PUCHAR ResponseFlags
-	);
-
-HRESULT KhspFilterReplyMessage(
-	_In_ PFILTER_MESSAGE_HEADER MessageHeader,
-	_In_ BOOLEAN Flags
-	);
-
-HRESULT KhspCreateSectionForDataScan(
-	_In_ LONGLONG ScanId,
-	_Out_ PHANDLE SectionHandle
-	);
-
-HRESULT KhspQueryFileName(
-	_In_ LONGLONG ScanId,
-	_In_ USHORT FileNameSizeInBytes,
-	_Out_ PWSTR FileName
-	);
-
 HANDLE HsKhsPortHandle;
 HANDLE HsKhsCompletionPort;
 
