@@ -14,6 +14,7 @@
     <ClCompile Include="KhsUser.c">
       <Filter>Driver</Filter>
     </ClCompile>
+    <ClCompile Include="Service.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="KhsUser.h">
@@ -23,6 +24,7 @@
       <Filter>Driver</Filter>
     </ClInclude>
     <ClInclude Include="resource.h" />
+    <ClInclude Include="Service.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="HsService.rc">
