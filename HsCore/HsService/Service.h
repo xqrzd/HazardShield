@@ -23,7 +23,6 @@
 #include "ph.h"
 
 #define HS_SERVICE_NAME L"HsService"
-#define HS_FILTER_NAME L"HzrFilter"
 
 #define CLAMAV_DATABASE_PATH "%AllUsersProfile%\\Hazard Shield"
 

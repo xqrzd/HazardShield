@@ -30,9 +30,14 @@ typedef struct _HS_FILE_INFO {
 	PWSTR FilePath;
 } HS_FILE_INFO, *PHS_FILE_INFO;
 
-typedef NTSTATUS(NTAPI *PHS_SCAN_FILE_ROUTINE)(
-	_In_ PHS_FILE_INFO FileInfo,
-	_Out_ PUCHAR ResponseFlags
+// This response is the lack of any other flags.
+// It cannot be combined with any other flags.
+#define HS_RESPONSE_FLAG_CLEAN 0x0
+#define HS_RESPONSE_FLAG_INFECTED 0x1
+#define HS_RESPONSE_FLAG_DELETE 0x2
+
+typedef UCHAR(NTAPI *PHS_SCAN_FILE_ROUTINE)(
+	_In_ PHS_FILE_INFO FileInfo
 	);
 
 HRESULT KhsConnect(

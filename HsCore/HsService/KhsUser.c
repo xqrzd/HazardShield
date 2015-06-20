@@ -214,7 +214,8 @@ NTSTATUS KhspHandleScanPeOpen(
 			else
 				fileInfo.FilePath = NULL;
 
-			status = HsFileScanRoutine(&fileInfo, ResponseFlags);
+			*ResponseFlags = HsFileScanRoutine(&fileInfo);
+			status = STATUS_SUCCESS;
 		}
 
 		UnmapViewOfFile(address);
