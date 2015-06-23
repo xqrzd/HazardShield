@@ -21,7 +21,11 @@
 #include "Service.h"
 #include "KhsUser.h"
 #include "Scanner.h"
+#include "Utility.h"
 #include <Sfc.h>
+
+PPH_BYTES HspGetClamAvDatabaseDirectory(
+	);
 
 struct {
 	SERVICE_STATUS ServiceStatus;
@@ -82,11 +86,32 @@ UCHAR ScanRoutine(
 	return HS_RESPONSE_FLAG_CLEAN;
 }
 
-VOID HspLoadClamAV()
+cl_error_t HspLoadClamAV()
 {
-	HsCreateScanner(&ServiceData.Scanner);
-	HsLoadClamAvDatabase(ServiceData.Scanner, "C:\\ProgramData\\Hazard Shield", CL_DB_BYTECODE);
-	HsCompileClamAvDatabase(ServiceData.Scanner);
+	cl_error_t result;
+	PPH_BYTES databaseDirectory;
+
+	if (!HsCreateScanner(&ServiceData.Scanner))
+		return CL_EMEM;
+
+	if (!(databaseDirectory = HspGetClamAvDatabaseDirectory()))
+		return CL_EMEM;
+
+	result = HsLoadClamAvDatabase(
+		ServiceData.Scanner,
+		databaseDirectory->Buffer,
+		CL_DB_BYTECODE);
+
+	if (result == CL_SUCCESS)
+	{
+		result = HsCompileClamAvDatabase(ServiceData.Scanner);
+	}
+	else
+		printf("HsLoadClamAvDatabase failed %d\n", result);
+
+	PhDereferenceObject(databaseDirectory);
+
+	return result;
 }
 
 VOID HspServiceInit()
@@ -95,23 +120,47 @@ VOID HspServiceInit()
 
 	if (SUCCEEDED(result))
 	{
-		SYSTEM_INFO systemInfo;
-
 		HsInit();
 		HspLoadClamAV();
-		GetSystemInfo(&systemInfo);
 
 		printf("Sigs loaded: %u\n", ServiceData.Scanner->Signatures);
 
 		InitializeSRWLock(&ServiceData.ScannerLock);
 
-		// All service initialization is done, start listening
+		// Finished service initialization. Start listening
 		// for messages from the driver.
 
-		KhsStartFiltering(systemInfo.dwNumberOfProcessors, ScanRoutine);
+		KhsStartFiltering(HsGetProcessorCount(), ScanRoutine);
 	}
 	else
 		printf("KhsConnect failed %X\n", result);
+}
+
+VOID HspServiceCleanup()
+{
+	KhsDisconnect();
+
+	HsDeleteScanner(ServiceData.Scanner);
+}
+
+PPH_BYTES HspGetClamAvDatabaseDirectory()
+{
+	static PH_STRINGREF path = PH_STRINGREF_INIT(CLAMAV_DATABASE_PATH);
+
+	PPH_STRING expandedPathUnicode;
+	PPH_BYTES expandedPathUtf8 = NULL;
+
+	expandedPathUnicode = PhExpandEnvironmentStrings(&path);
+
+	if (expandedPathUnicode)
+	{
+		// cl_load expects UTF-8 format.
+		expandedPathUtf8 = PhConvertUtf16ToUtf8(expandedPathUnicode->Buffer);
+
+		PhDereferenceObject(expandedPathUnicode);
+	}
+
+	return expandedPathUtf8;
 }
 
 VOID WINAPI HsServiceMain(
@@ -147,7 +196,7 @@ DWORD WINAPI HsServiceHandlerEx(
 		ServiceData.ServiceStatus.dwCurrentState = SERVICE_STOP_PENDING;
 		SetServiceStatus(ServiceData.ServiceStatusHandle, &ServiceData.ServiceStatus);
 
-		// Cleanup...
+		HspServiceCleanup();
 
 		ServiceData.ServiceStatus.dwCurrentState = SERVICE_STOPPED;
 		SetServiceStatus(ServiceData.ServiceStatusHandle, &ServiceData.ServiceStatus);

@@ -177,6 +177,7 @@ NTSTATUS KhspHandleScanPeOpen(
 	NTSTATUS status = STATUS_UNSUCCESSFUL;
 	HRESULT result;
 	HANDLE sectionHandle;
+	PVOID address;
 
 	if (!HsFileScanRoutine)
 		return STATUS_NO_CALLBACK_ACTIVE;
@@ -185,8 +186,6 @@ NTSTATUS KhspHandleScanPeOpen(
 
 	if (!SUCCEEDED(result))
 		return status;
-
-	PVOID address;
 
 	address = MapViewOfFile(
 		sectionHandle,

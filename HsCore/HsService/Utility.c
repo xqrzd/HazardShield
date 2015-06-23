@@ -18,22 +18,13 @@
 *  MA 02110-1301, USA.
 */
 
-#pragma once
+#include "Utility.h"
 
-#include "ph.h"
+DWORD HsGetProcessorCount()
+{
+	SYSTEM_INFO systemInfo;
 
-#define HS_SERVICE_NAME L"HsService"
+	GetSystemInfo(&systemInfo);
 
-#define CLAMAV_DATABASE_PATH L"%AllUsersProfile%\\Hazard Shield"
-
-VOID WINAPI HsServiceMain(
-	_In_ DWORD dwArgc,
-	_In_ LPTSTR *lpszArgv
-	);
-
-DWORD WINAPI HsServiceHandlerEx(
-	_In_ DWORD dwControl,
-	_In_ DWORD dwEventType,
-	_In_ LPVOID lpEventData,
-	_In_ LPVOID lpContext
-	);
+	return systemInfo.dwNumberOfProcessors;
+}

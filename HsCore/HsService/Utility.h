@@ -22,18 +22,5 @@
 
 #include "ph.h"
 
-#define HS_SERVICE_NAME L"HsService"
-
-#define CLAMAV_DATABASE_PATH L"%AllUsersProfile%\\Hazard Shield"
-
-VOID WINAPI HsServiceMain(
-	_In_ DWORD dwArgc,
-	_In_ LPTSTR *lpszArgv
-	);
-
-DWORD WINAPI HsServiceHandlerEx(
-	_In_ DWORD dwControl,
-	_In_ DWORD dwEventType,
-	_In_ LPVOID lpEventData,
-	_In_ LPVOID lpContext
+DWORD HsGetProcessorCount(
 	);

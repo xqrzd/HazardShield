@@ -8,6 +8,9 @@
     <Filter Include="Driver">
       <UniqueIdentifier>{b856b754-7092-4c57-bd0d-2fab47fb60ea}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Utility">
+      <UniqueIdentifier>{4fe49c1d-34e0-40e8-a439-0c75653588c6}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.c" />
@@ -15,6 +18,9 @@
       <Filter>Driver</Filter>
     </ClCompile>
     <ClCompile Include="Service.c" />
+    <ClCompile Include="Utility.c">
+      <Filter>Utility</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="KhsUser.h">
@@ -25,6 +31,9 @@
     </ClInclude>
     <ClInclude Include="resource.h" />
     <ClInclude Include="Service.h" />
+    <ClInclude Include="Utility.h">
+      <Filter>Utility</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="HsService.rc">
