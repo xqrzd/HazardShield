@@ -683,8 +683,8 @@ NTSTATUS HsFilterScanStream(
 	status = HsGetFileSize(Instance, FileObject, &fileSize);
 
 	if (NT_SUCCESS(status) &&
-		fileSize > HS_MIN_FILE_SCAN_SIZE &&
-		fileSize < HS_MAX_FILE_SCAN_SIZE)
+		fileSize < HS_MIN_FILE_SCAN_SIZE &&
+		fileSize > HS_MAX_FILE_SCAN_SIZE)
 	{
 		// The file doesn't need to be scanned, as it is either
 		// too small or too large.
