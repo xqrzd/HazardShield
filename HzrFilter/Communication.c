@@ -187,6 +187,14 @@ NTSTATUS HspFilterClientMessage(
 			return status;
 		}
 
+		if (scanContext->SectionContext)
+		{
+			DbgPrint("Already created section context for scan %lld",
+				request.CreateSectionForDataScan.ScanId);
+
+			return STATUS_UNSUCCESSFUL;
+		}
+
 		status = HspHandleCmdCreateSectionForDataScan(
 			scanContext,
 			&sectionHandle);
