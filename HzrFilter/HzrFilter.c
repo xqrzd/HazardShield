@@ -678,6 +678,19 @@ NTSTATUS HsFilterScanStream(
 	_Out_ PBOOLEAN Infected)
 {
 	NTSTATUS status;
+	LONGLONG fileSize;
+
+	status = HsGetFileSize(Instance, FileObject, &fileSize);
+
+	if (NT_SUCCESS(status) &&
+		fileSize > HS_MIN_FILE_SCAN_SIZE &&
+		fileSize < HS_MAX_FILE_SCAN_SIZE)
+	{
+		// The file doesn't need to be scanned, as it is either
+		// too small or too large.
+
+		return STATUS_FILE_TOO_LARGE;
+	}
 
 	FltAcquirePushLockExclusive(&StreamContext->ScanLock);
 

@@ -29,6 +29,9 @@
 #include "Protect.h"
 #include "Utility.h"
 
+#define HS_MIN_FILE_SCAN_SIZE 64
+#define HS_MAX_FILE_SCAN_SIZE 52428800 // 50 MB
+
 #define HS_RESPONSE_FLAG_INFECTED 0x1
 #define HS_RESPONSE_FLAG_DELETE 0x2
 

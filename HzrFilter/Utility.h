@@ -45,6 +45,18 @@ NTSTATUS HsGetFileId64(
 	);
 
 /// <summary>
+/// Gets the size of a file in bytes.
+/// </summary>
+/// <param name="Instance">Opaque instance pointer for the caller.</param>
+/// <param name="FileObject">File object pointer for the file.</param>
+/// <param name="FileSize">The size of the file in bytes.</param>
+NTSTATUS HsGetFileSize(
+	_In_ PFLT_INSTANCE Instance,
+	_In_ PFILE_OBJECT FileObject,
+	_Out_ PLONGLONG FileSize
+	);
+
+/// <summary>
 /// Returns TRUE if the prefetcher performed the open request.
 /// https://msdn.microsoft.com/en-us/library/windows/hardware/ff551843.aspx
 /// </summary>
