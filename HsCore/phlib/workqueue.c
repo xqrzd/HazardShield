@@ -2,7 +2,7 @@
  * Process Hacker -
  *   thread pool
  *
- * Copyright (C) 2009-2010 wj32
+ * Copyright (C) 2009-2015 wj32
  *
  * This file is part of Process Hacker.
  *
@@ -23,6 +23,14 @@
 #define _PH_WORKQUEUE_PRIVATE
 #include <phbase.h>
 #include <phintrnl.h>
+
+HANDLE PhpGetSemaphoreWorkQueue(
+    _Inout_ PPH_WORK_QUEUE WorkQueue
+    );
+
+BOOLEAN PhpCreateWorkQueueThread(
+    _Inout_ PPH_WORK_QUEUE WorkQueue
+    );
 
 NTSTATUS PhpWorkQueueThreadStart(
     _In_ PVOID Parameter
@@ -47,6 +55,39 @@ VOID PhWorkQueueInitialization(
 #endif
 }
 
+FORCEINLINE PPH_WORK_QUEUE_ITEM PhpCreateWorkQueueItem(
+    _In_ PUSER_THREAD_START_ROUTINE Function,
+    _In_opt_ PVOID Context,
+    _In_opt_ PPH_WORK_QUEUE_ITEM_DELETE_FUNCTION DeleteFunction
+    )
+{
+    PPH_WORK_QUEUE_ITEM workQueueItem;
+
+    workQueueItem = PhAllocateFromFreeList(&PhWorkQueueItemFreeList);
+    workQueueItem->Function = Function;
+    workQueueItem->Context = Context;
+    workQueueItem->DeleteFunction = DeleteFunction;
+
+    return workQueueItem;
+}
+
+FORCEINLINE VOID PhpDestroyWorkQueueItem(
+    _In_ PPH_WORK_QUEUE_ITEM WorkQueueItem
+    )
+{
+    if (WorkQueueItem->DeleteFunction)
+        WorkQueueItem->DeleteFunction(WorkQueueItem->Function, WorkQueueItem->Context);
+
+    PhFreeToFreeList(&PhWorkQueueItemFreeList, WorkQueueItem);
+}
+
+FORCEINLINE VOID PhpExecuteWorkQueueItem(
+    _Inout_ PPH_WORK_QUEUE_ITEM WorkQueueItem
+    )
+{
+    WorkQueueItem->Function(WorkQueueItem->Context);
+}
+
 /**
  * Initializes a work queue.
  *
@@ -69,6 +110,7 @@ VOID PhInitializeWorkQueue(
 
     InitializeListHead(&WorkQueue->QueueListHead);
     PhInitializeQueuedLock(&WorkQueue->QueueLock);
+    PhInitializeQueuedLock(&WorkQueue->QueueEmptyCondition);
 
     WorkQueue->MinimumThreads = MinimumThreads;
     WorkQueue->MaximumThreads = MaximumThreads;
@@ -76,9 +118,9 @@ VOID PhInitializeWorkQueue(
 
     PhInitializeQueuedLock(&WorkQueue->StateLock);
 
-    NtCreateSemaphore(&WorkQueue->SemaphoreHandle, SEMAPHORE_ALL_ACCESS, NULL, 0, MAXLONG);
+    WorkQueue->SemaphoreHandle = NULL;
     WorkQueue->CurrentThreads = 0;
-    WorkQueue->BusyThreads = 0;
+    WorkQueue->BusyCount = 0;
 
 #ifdef DEBUG
     PhAcquireQueuedLockExclusive(&PhDbgWorkQueueListLock);
@@ -110,8 +152,13 @@ VOID PhDeleteWorkQueue(
 #endif
 
     // Wait for all worker threads to exit.
+
     WorkQueue->Terminating = TRUE;
-    NtReleaseSemaphore(WorkQueue->SemaphoreHandle, WorkQueue->CurrentThreads, NULL);
+    MemoryBarrier();
+
+    if (WorkQueue->SemaphoreHandle)
+        NtReleaseSemaphore(WorkQueue->SemaphoreHandle, WorkQueue->CurrentThreads, NULL);
+
     PhWaitForRundownProtection(&WorkQueue->RundownProtect);
 
     // Free all un-executed work items.
@@ -122,27 +169,56 @@ VOID PhDeleteWorkQueue(
     {
         workQueueItem = CONTAINING_RECORD(listEntry, PH_WORK_QUEUE_ITEM, ListEntry);
         listEntry = listEntry->Flink;
-        PhFreeToFreeList(&PhWorkQueueItemFreeList, workQueueItem);
+        PhpDestroyWorkQueueItem(workQueueItem);
     }
 
-    NtClose(WorkQueue->SemaphoreHandle);
+    if (WorkQueue->SemaphoreHandle)
+        NtClose(WorkQueue->SemaphoreHandle);
 }
 
-FORCEINLINE VOID PhpInitializeWorkQueueItem(
-    _Out_ PPH_WORK_QUEUE_ITEM WorkQueueItem,
-    _In_ PTHREAD_START_ROUTINE Function,
-    _In_opt_ PVOID Context
+/**
+ * Waits for all queued work items to be executed.
+ *
+ * \param WorkQueue A work queue object.
+ */
+VOID PhWaitForWorkQueue(
+    _Inout_ PPH_WORK_QUEUE WorkQueue
     )
 {
-    WorkQueueItem->Function = Function;
-    WorkQueueItem->Context = Context;
+    PhAcquireQueuedLockExclusive(&WorkQueue->QueueLock);
+
+    while (!IsListEmpty(&WorkQueue->QueueListHead))
+        PhWaitForCondition(&WorkQueue->QueueEmptyCondition, &WorkQueue->QueueLock, NULL);
+
+    PhReleaseQueuedLockExclusive(&WorkQueue->QueueLock);
 }
 
-FORCEINLINE VOID PhpExecuteWorkQueueItem(
-    _Inout_ PPH_WORK_QUEUE_ITEM WorkQueueItem
+HANDLE PhpGetSemaphoreWorkQueue(
+    _Inout_ PPH_WORK_QUEUE WorkQueue
     )
 {
-    WorkQueueItem->Function(WorkQueueItem->Context);
+    HANDLE semaphoreHandle;
+
+    semaphoreHandle = WorkQueue->SemaphoreHandle;
+
+    if (!semaphoreHandle)
+    {
+        NtCreateSemaphore(&semaphoreHandle, SEMAPHORE_ALL_ACCESS, NULL, 0, MAXLONG);
+        assert(semaphoreHandle);
+
+        if (_InterlockedCompareExchangePointer(
+            &WorkQueue->SemaphoreHandle,
+            semaphoreHandle,
+            NULL
+            ) != NULL)
+        {
+            // Someone else created the semaphore before we did.
+            NtClose(semaphoreHandle);
+            semaphoreHandle = WorkQueue->SemaphoreHandle;
+        }
+    }
+
+    return semaphoreHandle;
 }
 
 BOOLEAN PhpCreateWorkQueueThread(
@@ -182,6 +258,7 @@ NTSTATUS PhpWorkQueueThreadStart(
     while (TRUE)
     {
         NTSTATUS status;
+        HANDLE semaphoreHandle;
         LARGE_INTEGER timeout;
         PPH_WORK_QUEUE_ITEM workQueueItem = NULL;
 
@@ -194,10 +271,8 @@ NTSTATUS PhpWorkQueueThreadStart(
             PhAcquireQueuedLockExclusive(&workQueue->StateLock);
 
             // Check the minimum as well.
-            if (
-                workQueue->CurrentThreads > workQueue->MaximumThreads &&
-                workQueue->CurrentThreads > workQueue->MinimumThreads
-                )
+            if (workQueue->CurrentThreads > workQueue->MaximumThreads &&
+                workQueue->CurrentThreads > workQueue->MinimumThreads)
             {
                 workQueue->CurrentThreads--;
                 terminate = TRUE;
@@ -209,30 +284,35 @@ NTSTATUS PhpWorkQueueThreadStart(
                 break;
         }
 
-        // Wait for work.
-        status = NtWaitForSingleObject(
-            workQueue->SemaphoreHandle,
-            FALSE,
-            PhTimeoutFromMilliseconds(&timeout, workQueue->NoWorkTimeout)
-            );
+        semaphoreHandle = PhpGetSemaphoreWorkQueue(workQueue);
 
-        if (workQueue->Terminating)
+        if (!workQueue->Terminating)
         {
-            // The work queue is being deleted.
-            PhAcquireQueuedLockExclusive(&workQueue->StateLock);
-            workQueue->CurrentThreads--;
-            PhReleaseQueuedLockExclusive(&workQueue->StateLock);
-
-            break;
+            // Wait for work.
+            status = NtWaitForSingleObject(
+                semaphoreHandle,
+                FALSE,
+                PhTimeoutFromMilliseconds(&timeout, workQueue->NoWorkTimeout)
+                );
+        }
+        else
+        {
+            status = STATUS_UNSUCCESSFUL;
         }
 
-        if (status == STATUS_WAIT_0)
+        if (status == STATUS_WAIT_0 && !workQueue->Terminating)
         {
             PLIST_ENTRY listEntry;
 
             // Dequeue the work item.
+
             PhAcquireQueuedLockExclusive(&workQueue->QueueLock);
+
             listEntry = RemoveHeadList(&workQueue->QueueListHead);
+
+            if (IsListEmpty(&workQueue->QueueListHead))
+                PhPulseCondition(&workQueue->QueueEmptyCondition);
+
             PhReleaseQueuedLockExclusive(&workQueue->QueueLock);
 
             // Make sure we got work.
@@ -240,24 +320,22 @@ NTSTATUS PhpWorkQueueThreadStart(
             {
                 workQueueItem = CONTAINING_RECORD(listEntry, PH_WORK_QUEUE_ITEM, ListEntry);
 
-                _InterlockedIncrement(&workQueue->BusyThreads);
                 PhpExecuteWorkQueueItem(workQueueItem);
-                _InterlockedDecrement(&workQueue->BusyThreads);
+                _InterlockedDecrement(&workQueue->BusyCount);
 
-                PhFreeToFreeList(&PhWorkQueueItemFreeList, workQueueItem);
+                PhpDestroyWorkQueueItem(workQueueItem);
             }
         }
         else
         {
             BOOLEAN terminate = FALSE;
 
-            // No work arrived before the timeout passed (or some error occurred).
+            // No work arrived before the timeout passed, or we are terminating, or some error occurred.
             // Terminate the thread.
 
             PhAcquireQueuedLockExclusive(&workQueue->StateLock);
 
-            // Check the minimum.
-            if (workQueue->CurrentThreads > workQueue->MinimumThreads)
+            if (workQueue->Terminating || workQueue->CurrentThreads > workQueue->MinimumThreads)
             {
                 workQueue->CurrentThreads--;
                 terminate = TRUE;
@@ -284,38 +362,51 @@ NTSTATUS PhpWorkQueueThreadStart(
  */
 VOID PhQueueItemWorkQueue(
     _Inout_ PPH_WORK_QUEUE WorkQueue,
-    _In_ PTHREAD_START_ROUTINE Function,
+    _In_ PUSER_THREAD_START_ROUTINE Function,
     _In_opt_ PVOID Context
+    )
+{
+    PhQueueItemWorkQueueEx(WorkQueue, Function, Context, NULL);
+}
+
+/**
+ * Queues a work item to a work queue.
+ *
+ * \param WorkQueue A work queue object.
+ * \param Function A function to execute.
+ * \param Context A user-defined value to pass to the function.
+ * \param DeleteFunction A callback function that is executed when the work queue item is about to be freed.
+ */
+VOID PhQueueItemWorkQueueEx(
+    _Inout_ PPH_WORK_QUEUE WorkQueue,
+    _In_ PUSER_THREAD_START_ROUTINE Function,
+    _In_opt_ PVOID Context,
+    _In_opt_ PPH_WORK_QUEUE_ITEM_DELETE_FUNCTION DeleteFunction
     )
 {
     PPH_WORK_QUEUE_ITEM workQueueItem;
 
-    workQueueItem = PhAllocateFromFreeList(&PhWorkQueueItemFreeList);
-    PhpInitializeWorkQueueItem(workQueueItem, Function, Context);
+    workQueueItem = PhpCreateWorkQueueItem(Function, Context, DeleteFunction);
 
     // Enqueue the work item.
     PhAcquireQueuedLockExclusive(&WorkQueue->QueueLock);
     InsertTailList(&WorkQueue->QueueListHead, &workQueueItem->ListEntry);
+    _InterlockedIncrement(&WorkQueue->BusyCount);
     PhReleaseQueuedLockExclusive(&WorkQueue->QueueLock);
     // Signal the semaphore once to let a worker thread continue.
-    NtReleaseSemaphore(WorkQueue->SemaphoreHandle, 1, NULL);
+    NtReleaseSemaphore(PhpGetSemaphoreWorkQueue(WorkQueue), 1, NULL);
 
     PHLIB_INC_STATISTIC(WqWorkItemsQueued);
 
-    // Check if all worker threads are currently busy,
-    // and if we can create more threads.
-    if (
-        WorkQueue->BusyThreads == WorkQueue->CurrentThreads &&
-        WorkQueue->CurrentThreads < WorkQueue->MaximumThreads
-        )
+    // Check if all worker threads are currently busy, and if we can create more threads.
+    if (WorkQueue->BusyCount >= WorkQueue->CurrentThreads &&
+        WorkQueue->CurrentThreads < WorkQueue->MaximumThreads)
     {
         // Lock and re-check.
         PhAcquireQueuedLockExclusive(&WorkQueue->StateLock);
 
         if (WorkQueue->CurrentThreads < WorkQueue->MaximumThreads)
-        {
             PhpCreateWorkQueueThread(WorkQueue);
-        }
 
         PhReleaseQueuedLockExclusive(&WorkQueue->StateLock);
     }
@@ -328,7 +419,7 @@ VOID PhQueueItemWorkQueue(
  * \param Context A user-defined value to pass to the function.
  */
 VOID PhQueueItemGlobalWorkQueue(
-    _In_ PTHREAD_START_ROUTINE Function,
+    _In_ PUSER_THREAD_START_ROUTINE Function,
     _In_opt_ PVOID Context
     )
 {

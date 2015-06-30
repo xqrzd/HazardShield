@@ -34,7 +34,7 @@ VOID PhpEscapeStringForCsv(
     SIZE_T i;
     SIZE_T length;
     PWCHAR runStart;
-    ULONG runLength;
+    SIZE_T runLength;
 
     length = String->Length / sizeof(WCHAR);
     runStart = NULL;
@@ -88,13 +88,11 @@ VOID PhaCreateTextTable(
     PPH_STRING **table;
     ULONG i;
 
-    PhCreateAlloc((PVOID *)&table, sizeof(PPH_STRING *) * Rows);
-    PhaDereferenceObject(table);
+    table = PhAutoDereferenceObject(PhCreateAlloc(sizeof(PPH_STRING *) * Rows));
 
     for (i = 0; i < Rows; i++)
     {
-        PhCreateAlloc((PVOID *)&table[i], sizeof(PPH_STRING) * Columns);
-        PhaDereferenceObject(table[i]);
+        table[i] = PhAutoDereferenceObject(PhCreateAlloc(sizeof(PPH_STRING) * Columns));
         memset(table[i], 0, sizeof(PPH_STRING) * Columns);
     }
 
@@ -130,8 +128,7 @@ PPH_LIST PhaFormatTextTable(
     {
         // Create the tab count array.
 
-        PhCreateAlloc(&tabCount, sizeof(ULONG) * Columns);
-        PhaDereferenceObject(tabCount);
+        tabCount = PhAutoDereferenceObject(PhCreateAlloc(sizeof(ULONG) * Columns));
         memset(tabCount, 0, sizeof(ULONG) * Columns); // zero all values
 
         for (i = 0; i < Rows; i++)
@@ -177,7 +174,7 @@ PPH_LIST PhaFormatTextTable(
                         // Calculate the number of tabs needed.
                         k = (ULONG)(tabCount[j] + 1 - Table[i][j]->Length / sizeof(WCHAR) / TAB_SIZE);
 
-                        PhAppendStringBuilder(&stringBuilder, Table[i][j]);
+                        PhAppendStringBuilder(&stringBuilder, &Table[i][j]->sr);
                     }
                     else
                     {
@@ -199,7 +196,7 @@ PPH_LIST PhaFormatTextTable(
                         // Calculate the number of spaces needed.
                         k = (ULONG)((tabCount[j] + 1) * TAB_SIZE - Table[i][j]->Length / sizeof(WCHAR));
 
-                        PhAppendStringBuilder(&stringBuilder, Table[i][j]);
+                        PhAppendStringBuilder(&stringBuilder, &Table[i][j]->sr);
                     }
                     else
                     {
@@ -321,13 +318,13 @@ PPH_STRING PhGetTreeNewText(
             PhInitializeEmptyStringRef(&getCellText.Text);
             TreeNew_GetCellText(TreeNewHandle, &getCellText);
 
-            PhAppendStringBuilderEx(&stringBuilder, getCellText.Text.Buffer, getCellText.Text.Length);
+            PhAppendStringBuilder(&stringBuilder, &getCellText.Text);
             PhAppendStringBuilder2(&stringBuilder, L", ");
         }
 
         // Remove the trailing comma and space.
         if (stringBuilder.String->Length != 0)
-            PhRemoveStringBuilder(&stringBuilder, stringBuilder.String->Length / 2 - 2, 2);
+            PhRemoveEndStringBuilder(&stringBuilder, 2);
 
         PhAppendStringBuilder2(&stringBuilder, L"\r\n");
     }
@@ -389,7 +386,7 @@ PPH_LIST PhGetGenericTreeNewLines(
         {
             for (j = 0; j < columns; j++)
             {
-                table[i + 1][j] = PHA_DEREFERENCE(PhReferenceEmptyString());
+                table[i + 1][j] = PhAutoDereferenceObject(PhReferenceEmptyString());
             }
         }
     }
@@ -481,7 +478,7 @@ PPH_STRING PhaGetListViewItemText(
     }
 
     PhTrimToNullTerminatorString(buffer);
-    PhaDereferenceObject(buffer);
+    PhAutoDereferenceObject(buffer);
 
     return buffer;
 }
@@ -512,13 +509,13 @@ PPH_STRING PhGetListViewText(
 
         for (j = 0; j < columns; j++)
         {
-            PhAppendStringBuilder(&stringBuilder, PhaGetListViewItemText(ListViewHandle, i, j));
+            PhAppendStringBuilder(&stringBuilder, &PhaGetListViewItemText(ListViewHandle, i, j)->sr);
             PhAppendStringBuilder2(&stringBuilder, L", ");
         }
 
         // Remove the trailing comma and space.
         if (stringBuilder.String->Length != 0)
-            PhRemoveStringBuilder(&stringBuilder, stringBuilder.String->Length / 2 - 2, 2);
+            PhRemoveEndStringBuilder(&stringBuilder, 2);
 
         PhAppendStringBuilder2(&stringBuilder, L"\r\n");
     }

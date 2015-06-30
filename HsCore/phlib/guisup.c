@@ -2,7 +2,7 @@
  * Process Hacker -
  *   GUI support functions
  *
- * Copyright (C) 2009-2013 wj32
+ * Copyright (C) 2009-2015 wj32
  *
  * This file is part of Process Hacker.
  *
@@ -20,7 +20,6 @@
  * along with Process Hacker.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#define _PH_GUISUP_PRIVATE
 #include <phgui.h>
 #include <guisupp.h>
 #include <windowsx.h>
@@ -55,9 +54,9 @@ VOID PhGuiSupportInitialization(
     uxthemeHandle = LoadLibrary(L"uxtheme.dll");
 
     if (WINDOWS_HAS_UAC)
-        ChangeWindowMessageFilter_I = PhGetProcAddress(L"user32.dll", "ChangeWindowMessageFilter");
+        ChangeWindowMessageFilter_I = PhGetModuleProcAddress(L"user32.dll", "ChangeWindowMessageFilter");
     if (WINDOWS_HAS_IMMERSIVE)
-        IsImmersiveProcess_I = PhGetProcAddress(L"user32.dll", "IsImmersiveProcess");
+        IsImmersiveProcess_I = PhGetModuleProcAddress(L"user32.dll", "IsImmersiveProcess");
     RunFileDlg = (PVOID)GetProcAddress(shell32Handle, (PSTR)61);
     SetWindowTheme_I = (PVOID)GetProcAddress(uxthemeHandle, "SetWindowTheme");
     IsThemeActive_I = (PVOID)GetProcAddress(uxthemeHandle, "IsThemeActive");
@@ -71,7 +70,7 @@ VOID PhGuiSupportInitialization(
     SHCreateShellItem_I = (PVOID)GetProcAddress(shell32Handle, "SHCreateShellItem");
     SHOpenFolderAndSelectItems_I = (PVOID)GetProcAddress(shell32Handle, "SHOpenFolderAndSelectItems");
     SHParseDisplayName_I = (PVOID)GetProcAddress(shell32Handle, "SHParseDisplayName");
-    TaskDialogIndirect_I = PhGetProcAddress(L"comctl32.dll", "TaskDialogIndirect");
+    TaskDialogIndirect_I = PhGetModuleProcAddress(L"comctl32.dll", "TaskDialogIndirect");
 }
 
 VOID PhSetControlTheme(
@@ -84,26 +83,6 @@ VOID PhSetControlTheme(
         if (SetWindowTheme_I)
             SetWindowTheme_I(Handle, Theme, NULL);
     }
-}
-
-HWND PhCreateListViewControl(
-    _In_ HWND ParentHandle,
-    _In_ INT_PTR Id
-    )
-{
-    return CreateWindow(
-        WC_LISTVIEW,
-        NULL,
-        WS_CHILD | LVS_REPORT | LVS_SHOWSELALWAYS | WS_VISIBLE | WS_BORDER | WS_CLIPSIBLINGS,
-        0,
-        0,
-        3,
-        3,
-        ParentHandle,
-        (HMENU)Id,
-        PhLibImageBase,
-        NULL
-        );
 }
 
 INT PhAddListViewColumn(
@@ -239,23 +218,6 @@ VOID PhSetListViewItemImageIndex(
     ListView_SetItem(ListViewHandle, &item);
 }
 
-VOID PhSetListViewItemStateImage(
-    _In_ HWND ListViewHandle,
-    _In_ INT Index,
-    _In_ INT StateImage
-    )
-{
-    LVITEM item;
-
-    item.mask = LVIF_STATE;
-    item.iItem = Index;
-    item.iSubItem = 0;
-    item.state = INDEXTOSTATEIMAGEMASK(StateImage);
-    item.stateMask = LVIS_STATEIMAGEMASK;
-
-    ListView_SetItem(ListViewHandle, &item);
-}
-
 VOID PhSetListViewSubItem(
     _In_ HWND ListViewHandle,
     _In_ INT Index,
@@ -279,47 +241,41 @@ BOOLEAN PhLoadListViewColumnSettings(
     )
 {
 #define ORDER_LIMIT 50
-    SIZE_T i;
-    SIZE_T length;
+    PH_STRINGREF remainingPart;
     ULONG columnIndex;
-    ULONG_PTR indexOfComma;
-    ULONG_PTR indexOfPipe;
-    PH_STRINGREF stringRef;
-    ULONG64 integer;
-    LVCOLUMN lvColumn;
     ULONG orderArray[ORDER_LIMIT]; // HACK, but reasonable limit
-    ULONG order;
     ULONG maxOrder;
 
     if (Settings->Length == 0)
         return FALSE;
 
-    i = 0;
-    length = Settings->Length / 2;
+    remainingPart = Settings->sr;
     columnIndex = 0;
-    lvColumn.mask = LVCF_WIDTH;
-
     memset(orderArray, 0, sizeof(orderArray));
     maxOrder = 0;
 
-    while (i < length)
+    while (remainingPart.Length != 0)
     {
-        indexOfComma = PhFindCharInString(Settings, i, ',');
+        PH_STRINGREF columnPart;
+        PH_STRINGREF orderPart;
+        PH_STRINGREF widthPart;
+        ULONG64 integer;
+        ULONG order;
+        LVCOLUMN lvColumn;
 
-        if (indexOfComma == -1)
+        PhSplitStringRefAtChar(&remainingPart, '|', &columnPart, &remainingPart);
+
+        if (columnPart.Length == 0)
             return FALSE;
 
-        indexOfPipe = PhFindCharInString(Settings, i, '|');
+        PhSplitStringRefAtChar(&columnPart, ',', &orderPart, &widthPart);
 
-        if (indexOfPipe == -1) // last pair in string
-            indexOfPipe = Settings->Length / 2;
+        if (orderPart.Length == 0 || widthPart.Length == 0)
+            return FALSE;
 
         // Order
 
-        stringRef.Buffer = &Settings->Buffer[i];
-        stringRef.Length = (indexOfComma - i) * 2;
-
-        if (!PhStringToInteger64(&stringRef, 10, &integer))
+        if (!PhStringToInteger64(&orderPart, 10, &integer))
             return FALSE;
 
         order = (ULONG)integer;
@@ -334,17 +290,13 @@ BOOLEAN PhLoadListViewColumnSettings(
 
         // Width
 
-        stringRef.Buffer = &Settings->Buffer[indexOfComma + 1];
-        stringRef.Length = (indexOfPipe - indexOfComma - 1) * 2;
-
-        if (!PhStringToInteger64(&stringRef, 10, &integer))
+        if (!PhStringToInteger64(&widthPart, 10, &integer))
             return FALSE;
 
+        lvColumn.mask = LVCF_WIDTH;
         lvColumn.cx = (ULONG)integer;
-
         ListView_SetColumn(ListViewHandle, columnIndex, &lvColumn);
 
-        i = indexOfPipe + 1;
         columnIndex++;
     }
 
@@ -377,32 +329,9 @@ PPH_STRING PhSaveListViewColumnSettings(
     }
 
     if (stringBuilder.String->Length != 0)
-        PhRemoveStringBuilder(&stringBuilder, stringBuilder.String->Length / 2 - 1, 1);
+        PhRemoveEndStringBuilder(&stringBuilder, 1);
 
     return PhFinalStringBuilderString(&stringBuilder);
-}
-
-HWND PhCreateTabControl(
-    _In_ HWND ParentHandle
-    )
-{
-    HWND tabControlHandle;
-
-    tabControlHandle = CreateWindow(
-        WC_TABCONTROL,
-        NULL,
-        WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS,
-        0,
-        0,
-        3,
-        3,
-        ParentHandle,
-        NULL,
-        PhLibImageBase,
-        NULL
-        );
-
-    return tabControlHandle;
 }
 
 INT PhAddTabControlTab(
@@ -423,24 +352,75 @@ PPH_STRING PhGetWindowText(
     _In_ HWND hwnd
     )
 {
+    PPH_STRING text;
+
+    PhGetWindowTextEx(hwnd, 0, &text);
+    return text;
+}
+
+ULONG PhGetWindowTextEx(
+    _In_ HWND hwnd,
+    _In_ ULONG Flags,
+    _Out_opt_ PPH_STRING *Text
+    )
+{
     PPH_STRING string;
     ULONG length;
 
-    length = GetWindowTextLength(hwnd);
-
-    if (length == 0)
-        return PhReferenceEmptyString();
-
-    string = PhCreateStringEx(NULL, length * 2);
-
-    if (GetWindowText(hwnd, string->Buffer, (ULONG)string->Length / 2 + 1))
+    if (Flags & PH_GET_WINDOW_TEXT_INTERNAL)
     {
-        return string;
+        if (Flags & PH_GET_WINDOW_TEXT_LENGTH_ONLY)
+        {
+            WCHAR buffer[32];
+            length = InternalGetWindowText(hwnd, buffer, sizeof(buffer) / sizeof(WCHAR));
+        }
+        else
+        {
+            // TODO: Resize the buffer until we get the entire thing.
+            string = PhCreateStringEx(NULL, 256 * sizeof(WCHAR));
+            length = InternalGetWindowText(hwnd, string->Buffer, (ULONG)string->Length / sizeof(WCHAR) + 1);
+            string->Length = length * sizeof(WCHAR);
+
+            if (Text)
+                *Text = string;
+            else
+                PhDereferenceObject(string);
+        }
+
+        return length;
     }
     else
     {
-        PhDereferenceObject(string);
-        return NULL;
+        length = GetWindowTextLength(hwnd);
+
+        if (length == 0 || (Flags & PH_GET_WINDOW_TEXT_LENGTH_ONLY))
+        {
+            if (Text)
+                *Text = PhReferenceEmptyString();
+
+            return length;
+        }
+
+        string = PhCreateStringEx(NULL, length * sizeof(WCHAR));
+
+        if (GetWindowText(hwnd, string->Buffer, (ULONG)string->Length / sizeof(WCHAR) + 1))
+        {
+            if (Text)
+                *Text = string;
+            else
+                PhDereferenceObject(string);
+
+            return length;
+        }
+        else
+        {
+            if (Text)
+                *Text = PhReferenceEmptyString();
+
+            PhDereferenceObject(string);
+
+            return 0;
+        }
     }
 }
 
@@ -550,112 +530,6 @@ PPH_STRING PhGetListBoxString(
     {
         PhDereferenceObject(string);
         return NULL;
-    }
-}
-
-VOID PhShowContextMenu(
-    _In_ HWND hwnd,
-    _In_ HWND subHwnd,
-    _In_ HMENU menu,
-    _In_ POINT point
-    )
-{
-    TrackPopupMenu(
-        menu,
-        TPM_LEFTALIGN | TPM_TOPALIGN | TPM_RIGHTBUTTON,
-        point.x,
-        point.y,
-        0,
-        hwnd,
-        NULL
-        );
-}
-
-UINT PhShowContextMenu2(
-    _In_ HWND hwnd,
-    _In_ HWND subHwnd,
-    _In_ HMENU menu,
-    _In_ POINT point
-    )
-{
-    return (UINT)TrackPopupMenu(
-        menu,
-        TPM_LEFTALIGN | TPM_TOPALIGN | TPM_RIGHTBUTTON | TPM_RETURNCMD,
-        point.x,
-        point.y,
-        0,
-        hwnd,
-        NULL
-        );
-}
-
-VOID PhSetMenuItemBitmap(
-    _In_ HMENU Menu,
-    _In_ ULONG Item,
-    _In_ BOOLEAN ByPosition,
-    _In_ HBITMAP Bitmap
-    )
-{
-    MENUITEMINFO info = { sizeof(info) };
-
-    info.fMask = MIIM_BITMAP;
-    info.hbmpItem = Bitmap;
-
-    SetMenuItemInfo(Menu, Item, ByPosition, &info);
-}
-
-VOID PhSetRadioCheckMenuItem(
-    _In_ HMENU Menu,
-    _In_ ULONG Id,
-    _In_ BOOLEAN RadioCheck
-    )
-{
-    MENUITEMINFO info = { sizeof(info) };
-
-    info.fMask = MIIM_FTYPE;
-    GetMenuItemInfo(Menu, Id, FALSE, &info);
-
-    if (RadioCheck)
-        info.fType |= MFT_RADIOCHECK;
-    else
-        info.fType &= ~MFT_RADIOCHECK;
-
-    SetMenuItemInfo(Menu, Id, FALSE, &info);
-}
-
-VOID PhEnableMenuItem(
-    _In_ HMENU Menu,
-    _In_ ULONG Id,
-    _In_ BOOLEAN Enable
-    )
-{
-    EnableMenuItem(Menu, Id, Enable ? MF_ENABLED : (MF_DISABLED | MF_GRAYED));
-}
-
-VOID PhEnableAllMenuItems(
-    _In_ HMENU Menu,
-    _In_ BOOLEAN Enable
-    )
-{
-    ULONG i;
-    ULONG count = GetMenuItemCount(Menu);
-
-    if (count == -1)
-        return;
-
-    if (Enable)
-    {
-        for (i = 0; i < count; i++)
-        {
-            EnableMenuItem(Menu, i, MF_ENABLED | MF_BYPOSITION);
-        }
-    }
-    else
-    {
-        for (i = 0; i < count; i++)
-        {
-            EnableMenuItem(Menu, i, MF_DISABLED | MF_GRAYED | MF_BYPOSITION);
-        }
     }
 }
 
@@ -934,27 +808,72 @@ VOID PhSetClipboardString(
     _In_ PPH_STRINGREF String
     )
 {
-    PhSetClipboardStringEx(hWnd, String->Buffer, String->Length);
-}
-
-VOID PhSetClipboardStringEx(
-    _In_ HWND hWnd,
-    _In_ PWSTR Buffer,
-    _In_ SIZE_T Length
-    )
-{
     HANDLE data;
     PVOID memory;
 
-    data = GlobalAlloc(GMEM_MOVEABLE, Length + 2);
+    data = GlobalAlloc(GMEM_MOVEABLE, String->Length + sizeof(WCHAR));
     memory = GlobalLock(data);
 
-    memcpy(memory, Buffer, Length);
-    *(PWCHAR)((PCHAR)memory + Length) = 0;
+    memcpy(memory, String->Buffer, String->Length);
+    *(PWCHAR)((PCHAR)memory + String->Length) = 0;
 
     GlobalUnlock(memory);
 
     PhpSetClipboardData(hWnd, CF_UNICODETEXT, data);
+}
+
+HWND PhCreateDialogFromTemplate(
+    _In_ HWND Parent,
+    _In_ ULONG Style,
+    _In_ PVOID Instance,
+    _In_ PWSTR Template,
+    _In_ DLGPROC DialogProc,
+    _In_ PVOID Parameter
+    )
+{
+    HRSRC resourceInfo;
+    ULONG resourceSize;
+    HGLOBAL resourceHandle;
+    PDLGTEMPLATEEX dialog;
+    PDLGTEMPLATEEX dialogCopy;
+    HWND dialogHandle;
+
+    resourceInfo = FindResource(Instance, Template, MAKEINTRESOURCE(RT_DIALOG));
+
+    if (!resourceInfo)
+        return NULL;
+
+    resourceSize = SizeofResource(Instance, resourceInfo);
+
+    if (resourceSize == 0)
+        return NULL;
+
+    resourceHandle = LoadResource(Instance, resourceInfo);
+
+    if (!resourceHandle)
+        return NULL;
+
+    dialog = LockResource(resourceHandle);
+
+    if (!dialog)
+        return NULL;
+
+    dialogCopy = PhAllocateCopy(dialog, resourceSize);
+
+    if (dialogCopy->signature == 0xffff)
+    {
+        dialogCopy->style = Style;
+    }
+    else
+    {
+        ((DLGTEMPLATE *)dialogCopy)->style = Style;
+    }
+
+    dialogHandle = CreateDialogIndirectParam(Instance, (DLGTEMPLATE *)dialogCopy, Parent, DialogProc, (LPARAM)Parameter);
+
+    PhFree(dialogCopy);
+
+    return dialogHandle;
 }
 
 VOID PhInitializeLayoutManager(

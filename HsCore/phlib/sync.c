@@ -2,7 +2,7 @@
  * Process Hacker -
  *   misc. synchronization utilities
  *
- * Copyright (C) 2010 wj32
+ * Copyright (C) 2010-2015 wj32
  *
  * This file is part of Process Hacker.
  *
@@ -79,7 +79,7 @@ FORCEINLINE VOID PhpDereferenceEvent(
     value = _InterlockedExchangeAddPointer((PLONG_PTR)&Event->Value, -PH_EVENT_REFCOUNT_INC);
 
     // See if the reference count has become 0.
-    if ((value >> PH_EVENT_REFCOUNT_SHIFT) - 1 == 0)
+    if (((value >> PH_EVENT_REFCOUNT_SHIFT) & PH_EVENT_REFCOUNT_MASK) - 1 == 0)
     {
         if (EventHandle)
         {
@@ -306,7 +306,7 @@ BOOLEAN FASTCALL PhfWaitForBarrier(
                 newValue = value + PH_BARRIER_COUNT_INC + PH_BARRIER_WAKING;
 
             if ((newValue = (ULONG_PTR)_InterlockedCompareExchangePointer(
-                (PPVOID)&Barrier->Value,
+                (PVOID *)&Barrier->Value,
                 (PVOID)newValue,
                 (PVOID)value
                 )) == value)
@@ -387,7 +387,7 @@ BOOLEAN FASTCALL PhfAcquireRundownProtection(
             return FALSE;
 
         if ((ULONG_PTR)_InterlockedCompareExchangePointer(
-            (PPVOID)&Protection->Value,
+            (PVOID *)&Protection->Value,
             (PVOID)(value + PH_RUNDOWN_REF_INC),
             (PVOID)value
             ) == value)
@@ -427,7 +427,7 @@ VOID FASTCALL PhfReleaseRundownProtection(
             // Decrement the reference count normally.
 
             if ((ULONG_PTR)_InterlockedCompareExchangePointer(
-                (PPVOID)&Protection->Value,
+                (PVOID *)&Protection->Value,
                 (PVOID)(value - PH_RUNDOWN_REF_INC),
                 (PVOID)value
                 ) == value)
@@ -448,7 +448,7 @@ VOID FASTCALL PhfWaitForRundownProtection(
     // Fast path. If the reference count is 0 or
     // rundown has already been completed, return.
     value = (ULONG_PTR)_InterlockedCompareExchangePointer(
-        (PPVOID)&Protection->Value,
+        (PVOID *)&Protection->Value,
         (PVOID)PH_RUNDOWN_ACTIVE,
         (PVOID)0
         );
@@ -474,7 +474,7 @@ VOID FASTCALL PhfWaitForRundownProtection(
         waitBlock.Count = count;
 
         if ((ULONG_PTR)_InterlockedCompareExchangePointer(
-            (PPVOID)&Protection->Value,
+            (PVOID *)&Protection->Value,
             (PVOID)((ULONG_PTR)&waitBlock | PH_RUNDOWN_ACTIVE),
             (PVOID)value
             ) == value)
@@ -491,41 +491,24 @@ VOID FASTCALL PhfInitializeInitOnce(
     _Out_ PPH_INITONCE InitOnce
     )
 {
-    InitOnce->State = PH_INITONCE_UNINITIALIZED;
-    PhInitializeEvent(&InitOnce->WakeEvent);
+    PhInitializeEvent(&InitOnce->Event);
 }
 
 BOOLEAN FASTCALL PhfBeginInitOnce(
     _Inout_ PPH_INITONCE InitOnce
     )
 {
-    LONG oldState;
-
-    oldState = _InterlockedCompareExchange(
-        &InitOnce->State,
-        PH_INITONCE_INITIALIZING,
-        PH_INITONCE_UNINITIALIZED
-        );
-
-    switch (oldState)
-    {
-    case PH_INITONCE_UNINITIALIZED:
+    if (!_InterlockedBitTestAndSetPointer(&InitOnce->Event.Value, PH_INITONCE_INITIALIZING_SHIFT))
         return TRUE;
-    case PH_INITONCE_INITIALIZED:
-        return FALSE;
-    case PH_INITONCE_INITIALIZING:
-        PhWaitForEvent(&InitOnce->WakeEvent, NULL);
-        return FALSE;
-    default:
-        ASSUME_NO_DEFAULT;
-        return FALSE;
-    }
+
+    PhWaitForEvent(&InitOnce->Event, NULL);
+
+    return FALSE;
 }
 
 VOID FASTCALL PhfEndInitOnce(
     _Inout_ PPH_INITONCE InitOnce
     )
 {
-    InitOnce->State = PH_INITONCE_INITIALIZED;
-    PhSetEvent(&InitOnce->WakeEvent);
+    PhSetEvent(&InitOnce->Event);
 }

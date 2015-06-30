@@ -48,7 +48,8 @@ typedef struct _PH_TREENEW_NODE
             ULONG Expanded : 1;
             ULONG UseAutoForeColor : 1;
             ULONG UseTempBackColor : 1;
-            ULONG SpareFlags : 27;
+            ULONG Unselectable : 1;
+            ULONG SpareFlags : 26;
         };
     };
 
@@ -94,6 +95,7 @@ typedef struct _PH_TREENEW_NODE
 #define TN_STYLE_NO_COLUMN_SORT 0x10
 #define TN_STYLE_NO_COLUMN_REORDER 0x20
 #define TN_STYLE_THIN_ROWS 0x40
+#define TN_STYLE_NO_COLUMN_HEADER 0x80
 
 // Extended flags
 #define TN_FLAG_ITEM_DRAG_SELECT 0x1
@@ -150,6 +152,9 @@ typedef struct _PH_TREENEW_NODE
 #define TN_SELECT_DESELECT 0x1
 #define TN_SELECT_TOGGLE 0x2
 #define TN_SELECT_RESET 0x4
+
+// Auto-size flags
+#define TN_AUTOSIZE_REMAINING_SPACE 0x1
 
 typedef struct _PH_TREENEW_CELL_PARTS
 {
@@ -383,7 +388,8 @@ typedef struct _PH_TREENEW_SEARCH_EVENT
 #define TNM_GETVISIBLECOLUMNCOUNT (WM_USER + 41)
 #define TNM_AUTOSIZECOLUMN (WM_USER + 42)
 #define TNM_SETEMPTYTEXT (WM_USER + 43)
-#define TNM_LAST (WM_USER + 43)
+#define TNM_SETROWHEIGHT (WM_USER + 44)
+#define TNM_LAST (WM_USER + 44)
 
 #define TreeNew_SetCallback(hWnd, Callback, Context) \
     SendMessage((hWnd), TNM_SETCALLBACK, (WPARAM)(Context), (LPARAM)(Callback))
@@ -502,11 +508,14 @@ typedef struct _PH_TREENEW_SEARCH_EVENT
 #define TreeNew_GetVisibleColumnCount(hWnd) \
     ((ULONG)SendMessage((hWnd), TNM_GETVISIBLECOLUMNCOUNT, 0, 0))
 
-#define TreeNew_AutoSizeColumn(hWnd, Id) \
-    SendMessage((hWnd), TNM_AUTOSIZECOLUMN, (WPARAM)(Id), 0)
+#define TreeNew_AutoSizeColumn(hWnd, Id, Flags) \
+    SendMessage((hWnd), TNM_AUTOSIZECOLUMN, (WPARAM)(Id), (LPARAM)(Flags))
 
 #define TreeNew_SetEmptyText(hWnd, Text, Flags) \
     SendMessage((hWnd), TNM_SETEMPTYTEXT, (WPARAM)(Flags), (LPARAM)(Text))
+
+#define TreeNew_SetRowHeight(hWnd, RowHeight) \
+    SendMessage((hWnd), TNM_SETROWHEIGHT, (WPARAM)(RowHeight), 0)
 
 typedef struct _PH_TREENEW_VIEW_PARTS
 {
@@ -603,6 +612,39 @@ FORCEINLINE BOOLEAN PhAddTreeNewColumnEx(
     if (DisplayIndex == -2)
         column.Fixed = TRUE;
     if (SortDescending)
+        column.SortDescending = TRUE;
+
+    return !!TreeNew_AddColumn(hwnd, &column);
+}
+
+FORCEINLINE BOOLEAN PhAddTreeNewColumnEx2(
+    _In_ HWND hwnd,
+    _In_ ULONG Id,
+    _In_ BOOLEAN Visible,
+    _In_ PWSTR Text,
+    _In_ ULONG Width,
+    _In_ ULONG Alignment,
+    _In_ ULONG DisplayIndex,
+    _In_ ULONG TextFlags,
+    _In_ ULONG ExtraFlags
+    )
+{
+    PH_TREENEW_COLUMN column;
+
+    memset(&column, 0, sizeof(PH_TREENEW_COLUMN));
+    column.Id = Id;
+    column.Visible = Visible;
+    column.Text = Text;
+    column.Width = Width;
+    column.Alignment = Alignment;
+    column.DisplayIndex = DisplayIndex;
+    column.TextFlags = TextFlags;
+
+    if (DisplayIndex == -2)
+        column.Fixed = TRUE;
+    if (ExtraFlags & TN_COLUMN_FLAG_CUSTOMDRAW)
+        column.CustomDraw = TRUE;
+    if (ExtraFlags & TN_COLUMN_FLAG_SORTDESCENDING)
         column.SortDescending = TRUE;
 
     return !!TreeNew_AddColumn(hwnd, &column);

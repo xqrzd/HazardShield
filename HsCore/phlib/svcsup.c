@@ -131,7 +131,7 @@ PVOID PhEnumServices(
         }
     }
 
-    if (bufferSize <= 0x10000) initialBufferSize = bufferSize;
+    if (bufferSize <= 0x20000) initialBufferSize = bufferSize;
     *Count = servicesReturned;
 
     return buffer;
@@ -161,7 +161,7 @@ PVOID PhGetServiceConfig(
     )
 {
     PVOID buffer;
-    ULONG bufferSize = 0x100;
+    ULONG bufferSize = 0x200;
 
     buffer = PhAllocate(bufferSize);
 
@@ -412,7 +412,7 @@ PPH_STRING PhGetServiceNameFromTag(
 
     if (!I_QueryTagInformation)
     {
-        I_QueryTagInformation = PhGetProcAddress(L"advapi32.dll", "I_QueryTagInformation");
+        I_QueryTagInformation = PhGetModuleProcAddress(L"advapi32.dll", "I_QueryTagInformation");
 
         if (!I_QueryTagInformation)
             return NULL;

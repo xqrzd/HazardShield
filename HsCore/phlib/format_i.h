@@ -84,7 +84,7 @@
             {
                 SIZE_T count;
 
-                count = wcslen(format->u.StringZ);
+                count = PhCountStringZ(format->u.StringZ);
                 ENSURE_BUFFER(count * sizeof(WCHAR));
                 if (OK_BUFFER)
                     memcpy(buffer, format->u.StringZ, count * sizeof(WCHAR));
@@ -417,7 +417,7 @@ CommonInt64Format:
             \
             if (OK_BUFFER) \
             { \
-                PhZeroExtendToUtf16InPlace(decimalPoint, copyCount, buffer); \
+                PhZeroExtendToUtf16Buffer(decimalPoint, copyCount, buffer); \
                 ADVANCE_BUFFER(copyCount * sizeof(WCHAR)); \
             } \
         } \
@@ -464,7 +464,7 @@ CommonInt64Format:
             \
             if (OK_BUFFER) \
             { \
-                PhZeroExtendToUtf16InPlace((PSTR)temp, length, buffer); \
+                PhZeroExtendToUtf16Buffer((PSTR)temp, length, buffer); \
                 ADVANCE_BUFFER(length * sizeof(WCHAR)); \
             } \
         } \

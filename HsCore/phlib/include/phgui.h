@@ -116,7 +116,6 @@ typedef HRESULT (WINAPI *_TaskDialogIndirect)(
     _In_ BOOL *pfVerificationFlagChecked
     );
 
-#ifndef _PH_GUISUP_PRIVATE
 extern _ChangeWindowMessageFilter ChangeWindowMessageFilter_I;
 extern _IsImmersiveProcess IsImmersiveProcess_I;
 extern _RunFileDlg RunFileDlg;
@@ -129,7 +128,6 @@ extern _DrawThemeText DrawThemeText_I;
 extern _GetThemeInt GetThemeInt_I;
 extern _SHAutoComplete SHAutoComplete_I;
 extern _TaskDialogIndirect TaskDialogIndirect_I;
-#endif
 
 VOID PhGuiSupportInitialization(
     VOID
@@ -226,11 +224,6 @@ do { \
         return atomName.Buffer; \
 } while (0)
 
-HWND PhCreateListViewControl(
-    _In_ HWND ParentHandle,
-    _In_ INT_PTR Id
-    );
-
 FORCEINLINE VOID PhSetListViewStyle(
     _In_ HWND Handle,
     _In_ BOOLEAN AllowDragDrop,
@@ -314,13 +307,6 @@ VOID PhSetListViewItemImageIndex(
     );
 
 PHLIBAPI
-VOID PhSetListViewItemStateImage(
-    _In_ HWND ListViewHandle,
-    _In_ INT Index,
-    _In_ INT StateImage
-    );
-
-PHLIBAPI
 VOID PhSetListViewSubItem(
     _In_ HWND ListViewHandle,
     _In_ INT Index,
@@ -339,10 +325,6 @@ PPH_STRING PhSaveListViewColumnSettings(
     _In_ HWND ListViewHandle
     );
 
-HWND PhCreateTabControl(
-    _In_ HWND ParentHandle
-    );
-
 PHLIBAPI
 INT PhAddTabControlTab(
     _In_ HWND TabControlHandle,
@@ -350,12 +332,22 @@ INT PhAddTabControlTab(
     _In_ PWSTR Text
     );
 
-#define PHA_GET_DLGITEM_TEXT(hwndDlg, id) \
-    ((PPH_STRING)PHA_DEREFERENCE(PhGetWindowText(GetDlgItem(hwndDlg, id))))
+#define PhaGetDlgItemText(hwndDlg, id) \
+    ((PPH_STRING)PhAutoDereferenceObject(PhGetWindowText(GetDlgItem(hwndDlg, id))))
 
 PHLIBAPI
 PPH_STRING PhGetWindowText(
     _In_ HWND hwnd
+    );
+
+#define PH_GET_WINDOW_TEXT_INTERNAL 0x1
+#define PH_GET_WINDOW_TEXT_LENGTH_ONLY 0x2
+
+PHLIBAPI
+ULONG PhGetWindowTextEx(
+    _In_ HWND hwnd,
+    _In_ ULONG Flags,
+    _Out_opt_ PPH_STRING *Text
     );
 
 PHLIBAPI
@@ -382,50 +374,6 @@ PHLIBAPI
 PPH_STRING PhGetListBoxString(
     _In_ HWND hwnd,
     _In_ INT Index
-    );
-
-PHLIBAPI
-VOID PhShowContextMenu(
-    _In_ HWND hwnd,
-    _In_ HWND subHwnd,
-    _In_ HMENU menu,
-    _In_ POINT point
-    );
-
-PHLIBAPI
-UINT PhShowContextMenu2(
-    _In_ HWND hwnd,
-    _In_ HWND subHwnd,
-    _In_ HMENU menu,
-    _In_ POINT point
-    );
-
-PHLIBAPI
-VOID PhSetMenuItemBitmap(
-    _In_ HMENU Menu,
-    _In_ ULONG Item,
-    _In_ BOOLEAN ByPosition,
-    _In_ HBITMAP Bitmap
-    );
-
-PHLIBAPI
-VOID PhSetRadioCheckMenuItem(
-    _In_ HMENU Menu,
-    _In_ ULONG Id,
-    _In_ BOOLEAN RadioCheck
-    );
-
-PHLIBAPI
-VOID PhEnableMenuItem(
-    _In_ HMENU Menu,
-    _In_ ULONG Id,
-    _In_ BOOLEAN Enable
-    );
-
-PHLIBAPI
-VOID PhEnableAllMenuItems(
-    _In_ HMENU Menu,
-    _In_ BOOLEAN Enable
     );
 
 PHLIBAPI
@@ -474,11 +422,27 @@ VOID PhSetClipboardString(
     _In_ PPH_STRINGREF String
     );
 
-PHLIBAPI
-VOID PhSetClipboardStringEx(
-    _In_ HWND hWnd,
-    _In_ PWSTR Buffer,
-    _In_ SIZE_T Length
+typedef struct _DLGTEMPLATEEX
+{
+    WORD dlgVer;
+    WORD signature;
+    DWORD helpID;
+    DWORD exStyle;
+    DWORD style;
+    WORD cDlgItems;
+    short x;
+    short y;
+    short cx;
+    short cy;
+} DLGTEMPLATEEX, *PDLGTEMPLATEEX;
+
+HWND PhCreateDialogFromTemplate(
+    _In_ HWND Parent,
+    _In_ ULONG Style,
+    _In_ PVOID Instance,
+    _In_ PWSTR Template,
+    _In_ DLGPROC DialogProc,
+    _In_ PVOID Parameter
     );
 
 #define PH_ANCHOR_LEFT 0x1
@@ -724,7 +688,9 @@ PhSetHeaderSortIcon(
  * \return A value ranging from 0 to 255,
  * indicating the brightness of the color.
  */
-FORCEINLINE ULONG PhGetColorBrightness(
+FORCEINLINE
+ULONG
+PhGetColorBrightness(
     _In_ COLORREF Color
     )
 {
@@ -745,7 +711,9 @@ FORCEINLINE ULONG PhGetColorBrightness(
     return (min + max) / 2;
 }
 
-FORCEINLINE COLORREF PhHalveColorBrightness(
+FORCEINLINE
+COLORREF
+PhHalveColorBrightness(
     _In_ COLORREF Color
     )
 {
@@ -762,7 +730,9 @@ FORCEINLINE COLORREF PhHalveColorBrightness(
     return Color;
 }
 
-FORCEINLINE COLORREF PhMakeColorBrighter(
+FORCEINLINE
+COLORREF
+PhMakeColorBrighter(
     _In_ COLORREF Color,
     _In_ UCHAR Increment
     )
@@ -792,175 +762,6 @@ FORCEINLINE COLORREF PhMakeColorBrighter(
 
     return RGB(r, g, b);
 }
-
-// secedit
-
-typedef NTSTATUS (NTAPI *PPH_GET_OBJECT_SECURITY)(
-    _Out_ PSECURITY_DESCRIPTOR *SecurityDescriptor,
-    _In_ SECURITY_INFORMATION SecurityInformation,
-    _In_opt_ PVOID Context
-    );
-
-typedef NTSTATUS (NTAPI *PPH_SET_OBJECT_SECURITY)(
-    _In_ PSECURITY_DESCRIPTOR SecurityDescriptor,
-    _In_ SECURITY_INFORMATION SecurityInformation,
-    _In_opt_ PVOID Context
-    );
-
-typedef struct _PH_ACCESS_ENTRY
-{
-    PWSTR Name;
-    ACCESS_MASK Access;
-    BOOLEAN General;
-    BOOLEAN Specific;
-    PWSTR ShortName;
-} PH_ACCESS_ENTRY, *PPH_ACCESS_ENTRY;
-
-PHLIBAPI
-HPROPSHEETPAGE
-NTAPI
-PhCreateSecurityPage(
-    _In_ PWSTR ObjectName,
-    _In_ PPH_GET_OBJECT_SECURITY GetObjectSecurity,
-    _In_ PPH_SET_OBJECT_SECURITY SetObjectSecurity,
-    _In_opt_ PVOID Context,
-    _In_ PPH_ACCESS_ENTRY AccessEntries,
-    _In_ ULONG NumberOfAccessEntries
-    );
-
-PHLIBAPI
-VOID
-NTAPI
-PhEditSecurity(
-    _In_ HWND hWnd,
-    _In_ PWSTR ObjectName,
-    _In_ PPH_GET_OBJECT_SECURITY GetObjectSecurity,
-    _In_ PPH_SET_OBJECT_SECURITY SetObjectSecurity,
-    _In_opt_ PVOID Context,
-    _In_ PPH_ACCESS_ENTRY AccessEntries,
-    _In_ ULONG NumberOfAccessEntries
-    );
-
-typedef NTSTATUS (NTAPI *PPH_OPEN_OBJECT)(
-    _Out_ PHANDLE Handle,
-    _In_ ACCESS_MASK DesiredAccess,
-    _In_opt_ PVOID Context
-    );
-
-typedef struct _PH_STD_OBJECT_SECURITY
-{
-    PPH_OPEN_OBJECT OpenObject;
-    PWSTR ObjectType;
-    PVOID Context;
-} PH_STD_OBJECT_SECURITY, *PPH_STD_OBJECT_SECURITY;
-
-FORCEINLINE ACCESS_MASK PhGetAccessForGetSecurity(
-    _In_ SECURITY_INFORMATION SecurityInformation
-    )
-{
-    ACCESS_MASK access = 0;
-
-    if (
-        (SecurityInformation & OWNER_SECURITY_INFORMATION) ||
-        (SecurityInformation & GROUP_SECURITY_INFORMATION) ||
-        (SecurityInformation & DACL_SECURITY_INFORMATION)
-        )
-    {
-        access |= READ_CONTROL;
-    }
-
-    if (SecurityInformation & SACL_SECURITY_INFORMATION)
-    {
-        access |= ACCESS_SYSTEM_SECURITY;
-    }
-
-    return access;
-}
-
-FORCEINLINE ACCESS_MASK PhGetAccessForSetSecurity(
-    _In_ SECURITY_INFORMATION SecurityInformation
-    )
-{
-    ACCESS_MASK access = 0;
-
-    if (
-        (SecurityInformation & OWNER_SECURITY_INFORMATION) ||
-        (SecurityInformation & GROUP_SECURITY_INFORMATION)
-        )
-    {
-        access |= WRITE_OWNER;
-    }
-
-    if (SecurityInformation & DACL_SECURITY_INFORMATION)
-    {
-        access |= WRITE_DAC;
-    }
-
-    if (SecurityInformation & SACL_SECURITY_INFORMATION)
-    {
-        access |= ACCESS_SYSTEM_SECURITY;
-    }
-
-    return access;
-}
-
-PHLIBAPI
-_Callback_ NTSTATUS
-NTAPI
-PhStdGetObjectSecurity(
-    _Out_ PSECURITY_DESCRIPTOR *SecurityDescriptor,
-    _In_ SECURITY_INFORMATION SecurityInformation,
-    _In_opt_ PVOID Context
-    );
-
-PHLIBAPI
-_Callback_ NTSTATUS
-NTAPI
-PhStdSetObjectSecurity(
-    _In_ PSECURITY_DESCRIPTOR SecurityDescriptor,
-    _In_ SECURITY_INFORMATION SecurityInformation,
-    _In_opt_ PVOID Context
-    );
-
-PHLIBAPI
-NTSTATUS
-NTAPI
-PhGetSeObjectSecurity(
-    _In_ HANDLE Handle,
-    _In_ ULONG ObjectType,
-    _In_ SECURITY_INFORMATION SecurityInformation,
-    _Out_ PSECURITY_DESCRIPTOR *SecurityDescriptor
-    );
-
-PHLIBAPI
-NTSTATUS
-NTAPI
-PhSetSeObjectSecurity(
-    _In_ HANDLE Handle,
-    _In_ ULONG ObjectType,
-    _In_ SECURITY_INFORMATION SecurityInformation,
-    _In_ PSECURITY_DESCRIPTOR SecurityDescriptor
-    );
-
-// secdata
-
-PHLIBAPI
-BOOLEAN
-NTAPI
-PhGetAccessEntries(
-    _In_ PWSTR Type,
-    _Out_ PPH_ACCESS_ENTRY *AccessEntries,
-    _Out_ PULONG NumberOfAccessEntries
-    );
-
-PHLIBAPI
-PPH_STRING
-NTAPI
-PhGetAccessString(
-    _In_ ACCESS_MASK Access,
-    _In_ PPH_ACCESS_ENTRY AccessEntries,
-    _In_ ULONG NumberOfAccessEntries
-    );
 
 #ifdef __cplusplus
 }

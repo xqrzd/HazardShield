@@ -22,6 +22,7 @@
 
 #include <ph.h>
 #include <phintrnl.h>
+#include <symprv.h>
 
 VOID PhInitializeSecurity(
     _In_ ULONG Flags
@@ -94,20 +95,10 @@ NTSTATUS PhInitializePhLibEx(
     PhLibImageBase = NtCurrentPeb()->ImageBaseAddress;
 
     PhInitializeWindowsVersion();
-
-    if (Flags & PHLIB_INIT_MODULE_NTIMPORTS)
-    {
-        if (!PhInitializeImports())
-            return STATUS_UNSUCCESSFUL;
-    }
-
     PhInitializeSystemInformation();
 
     if (!PhQueuedLockInitialization())
         return STATUS_UNSUCCESSFUL;
-
-    if (Flags & PHLIB_INIT_MODULE_FAST_LOCK)
-        PhFastLockInitialization();
 
     if (!NT_SUCCESS(PhInitializeRef()))
         return STATUS_UNSUCCESSFUL;
@@ -121,6 +112,25 @@ NTSTATUS PhInitializePhLibEx(
 
     return STATUS_SUCCESS;
 }
+
+#ifndef _WIN64
+BOOLEAN PhIsExecutingInWow64(
+    VOID
+    )
+{
+    static BOOLEAN valid = FALSE;
+    static BOOLEAN isWow64;
+
+    if (!valid)
+    {
+        PhGetProcessIsWow64(NtCurrentProcess(), &isWow64);
+        MemoryBarrier();
+        valid = TRUE;
+    }
+
+    return isWow64;
+}
+#endif
 
 static VOID PhInitializeSecurity(
     _In_ ULONG Flags
@@ -165,11 +175,6 @@ static BOOLEAN PhInitializeSystem(
     {
         if (!PhSymbolProviderInitialization())
             return FALSE;
-    }
-
-    if (Flags & PHLIB_INIT_MODULE_HANDLE_INFO)
-    {
-        PhHandleInfoInitialization();
     }
 
     return TRUE;
@@ -252,7 +257,7 @@ static VOID PhInitializeWindowsVersion(
     /* Windows 8.1 */
     else if (majorVersion == 6 && minorVersion == 3)
     {
-        WindowsVersion = WINDOWS_81;
+        WindowsVersion = WINDOWS_8_1;
     }
     /* Windows 10 */
     else if (majorVersion == 10 && minorVersion == 0)

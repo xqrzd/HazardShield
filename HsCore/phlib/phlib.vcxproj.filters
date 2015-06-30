@@ -17,9 +17,6 @@
     <ClCompile Include="basesupa.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="basesupx.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="circbuf.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -92,9 +89,6 @@
     <ClCompile Include="native.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="ntimport.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="provider.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -143,11 +137,11 @@
     <ClCompile Include="kphdata.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="apiimport.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="include\phsync.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
     <ClInclude Include="include\circbuf.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -158,9 +152,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\colorbox.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="pcre\config.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\dltmgr.h">
@@ -212,9 +203,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\ntgdi.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="include\ntimport.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\ntioapi.h">
@@ -322,9 +310,6 @@
     <ClInclude Include="include\templ.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="pcre\ucp.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="include\verifyp.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -368,6 +353,15 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\verify.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\secedit.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\symprvp.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\apiimport.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -128,7 +128,7 @@ BOOLEAN PhLookupPrivilegeName(
     if (!NT_SUCCESS(status))
         return FALSE;
 
-    *PrivilegeName = PhCreateStringEx(name->Buffer, name->Length);
+    *PrivilegeName = PhCreateStringFromUnicodeString(name);
     LsaFreeMemory(name);
 
     return TRUE;
@@ -165,7 +165,7 @@ BOOLEAN PhLookupPrivilegeDisplayName(
     if (!NT_SUCCESS(status))
         return FALSE;
 
-    *PrivilegeDisplayName = PhCreateStringEx(displayName->Buffer, displayName->Length);
+    *PrivilegeDisplayName = PhCreateStringFromUnicodeString(displayName);
     LsaFreeMemory(displayName);
 
     return TRUE;
@@ -238,7 +238,7 @@ NTSTATUS PhLookupSid(
         {
             if (Name)
             {
-                *Name = PhCreateStringEx(names[0].Name.Buffer, names[0].Name.Length);
+                *Name = PhCreateStringFromUnicodeString(&names[0].Name);
             }
 
             if (DomainName)
@@ -248,7 +248,7 @@ NTSTATUS PhLookupSid(
                     PLSA_TRUST_INFORMATION trustInfo;
 
                     trustInfo = &referencedDomains->Domains[names[0].DomainIndex];
-                    *DomainName = PhCreateStringEx(trustInfo->Name.Buffer, trustInfo->Name.Length);
+                    *DomainName = PhCreateStringFromUnicodeString(&trustInfo->Name);
                 }
                 else
                 {
@@ -340,7 +340,7 @@ NTSTATUS PhLookupName(
                     PLSA_TRUST_INFORMATION trustInfo;
 
                     trustInfo = &referencedDomains->Domains[sids[0].DomainIndex];
-                    *DomainName = PhCreateStringEx(trustInfo->Name.Buffer, trustInfo->Name.Length);
+                    *DomainName = PhCreateStringFromUnicodeString(&trustInfo->Name);
                 }
                 else
                 {
@@ -437,7 +437,7 @@ PPH_STRING PhGetSidFullName(
             }
             else
             {
-                fullName = PhCreateStringEx(names[0].Name.Buffer, names[0].Name.Length);
+                fullName = PhCreateStringFromUnicodeString(&names[0].Name);
             }
 
             if (NameUse)
@@ -490,6 +490,9 @@ PPH_STRING PhSidToStringSid(
         FALSE
         )))
     {
+        string->Length = us.Length;
+        string->Buffer[us.Length / sizeof(WCHAR)] = 0;
+
         return string;
     }
     else

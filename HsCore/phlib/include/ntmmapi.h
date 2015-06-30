@@ -55,7 +55,8 @@ typedef struct _MEMORY_WORKING_SET_EX_BLOCK
             ULONG_PTR Locked : 1;
             ULONG_PTR LargePage : 1;
             ULONG_PTR Priority : 3;
-            ULONG_PTR Reserved : 4;
+            ULONG_PTR Reserved : 3;
+            ULONG_PTR SharedOriginal : 1;
             ULONG_PTR Bad : 1;
 #ifdef _WIN64
             ULONG_PTR ReservedUlong : 32;
@@ -69,7 +70,10 @@ typedef struct _MEMORY_WORKING_SET_EX_BLOCK
             ULONG_PTR Reserved1 : 5;
             ULONG_PTR PageTable : 1;
             ULONG_PTR Location : 2;
-            ULONG_PTR Reserved2 : 7;
+            ULONG_PTR Priority : 3;
+            ULONG_PTR ModifiedList : 1;
+            ULONG_PTR Reserved2 : 2;
+            ULONG_PTR SharedOriginal : 1;
             ULONG_PTR Bad : 1;
 #ifdef _WIN64
             ULONG_PTR ReservedUlong : 32;
@@ -85,7 +89,7 @@ typedef struct _MEMORY_WORKING_SET_EX_INFORMATION
     union
     {
         MEMORY_WORKING_SET_EX_BLOCK VirtualAttributes;
-        ULONG Long;
+        ULONG_PTR Long;
     } u1;
 } MEMORY_WORKING_SET_EX_INFORMATION, *PMEMORY_WORKING_SET_EX_INFORMATION;
 
@@ -243,7 +247,7 @@ NTSTATUS
 NTAPI
 NtAllocateVirtualMemory(
     _In_ HANDLE ProcessHandle,
-    _Inout_ PVOID *BaseAddress,
+    _Inout_ _At_(*BaseAddress, _Readable_bytes_(*RegionSize) _Writable_bytes_(*RegionSize) _Post_readable_byte_size_(*RegionSize)) PVOID *BaseAddress,
     _In_ ULONG_PTR ZeroBits,
     _Inout_ PSIZE_T RegionSize,
     _In_ ULONG AllocationType,
@@ -305,6 +309,39 @@ NtQueryVirtualMemory(
     _Out_opt_ PSIZE_T ReturnLength
     );
 
+// begin_private
+
+typedef enum _VIRTUAL_MEMORY_INFORMATION_CLASS
+{
+    VmPrefetchInformation,
+    VmPagePriorityInformation,
+    VmCfgCallTargetInformation
+} VIRTUAL_MEMORY_INFORMATION_CLASS;
+
+typedef struct _MEMORY_RANGE_ENTRY
+{
+    PVOID VirtualAddress;
+    SIZE_T NumberOfBytes;
+} MEMORY_RANGE_ENTRY, *PMEMORY_RANGE_ENTRY;
+
+// end_private
+
+#if (PHNT_VERSION >= PHNT_THRESHOLD)
+
+NTSYSCALLAPI
+NTSTATUS
+NTAPI
+NtSetInformationVirtualMemory(
+    _In_ HANDLE ProcessHandle,
+    _In_ VIRTUAL_MEMORY_INFORMATION_CLASS VmInformationClass,
+    _In_ ULONG_PTR NumberOfEntries,
+    _In_reads_ (NumberOfEntries) PMEMORY_RANGE_ENTRY VirtualAddresses,
+    _In_reads_bytes_ (VmInformationLength) PVOID VmInformation,
+    _In_ ULONG VmInformationLength
+    );
+
+#endif
+
 NTSYSCALLAPI
 NTSTATUS
 NTAPI
@@ -355,7 +392,7 @@ NTAPI
 NtMapViewOfSection(
     _In_ HANDLE SectionHandle,
     _In_ HANDLE ProcessHandle,
-    _Inout_ PVOID *BaseAddress,
+    _Inout_ _At_(*BaseAddress, _Readable_bytes_(*ViewSize) _Writable_bytes_(*ViewSize) _Post_readable_byte_size_(*ViewSize)) PVOID *BaseAddress,
     _In_ ULONG_PTR ZeroBits,
     _In_ SIZE_T CommitSize,
     _Inout_opt_ PLARGE_INTEGER SectionOffset,
@@ -370,8 +407,19 @@ NTSTATUS
 NTAPI
 NtUnmapViewOfSection(
     _In_ HANDLE ProcessHandle,
-    _In_ PVOID BaseAddress
+    _In_opt_ PVOID BaseAddress
     );
+
+#if (PHNT_VERSION >= PHNT_WIN8)
+NTSYSCALLAPI
+NTSTATUS
+NTAPI
+NtUnmapViewOfSectionEx(
+    _In_ HANDLE ProcessHandle,
+    _In_opt_ PVOID BaseAddress,
+    _In_ ULONG Flags
+    );
+#endif
 
 NTSYSCALLAPI
 NTSTATUS
@@ -399,6 +447,49 @@ NtAreMappedFilesTheSame(
     _In_ PVOID File1MappedAsAnImage,
     _In_ PVOID File2MappedAsFile
     );
+
+// Partitions
+
+// private
+typedef enum _MEMORY_PARTITION_INFORMATION_CLASS
+{
+    SystemMemoryPartitionInformation,
+    SystemMemoryPartitionMoveMemory,
+    SystemMemoryPartitionAddPagefile,
+    SystemMemoryPartitionCombineMemory
+} MEMORY_PARTITION_INFORMATION_CLASS;
+
+#if (PHNT_VERSION >= PHNT_THRESHOLD)
+
+NTSYSCALLAPI
+NTSTATUS
+NTAPI
+NtCreatePartition(
+    _Out_ PHANDLE PartitionHandle,
+    _In_ ACCESS_MASK DesiredAccess,
+    _In_opt_ POBJECT_ATTRIBUTES ObjectAttributes,
+    _In_ ULONG PreferredNode
+    );
+
+NTSYSCALLAPI
+NTSTATUS
+NTAPI
+NtOpenPartition(
+    _Out_ PHANDLE PartitionHandle,
+    _In_ ACCESS_MASK DesiredAccess,
+    _In_ POBJECT_ATTRIBUTES ObjectAttributes
+    );
+
+NTSYSCALLAPI
+NTSTATUS
+NTAPI
+NtManagePartition(
+    _In_ MEMORY_PARTITION_INFORMATION_CLASS PartitionInformationClass,
+    _In_ PVOID PartitionInformation,
+    _In_ ULONG PartitionInformationLength
+    );
+
+#endif
 
 // User physical pages
 
@@ -441,7 +532,6 @@ NtFreeUserPhysicalPages(
 // Sessions
 
 #if (PHNT_VERSION >= PHNT_VISTA)
-// private
 NTSYSCALLAPI
 NTSTATUS
 NTAPI
@@ -451,8 +541,6 @@ NtOpenSession(
     _In_ POBJECT_ATTRIBUTES ObjectAttributes
     );
 #endif
-
-// missing:NtNotifyChangeSession
 
 // Misc.
 

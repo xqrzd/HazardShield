@@ -18,9 +18,26 @@ typedef enum _KTHREAD_STATE
     Waiting,
     Transition,
     DeferredReady,
-    GateWait,
+    GateWaitObsolete,
+    WaitingForProcessInSwap,
     MaximumThreadState
 } KTHREAD_STATE, *PKTHREAD_STATE;
+
+// private
+typedef enum _KHETERO_CPU_POLICY
+{
+    KHeteroCpuPolicyAll,
+    KHeteroCpuPolicyLarge,
+    KHeteroCpuPolicyLargeOrIdle,
+    KHeteroCpuPolicySmall,
+    KHeteroCpuPolicySmallOrIdle,
+    KHeteroCpuPolicyDynamic,
+    KHeteroCpuPolicyStaticMax,
+    KHeteroCpuPolicyBiasedSmall,
+    KHeteroCpuPolicyBiasedLarge,
+    KHeteroCpuPolicyDefault,
+    KHeteroCpuPolicyMax
+} KHETERO_CPU_POLICY, *PKHETERO_CPU_POLICY;
 
 #if (PHNT_MODE != PHNT_MODE_KERNEL)
 
@@ -110,6 +127,15 @@ NtCallbackReturn(
     _In_ NTSTATUS Status
     );
 
+#if (PHNT_VERSION >= PHNT_VISTA)
+NTSYSCALLAPI
+VOID
+NTAPI
+NtFlushProcessWriteBuffers(
+    VOID
+    );
+#endif
+
 NTSYSCALLAPI
 NTSTATUS
 NTAPI
@@ -133,16 +159,6 @@ NTAPI
 NtYieldExecution(
     VOID
     );
-
-#if (PHNT_VERSION >= PHNT_VISTA)
-// winnt:FlushProcessWriteBuffers
-NTSYSCALLAPI
-VOID
-NTAPI
-NtFlushProcessWriteBuffers(
-    VOID
-    );
-#endif
 
 #endif
 

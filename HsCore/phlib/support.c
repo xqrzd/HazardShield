@@ -289,30 +289,28 @@ PPH_STRING PhGetNtMessage(
     else
         message = PhGetWin32Message(WIN32_FROM_NTSTATUS(Status));
 
-    if (!message)
-        return NULL;
-    if (message->Length == 0)
+    if (PhIsNullOrEmptyString(message))
         return message;
+
+    PhTrimToNullTerminatorString(message);
+
+    // Remove any trailing newline.
+    if (message->Length >= 2 * sizeof(WCHAR) &&
+        message->Buffer[message->Length / sizeof(WCHAR) - 2] == '\r' &&
+        message->Buffer[message->Length / sizeof(WCHAR) - 1] == '\n')
+    {
+        PhMoveReference(&message, PhCreateStringEx(message->Buffer, message->Length - 2 * sizeof(WCHAR)));
+    }
 
     // Fix those messages which are formatted like:
     // {Asdf}\r\nAsdf asdf asdf...
     if (message->Buffer[0] == '{')
     {
-        ULONG_PTR indexOfNewLine = PhFindCharInString(message, 0, '\n');
+        PH_STRINGREF titlePart;
+        PH_STRINGREF remainingPart;
 
-        if (indexOfNewLine != -1)
-        {
-            PPH_STRING newMessage;
-
-            newMessage = PhSubstring(
-                message,
-                indexOfNewLine + 1,
-                message->Length / 2 - indexOfNewLine - 1
-                );
-            PhDereferenceObject(message);
-
-            message = newMessage;
-        }
+        if (PhSplitStringRefAtChar(&message->sr, '\n', &titlePart, &remainingPart))
+            PhMoveReference(&message, PhCreateString2(&remainingPart));
     }
 
     return message;
@@ -327,7 +325,22 @@ PPH_STRING PhGetWin32Message(
     _In_ ULONG Result
     )
 {
-    return PhGetMessage(GetModuleHandle(L"kernel32.dll"), 0xb, GetUserDefaultLangID(), Result);
+    PPH_STRING message;
+    
+    message = PhGetMessage(GetModuleHandle(L"kernel32.dll"), 0xb, GetUserDefaultLangID(), Result);
+
+    if (message)
+        PhTrimToNullTerminatorString(message);
+
+    // Remove any trailing newline.
+    if (message && message->Length >= 2 * sizeof(WCHAR) &&
+        message->Buffer[message->Length / sizeof(WCHAR) - 2] == '\r' &&
+        message->Buffer[message->Length / sizeof(WCHAR) - 1] == '\n')
+    {
+        PhMoveReference(&message, PhCreateStringEx(message->Buffer, message->Length - 2 * sizeof(WCHAR)));
+    }
+
+    return message;
 }
 
 /**
@@ -539,7 +552,7 @@ BOOLEAN PhShowConfirmMessage(
         config.hwndParent = hWnd;
         config.hInstance = PhLibImageBase;
         config.dwFlags = TDF_ALLOW_DIALOG_CANCELLATION;
-        config.pszWindowTitle = L"Process Hacker";
+        config.pszWindowTitle = PhApplicationName;
         config.pszMainIcon = Warning ? TD_WARNING_ICON : NULL;
         config.pszMainInstruction = PhaConcatStrings(3, L"Do you want to ", action->Buffer, L"?")->Buffer;
 
@@ -811,8 +824,7 @@ PPH_STRING PhEllipsisString(
         DesiredCount < 3
         )
     {
-        PhReferenceObject(String);
-        return String;
+        return PhReferenceObject(String);
     }
     else
     {
@@ -856,8 +868,7 @@ PPH_STRING PhEllipsisStringPath(
         DesiredCount < 3
         )
     {
-        PhReferenceObject(String);
-        return String;
+        return PhReferenceObject(String);
     }
     else
     {
@@ -1204,7 +1215,7 @@ PPH_STRING PhFormatDateTime(
         return NULL;
     }
 
-    count = (ULONG)wcslen(string->Buffer);
+    count = (ULONG)PhCountStringZ(string->Buffer);
     string->Buffer[count] = ' ';
 
     if (!GetDateFormat(LOCALE_USER_DEFAULT, 0, DateTime, NULL, &string->Buffer[count + 1], dateBufferSize))
@@ -1456,7 +1467,7 @@ PPH_STRING PhFormatGuid(
     if (!NT_SUCCESS(RtlStringFromGUID(Guid, &unicodeString)))
         return NULL;
 
-    string = PhCreateStringEx(unicodeString.Buffer, unicodeString.Length);
+    string = PhCreateStringFromUnicodeString(&unicodeString);
     RtlFreeUnicodeString(&unicodeString);
 
     return string;
@@ -1683,15 +1694,12 @@ VOID PhDeleteImageVersionInfo(
 PPH_STRING PhFormatImageVersionInfo(
     _In_opt_ PPH_STRING FileName,
     _In_ PPH_IMAGE_VERSION_INFO ImageVersionInfo,
-    _In_opt_ PWSTR Indent,
+    _In_opt_ PPH_STRINGREF Indent,
     _In_opt_ ULONG LineLimit
     )
 {
     PH_STRING_BUILDER stringBuilder;
-    ULONG indentLength;
 
-    if (Indent)
-        indentLength = (ULONG)wcslen(Indent) * sizeof(WCHAR);
     if (LineLimit == 0)
         LineLimit = MAXULONG32;
 
@@ -1703,10 +1711,10 @@ PPH_STRING PhFormatImageVersionInfo(
     {
         PPH_STRING temp;
 
-        if (Indent) PhAppendStringBuilderEx(&stringBuilder, Indent, indentLength);
+        if (Indent) PhAppendStringBuilder(&stringBuilder, Indent);
 
         temp = PhEllipsisStringPath(FileName, LineLimit);
-        PhAppendStringBuilderEx(&stringBuilder, temp->Buffer, temp->Length);
+        PhAppendStringBuilder(&stringBuilder, &temp->sr);
         PhDereferenceObject(temp);
         PhAppendCharStringBuilder(&stringBuilder, '\n');
     }
@@ -1750,28 +1758,18 @@ PPH_STRING PhFormatImageVersionInfo(
                 );
         }
 
-        if (Indent) PhAppendStringBuilderEx(&stringBuilder, Indent, indentLength);
+        if (Indent) PhAppendStringBuilder(&stringBuilder, Indent);
 
         if (tempDescription)
         {
-            PhAppendStringBuilderEx(
-                &stringBuilder,
-                tempDescription->Buffer,
-                tempDescription->Length
-                );
+            PhAppendStringBuilder(&stringBuilder, &tempDescription->sr);
 
             if (tempVersion)
                 PhAppendCharStringBuilder(&stringBuilder, ' ');
         }
 
         if (tempVersion)
-        {
-            PhAppendStringBuilderEx(
-                &stringBuilder,
-                tempVersion->Buffer,
-                tempVersion->Length
-                );
-        }
+            PhAppendStringBuilder(&stringBuilder, &tempVersion->sr);
 
         if (tempDescription)
             PhDereferenceObject(tempDescription);
@@ -1787,17 +1785,17 @@ PPH_STRING PhFormatImageVersionInfo(
     {
         PPH_STRING temp;
 
-        if (Indent) PhAppendStringBuilderEx(&stringBuilder, Indent, indentLength);
+        if (Indent) PhAppendStringBuilder(&stringBuilder, Indent);
 
         temp = PhEllipsisString(ImageVersionInfo->CompanyName, LineLimit);
-        PhAppendStringBuilderEx(&stringBuilder, temp->Buffer, temp->Length);
+        PhAppendStringBuilder(&stringBuilder, &temp->sr);
         PhDereferenceObject(temp);
         PhAppendCharStringBuilder(&stringBuilder, '\n');
     }
 
     // Remove the extra newline.
     if (stringBuilder.String->Length != 0)
-        PhRemoveStringBuilder(&stringBuilder, stringBuilder.String->Length / 2 - 1, 1);
+        PhRemoveEndStringBuilder(&stringBuilder, 1);
 
     return PhFinalStringBuilderString(&stringBuilder);
 }
@@ -1927,21 +1925,13 @@ PPH_STRING PhGetBaseName(
     _In_ PPH_STRING FileName
     )
 {
-    ULONG_PTR lastIndexOfBackslash;
+    PH_STRINGREF pathPart;
+    PH_STRINGREF baseNamePart;
 
-    lastIndexOfBackslash = PhFindLastCharInString(FileName, 0, '\\');
+    if (!PhSplitStringRefAtLastChar(&FileName->sr, '\\', &pathPart, &baseNamePart))
+        return PhReferenceObject(FileName);
 
-    if (lastIndexOfBackslash == -1)
-    {
-        PhReferenceObject(FileName);
-        return FileName;
-    }
-
-    return PhSubstring(
-        FileName,
-        lastIndexOfBackslash + 1,
-        FileName->Length / 2 - lastIndexOfBackslash - 1
-        );
+    return PhCreateString2(&baseNamePart);
 }
 
 /**
@@ -1962,10 +1952,7 @@ PPH_STRING PhGetSystemDirectory(
     systemDirectory = cachedSystemDirectory;
 
     if (systemDirectory)
-    {
-        PhReferenceObject(systemDirectory);
-        return systemDirectory;
-    }
+        return PhReferenceObject(systemDirectory);
 
     bufferSize = 0x40;
     systemDirectory = PhCreateStringEx(NULL, bufferSize * 2);
@@ -2022,7 +2009,7 @@ VOID PhGetSystemRoot(
     }
 
     localSystemRoot.Buffer = USER_SHARED_DATA->NtSystemRoot;
-    count = wcslen(localSystemRoot.Buffer);
+    count = PhCountStringZ(localSystemRoot.Buffer);
     localSystemRoot.Length = count * sizeof(WCHAR);
 
     // Make sure the system root string doesn't have a trailing backslash.
@@ -2113,7 +2100,7 @@ PPH_STRING PhGetDllFileName(
     entry = PhFindLoaderEntry(DllHandle, NULL, NULL);
 
     if (entry)
-        fileName = PhCreateStringEx(entry->FullDllName.Buffer, entry->FullDllName.Length);
+        fileName = PhCreateStringFromUnicodeString(&entry->FullDllName);
     else
         fileName = NULL;
 
@@ -2193,7 +2180,7 @@ PPH_STRING PhGetKnownLocation(
     SIZE_T appendPathLength;
 
     if (AppendPath)
-        appendPathLength = wcslen(AppendPath) * 2;
+        appendPathLength = PhCountStringZ(AppendPath) * 2;
     else
         appendPathLength = 0;
 
@@ -2806,9 +2793,9 @@ NTSTATUS PhCreateProcessAsUser(
             logonType = LOGON32_LOGON_INTERACTIVE;
 
             // Check if this is a service logon.
-            if (WSTR_IEQUAL(Information->DomainName, L"NT AUTHORITY"))
+            if (PhEqualStringZ(Information->DomainName, L"NT AUTHORITY", TRUE))
             {
-                if (WSTR_IEQUAL(Information->UserName, L"SYSTEM"))
+                if (PhEqualStringZ(Information->UserName, L"SYSTEM", TRUE))
                 {
                     if (WindowsVersion >= WINDOWS_VISTA)
                         logonType = LOGON32_LOGON_SERVICE;
@@ -2816,10 +2803,8 @@ NTSTATUS PhCreateProcessAsUser(
                         logonType = LOGON32_LOGON_NEW_CREDENTIALS; // HACK
                 }
 
-                if (
-                    WSTR_IEQUAL(Information->UserName, L"LOCAL SERVICE") ||
-                    WSTR_IEQUAL(Information->UserName, L"NETWORK SERVICE")
-                    )
+                if (PhEqualStringZ(Information->UserName, L"LOCAL SERVICE", TRUE) ||
+                    PhEqualStringZ(Information->UserName, L"NETWORK SERVICE", TRUE))
                 {
                     logonType = LOGON32_LOGON_SERVICE;
                 }
@@ -3232,7 +3217,7 @@ VOID PhShellExecute(
  * \param ProcessHandle A variable which receives a handle to the new process.
  */
 BOOLEAN PhShellExecuteEx(
-    _In_ HWND hWnd,
+    _In_opt_ HWND hWnd,
     _In_ PWSTR FileName,
     _In_opt_ PWSTR Parameters,
     _In_ ULONG ShowWindowType,
@@ -3376,8 +3361,7 @@ PPH_STRING PhExpandKeyName(
     }
     else
     {
-        keyName = KeyName;
-        PhReferenceObject(KeyName);
+        PhSetReference(&keyName, KeyName);
     }
 
     if (Computer)
@@ -3676,14 +3660,13 @@ UINT_PTR CALLBACK PhpOpenFileNameHookProc(
 }
 
 OPENFILENAME *PhpCreateOpenFileName(
-    _In_ ULONG Type
+    VOID
     )
 {
     OPENFILENAME *ofn;
 
-    ofn = PhAllocate(sizeof(OPENFILENAME) + sizeof(ULONG));
+    ofn = PhAllocate(sizeof(OPENFILENAME));
     memset(ofn, 0, sizeof(OPENFILENAME));
-    *(PULONG)PTR_ADD_OFFSET(ofn, sizeof(OPENFILENAME)) = Type;
 
     ofn->lStructSize = sizeof(OPENFILENAME);
     ofn->nMaxFile = 0x400;
@@ -3707,6 +3690,47 @@ VOID PhpFreeOpenFileName(
     PhFree(OpenFileName);
 }
 
+typedef struct _PHP_FILE_DIALOG
+{
+    BOOLEAN UseIFileDialog;
+    BOOLEAN Save;
+    union
+    {
+        OPENFILENAME *OpenFileName;
+        IFileDialog *FileDialog;
+    } u;
+} PHP_FILE_DIALOG, *PPHP_FILE_DIALOG;
+
+PPHP_FILE_DIALOG PhpCreateFileDialog(
+    _In_ BOOLEAN Save,
+    _In_opt_ OPENFILENAME *OpenFileName,
+    _In_opt_ IFileDialog *FileDialog
+    )
+{
+    PPHP_FILE_DIALOG fileDialog;
+
+    assert(!!OpenFileName != !!FileDialog);
+    fileDialog = PhAllocate(sizeof(PHP_FILE_DIALOG));
+    fileDialog->Save = Save;
+
+    if (OpenFileName)
+    {
+        fileDialog->UseIFileDialog = FALSE;
+        fileDialog->u.OpenFileName = OpenFileName;
+    }
+    else if (FileDialog)
+    {
+        fileDialog->UseIFileDialog = TRUE;
+        fileDialog->u.FileDialog = FileDialog;
+    }
+    else
+    {
+        PhRaiseStatus(STATUS_INVALID_PARAMETER);
+    }
+
+    return fileDialog;
+}
+
 /**
  * Creates a file dialog for the user to select
  * a file to open.
@@ -3719,6 +3743,9 @@ PVOID PhCreateOpenFileDialog(
     VOID
     )
 {
+    OPENFILENAME *ofn;
+    PVOID ofnFileDialog;
+
     if (PHP_USE_IFILEDIALOG)
     {
         IFileDialog *fileDialog;
@@ -3732,22 +3759,15 @@ PVOID PhCreateOpenFileDialog(
             )))
         {
             // The default options are fine.
-            return fileDialog;
-        }
-        else
-        {
-            return NULL;
+            return PhpCreateFileDialog(FALSE, NULL, fileDialog);
         }
     }
-    else
-    {
-        OPENFILENAME *ofn;
 
-        ofn = PhpCreateOpenFileName(1);
-        PhSetFileDialogOptions(ofn, PH_FILEDIALOG_PATHMUSTEXIST | PH_FILEDIALOG_FILEMUSTEXIST | PH_FILEDIALOG_STRICTFILETYPES);
+    ofn = PhpCreateOpenFileName();
+    ofnFileDialog = PhpCreateFileDialog(FALSE, ofn, NULL);
+    PhSetFileDialogOptions(ofnFileDialog, PH_FILEDIALOG_PATHMUSTEXIST | PH_FILEDIALOG_FILEMUSTEXIST | PH_FILEDIALOG_STRICTFILETYPES);
 
-        return ofn;
-    }
+    return ofnFileDialog;
 }
 
 /**
@@ -3762,6 +3782,9 @@ PVOID PhCreateSaveFileDialog(
     VOID
     )
 {
+    OPENFILENAME *ofn;
+    PVOID ofnFileDialog;
+
     if (PHP_USE_IFILEDIALOG)
     {
         IFileDialog *fileDialog;
@@ -3775,22 +3798,15 @@ PVOID PhCreateSaveFileDialog(
             )))
         {
             // The default options are fine.
-            return fileDialog;
-        }
-        else
-        {
-            return NULL;
+            return PhpCreateFileDialog(TRUE, NULL, fileDialog);
         }
     }
-    else
-    {
-        OPENFILENAME *ofn;
 
-        ofn = PhpCreateOpenFileName(2);
-        PhSetFileDialogOptions(ofn, PH_FILEDIALOG_PATHMUSTEXIST | PH_FILEDIALOG_OVERWRITEPROMPT | PH_FILEDIALOG_STRICTFILETYPES);
+    ofn = PhpCreateOpenFileName();
+    ofnFileDialog = PhpCreateFileDialog(TRUE, ofn, NULL);
+    PhSetFileDialogOptions(ofnFileDialog, PH_FILEDIALOG_PATHMUSTEXIST | PH_FILEDIALOG_OVERWRITEPROMPT | PH_FILEDIALOG_STRICTFILETYPES);
 
-        return ofn;
-    }
+    return ofnFileDialog;
 }
 
 /**
@@ -3802,14 +3818,18 @@ VOID PhFreeFileDialog(
     _In_ PVOID FileDialog
     )
 {
-    if (PHP_USE_IFILEDIALOG)
+    PPHP_FILE_DIALOG fileDialog = FileDialog;
+
+    if (fileDialog->UseIFileDialog)
     {
-        IFileDialog_Release((IFileDialog *)FileDialog);
+        IFileDialog_Release(fileDialog->u.FileDialog);
     }
     else
     {
-        PhpFreeOpenFileName((OPENFILENAME *)FileDialog);
+        PhpFreeOpenFileName(fileDialog->u.OpenFileName);
     }
+
+    PhFree(fileDialog);
 }
 
 /**
@@ -3827,24 +3847,24 @@ BOOLEAN PhShowFileDialog(
     _In_ PVOID FileDialog
     )
 {
-    if (PHP_USE_IFILEDIALOG)
+    PPHP_FILE_DIALOG fileDialog = FileDialog;
+
+    if (fileDialog->UseIFileDialog)
     {
         // Set a blank default extension. This will have an effect when the user
         // selects a different file type.
-        IFileDialog_SetDefaultExtension((IFileDialog *)FileDialog, L"");
+        IFileDialog_SetDefaultExtension(fileDialog->u.FileDialog, L"");
 
-        return SUCCEEDED(IFileDialog_Show((IFileDialog *)FileDialog, hWnd));
+        return SUCCEEDED(IFileDialog_Show(fileDialog->u.FileDialog, hWnd));
     }
     else
     {
-        OPENFILENAME *ofn = (OPENFILENAME *)FileDialog;
+        OPENFILENAME *ofn = fileDialog->u.OpenFileName;
 
         ofn->hwndOwner = hWnd;
 
-        // Determine whether the structure represents
-        // a open or save dialog and call the appropriate
-        // function.
-        if (*(PULONG)PTR_ADD_OFFSET(FileDialog, sizeof(OPENFILENAME)) == 1)
+        // Determine whether the structure represents a open or save dialog and call the appropriate function.
+        if (!fileDialog->Save)
         {
             return GetOpenFileName(ofn);
         }
@@ -3890,12 +3910,14 @@ ULONG PhGetFileDialogOptions(
     _In_ PVOID FileDialog
     )
 {
-    if (PHP_USE_IFILEDIALOG)
+    PPHP_FILE_DIALOG fileDialog = FileDialog;
+
+    if (fileDialog->UseIFileDialog)
     {
         FILEOPENDIALOGOPTIONS dialogOptions;
         ULONG options;
 
-        if (SUCCEEDED(IFileDialog_GetOptions((IFileDialog *)FileDialog, &dialogOptions)))
+        if (SUCCEEDED(IFileDialog_GetOptions(fileDialog->u.FileDialog, &dialogOptions)))
         {
             options = 0;
 
@@ -3915,7 +3937,7 @@ ULONG PhGetFileDialogOptions(
     }
     else
     {
-        OPENFILENAME *ofn = (OPENFILENAME *)FileDialog;
+        OPENFILENAME *ofn = fileDialog->u.OpenFileName;
         ULONG options;
 
         options = 0;
@@ -3959,11 +3981,13 @@ VOID PhSetFileDialogOptions(
     _In_ ULONG Options
     )
 {
-    if (PHP_USE_IFILEDIALOG)
+    PPHP_FILE_DIALOG fileDialog = FileDialog;
+
+    if (fileDialog->UseIFileDialog)
     {
         FILEOPENDIALOGOPTIONS dialogOptions;
 
-        if (SUCCEEDED(IFileDialog_GetOptions((IFileDialog *)FileDialog, &dialogOptions)))
+        if (SUCCEEDED(IFileDialog_GetOptions(fileDialog->u.FileDialog, &dialogOptions)))
         {
             PhMapFlags1(
                 &dialogOptions,
@@ -3972,12 +3996,12 @@ VOID PhSetFileDialogOptions(
                 sizeof(PhpFileDialogIfdMappings) / sizeof(PH_FLAG_MAPPING)
                 );
 
-            IFileDialog_SetOptions((IFileDialog *)FileDialog, dialogOptions);
+            IFileDialog_SetOptions(fileDialog->u.FileDialog, dialogOptions);
         }
     }
     else
     {
-        OPENFILENAME *ofn = (OPENFILENAME *)FileDialog;
+        OPENFILENAME *ofn = fileDialog->u.OpenFileName;
 
         PhMapFlags1(
             &ofn->Flags,
@@ -4001,11 +4025,13 @@ ULONG PhGetFileDialogFilterIndex(
     _In_ PVOID FileDialog
     )
 {
-    if (PHP_USE_IFILEDIALOG)
+    PPHP_FILE_DIALOG fileDialog = FileDialog;
+
+    if (fileDialog->UseIFileDialog)
     {
         ULONG index;
 
-        if (SUCCEEDED(IFileDialog_GetFileTypeIndex((IFileDialog *)FileDialog, &index)))
+        if (SUCCEEDED(IFileDialog_GetFileTypeIndex(fileDialog->u.FileDialog, &index)))
         {
             return index;
         }
@@ -4016,7 +4042,7 @@ ULONG PhGetFileDialogFilterIndex(
     }
     else
     {
-        OPENFILENAME *ofn = (OPENFILENAME *)FileDialog;
+        OPENFILENAME *ofn = fileDialog->u.OpenFileName;
 
         return ofn->nFilterIndex;
     }
@@ -4036,17 +4062,19 @@ VOID PhSetFileDialogFilter(
     _In_ ULONG NumberOfFilters
     )
 {
-    if (PHP_USE_IFILEDIALOG)
+    PPHP_FILE_DIALOG fileDialog = FileDialog;
+
+    if (fileDialog->UseIFileDialog)
     {
         IFileDialog_SetFileTypes(
-            (IFileDialog *)FileDialog,
+            fileDialog->u.FileDialog,
             NumberOfFilters,
             (COMDLG_FILTERSPEC *)Filters
             );
     }
     else
     {
-        OPENFILENAME *ofn = (OPENFILENAME *)FileDialog;
+        OPENFILENAME *ofn = fileDialog->u.OpenFileName;
         PPH_STRING filterString;
         PH_STRING_BUILDER filterBuilder;
         ULONG i;
@@ -4085,12 +4113,14 @@ PPH_STRING PhGetFileDialogFileName(
     _In_ PVOID FileDialog
     )
 {
-    if (PHP_USE_IFILEDIALOG)
+    PPHP_FILE_DIALOG fileDialog = FileDialog;
+
+    if (fileDialog->UseIFileDialog)
     {
         IShellItem *result;
         PPH_STRING fileName = NULL;
 
-        if (SUCCEEDED(IFileDialog_GetResult((IFileDialog *)FileDialog, &result)))
+        if (SUCCEEDED(IFileDialog_GetResult(fileDialog->u.FileDialog, &result)))
         {
             PWSTR name;
 
@@ -4107,7 +4137,7 @@ PPH_STRING PhGetFileDialogFileName(
         {
             PWSTR name;
 
-            if (SUCCEEDED(IFileDialog_GetFileName((IFileDialog *)FileDialog, &name)))
+            if (SUCCEEDED(IFileDialog_GetFileName(fileDialog->u.FileDialog, &name)))
             {
                 fileName = PhCreateString(name);
                 CoTaskMemFree(name);
@@ -4118,7 +4148,7 @@ PPH_STRING PhGetFileDialogFileName(
     }
     else
     {
-        return PhCreateString(((OPENFILENAME *)FileDialog)->lpstrFile);
+        return PhCreateString(fileDialog->u.OpenFileName->lpstrFile);
     }
 }
 
@@ -4133,21 +4163,25 @@ VOID PhSetFileDialogFileName(
     _In_ PWSTR FileName
     )
 {
-    if (PHP_USE_IFILEDIALOG)
+    PPHP_FILE_DIALOG fileDialog = FileDialog;
+    PH_STRINGREF fileName;
+
+    PhInitializeStringRefLongHint(&fileName, FileName);
+
+    if (fileDialog->UseIFileDialog)
     {
         IShellItem *shellItem = NULL;
-        PWSTR baseName;
+        PH_STRINGREF pathNamePart;
+        PH_STRINGREF baseNamePart;
 
-        baseName = wcsrchr(FileName, '\\');
-
-        if (baseName && SHParseDisplayName_I && SHCreateShellItem_I)
+        if (PhSplitStringRefAtLastChar(&fileName, '\\', &pathNamePart, &baseNamePart) &&
+            SHParseDisplayName_I && SHCreateShellItem_I)
         {
             LPITEMIDLIST item;
             SFGAOF attributes;
             PPH_STRING pathName;
 
-            // Remove the base name.
-            pathName = PhCreateStringEx(FileName, (baseName - FileName) * 2);
+            pathName = PhCreateString2(&pathNamePart);
 
             if (SUCCEEDED(SHParseDisplayName_I(pathName->Buffer, NULL, &item, 0, &attributes)))
             {
@@ -4160,21 +4194,20 @@ VOID PhSetFileDialogFileName(
 
         if (shellItem)
         {
-            IFileDialog_SetFolder((IFileDialog *)FileDialog, shellItem);
-            IFileDialog_SetFileName((IFileDialog *)FileDialog, baseName + 1);
+            IFileDialog_SetFolder(fileDialog->u.FileDialog, shellItem);
+            IFileDialog_SetFileName(fileDialog->u.FileDialog, baseNamePart.Buffer);
             IShellItem_Release(shellItem);
         }
         else
         {
-            IFileDialog_SetFileName((IFileDialog *)FileDialog, FileName);
+            IFileDialog_SetFileName(fileDialog->u.FileDialog, FileName);
         }
     }
     else
     {
-        OPENFILENAME *ofn = (OPENFILENAME *)FileDialog;
-        SIZE_T length;
+        OPENFILENAME *ofn = fileDialog->u.OpenFileName;
 
-        if (wcschr(FileName, '/') || wcschr(FileName, '\"'))
+        if (PhFindCharInStringRef(&fileName, '/', FALSE) != -1 || PhFindCharInStringRef(&fileName, '\"', FALSE) != -1)
         {
             // It refuses to take any filenames with a slash or quotation mark.
             return;
@@ -4182,10 +4215,9 @@ VOID PhSetFileDialogFileName(
 
         PhFree(ofn->lpstrFile);
 
-        length = wcslen(FileName);
-        ofn->nMaxFile = (ULONG)max(length + 1, 0x400);
+        ofn->nMaxFile = (ULONG)max(fileName.Length / sizeof(WCHAR) + 1, 0x400);
         ofn->lpstrFile = PhAllocate(ofn->nMaxFile * 2);
-        memcpy(ofn->lpstrFile, FileName, (length + 1) * 2);
+        memcpy(ofn->lpstrFile, fileName.Buffer, fileName.Length + sizeof(WCHAR));
     }
 }
 
@@ -4307,7 +4339,7 @@ NTSTATUS PhIsExecutablePacked(
             )))
             goto CleanupExit;
 
-        if (STR_IEQUAL(importDll.Name, "mscoree.dll"))
+        if (PhEqualBytesZ(importDll.Name, "mscoree.dll", TRUE))
             isModuleMscoree = TRUE;
 
         numberOfFunctions += importDll.NumberOfEntries;
@@ -4352,6 +4384,20 @@ CleanupExit:
     PhUnloadMappedImage(&mappedImage);
 
     return status;
+}
+
+ULONG PhCrc32(
+    _In_ ULONG Crc,
+    _In_reads_(Length) PCHAR Buffer,
+    _In_ SIZE_T Length
+    )
+{
+    Crc ^= 0xffffffff;
+
+    while (Length--)
+        Crc = (Crc >> 8) ^ PhCrc32Table[(Crc ^ *Buffer++) & 0xff];
+
+    return Crc ^ 0xffffffff;
 }
 
 C_ASSERT(RTL_FIELD_SIZE(PH_HASH_CONTEXT, Context) >= sizeof(MD5_CTX));
@@ -4412,7 +4458,7 @@ VOID PhUpdateHash(
         A_SHAUpdate((A_SHA_CTX *)Context->Context, (PUCHAR)Buffer, Length);
         break;
     case Crc32HashAlgorithm:
-        Context->Context[0] = ph_crc32(Context->Context[0], (PUCHAR)Buffer, Length);
+        Context->Context[0] = PhCrc32(Context->Context[0], (PUCHAR)Buffer, Length);
         break;
     default:
         PhRaiseStatus(STATUS_INVALID_PARAMETER);
@@ -4743,7 +4789,7 @@ PPH_STRING PhEscapeCommandLinePart(
     _In_ PPH_STRINGREF String
     )
 {
-    static WCHAR backslashAndQuote[2] = { '\\', '\"' };
+    static PH_STRINGREF backslashAndQuote = PH_STRINGREF_INIT(L"\\\"");
 
     PH_STRING_BUILDER stringBuilder;
     ULONG length;
@@ -4772,7 +4818,7 @@ PPH_STRING PhEscapeCommandLinePart(
                 numberOfBackslashes = 0;
             }
 
-            PhAppendStringBuilderEx(&stringBuilder, backslashAndQuote, sizeof(backslashAndQuote));
+            PhAppendStringBuilder(&stringBuilder, &backslashAndQuote);
 
             break;
         default:
@@ -4789,24 +4835,6 @@ PPH_STRING PhEscapeCommandLinePart(
     }
 
     return PhFinalStringBuilderString(&stringBuilder);
-}
-
-VOID PhpSkipWhitespaceStringRef(
-    _Inout_ PPH_STRINGREF String
-    )
-{
-    WCHAR c;
-
-    while (String->Length != 0)
-    {
-        c = *String->Buffer;
-
-        if (c != ' ' && c != '\t')
-            break;
-
-        String->Buffer++;
-        String->Length -= sizeof(WCHAR);
-    }
 }
 
 BOOLEAN PhpSearchFilePath(
@@ -4882,6 +4910,8 @@ BOOLEAN PhParseCommandLineFuzzy(
     _Out_opt_ PPH_STRING *FullFileName
     )
 {
+    static PH_STRINGREF whitespace = PH_STRINGREF_INIT(L" \t");
+
     PH_STRINGREF commandLine;
     PH_STRINGREF temp;
     PH_STRINGREF currentPart;
@@ -4890,21 +4920,7 @@ BOOLEAN PhParseCommandLineFuzzy(
     WCHAR originalChar;
 
     commandLine = *CommandLine;
-
-    // Remove leading whitespace.
-    PhpSkipWhitespaceStringRef(&commandLine);
-
-    // Remove trailing whitespace.
-    while (commandLine.Length != 0)
-    {
-        if (commandLine.Buffer[commandLine.Length / 2 - 1] != ' ' &&
-            commandLine.Buffer[commandLine.Length / 2 - 1] != '\t')
-        {
-            break;
-        }
-
-        commandLine.Length -= sizeof(WCHAR);
-    }
+    PhTrimStringRef(&commandLine, &whitespace, 0);
 
     if (commandLine.Length == 0)
     {
@@ -4921,15 +4937,14 @@ BOOLEAN PhParseCommandLineFuzzy(
     {
         PH_STRINGREF arguments;
 
-        commandLine.Buffer++;
-        commandLine.Length -= sizeof(WCHAR);
+        PhSkipStringRef(&commandLine, sizeof(WCHAR));
 
         // Find the matching quote character and we have our file name.
 
         if (!PhSplitStringRefAtChar(&commandLine, '"', &commandLine, &arguments))
         {
-            FileName->Buffer = commandLine.Buffer - 1;
-            FileName->Length = commandLine.Length + sizeof(WCHAR);
+            PhSkipStringRef(&commandLine, -(LONG_PTR)sizeof(WCHAR)); // Unskip the initial quote character
+            *FileName = commandLine;
             PhInitializeEmptyStringRef(Arguments);
 
             if (FullFileName)
@@ -4938,7 +4953,7 @@ BOOLEAN PhParseCommandLineFuzzy(
             return FALSE;
         }
 
-        PhpSkipWhitespaceStringRef(&arguments);
+        PhTrimStringRef(&arguments, &whitespace, PH_TRIM_START_ONLY);
         *FileName = commandLine;
         *Arguments = arguments;
 
@@ -4946,7 +4961,7 @@ BOOLEAN PhParseCommandLineFuzzy(
         {
             PPH_STRING tempCommandLine;
 
-            tempCommandLine = PhCreateStringEx(commandLine.Buffer, commandLine.Length);
+            tempCommandLine = PhCreateString2(&commandLine);
 
             if (PhpSearchFilePath(tempCommandLine->Buffer, L".exe", buffer))
             {
@@ -5007,7 +5022,7 @@ BOOLEAN PhParseCommandLineFuzzy(
             FileName->Buffer = commandLine.Buffer;
             FileName->Length = ((PCHAR)currentPart.Buffer - (PCHAR)temp.Buffer) + currentPart.Length;
 
-            PhpSkipWhitespaceStringRef(&remainingPart);
+            PhTrimStringRef(&remainingPart, &whitespace, PH_TRIM_START_ONLY);
             *Arguments = remainingPart;
 
             if (FullFileName)

@@ -21,6 +21,7 @@
  */
 
 #include <phgui.h>
+#include <secedit.h>
 
 #define ACCESS_ENTRIES(Type) static PH_ACCESS_ENTRY Ph##Type##AccessEntries[] =
 #define ACCESS_ENTRY(Type, HasSynchronize) \
@@ -618,24 +619,24 @@ BOOLEAN PhGetAccessEntries(
     PPH_SPECIFIC_TYPE specificType = NULL;
     PPH_ACCESS_ENTRY accessEntries;
 
-    if (WSTR_IEQUAL(Type, L"ALPC Port"))
+    if (PhEqualStringZ(Type, L"ALPC Port", TRUE))
     {
         Type = L"AlpcPort";
     }
-    else if (WSTR_IEQUAL(Type, L"Port"))
+    else if (PhEqualStringZ(Type, L"Port", TRUE))
     {
         Type = L"AlpcPort";
     }
-    else if (WSTR_IEQUAL(Type, L"WaitablePort"))
+    else if (PhEqualStringZ(Type, L"WaitablePort", TRUE))
     {
         Type = L"AlpcPort";
     }
-    else if (WSTR_IEQUAL(Type, L"Process"))
+    else if (PhEqualStringZ(Type, L"Process", TRUE))
     {
         if (WindowsVersion >= WINDOWS_VISTA)
             Type = L"Process60";
     }
-    else if (WSTR_IEQUAL(Type, L"Thread"))
+    else if (PhEqualStringZ(Type, L"Thread", TRUE))
     {
         if (WindowsVersion >= WINDOWS_VISTA)
             Type = L"Thread60";
@@ -644,7 +645,7 @@ BOOLEAN PhGetAccessEntries(
     // Find the specific type.
     for (i = 0; i < sizeof(PhSpecificTypes) / sizeof(PH_SPECIFIC_TYPE); i++)
     {
-        if (WSTR_IEQUAL(PhSpecificTypes[i].Type, Type))
+        if (PhEqualStringZ(PhSpecificTypes[i].Type, Type, TRUE))
         {
             specificType = &PhSpecificTypes[i];
             break;
@@ -770,7 +771,7 @@ PPH_STRING PhGetAccessString(
 
     // Remove the trailing ", ".
     if (PhEndsWithString2(stringBuilder.String, L", ", FALSE))
-        PhRemoveStringBuilder(&stringBuilder, stringBuilder.String->Length / 2 - 2, 2);
+        PhRemoveEndStringBuilder(&stringBuilder, 2);
 
     PhFree(matched);
     PhFree(accessEntries);

@@ -1,6 +1,6 @@
 /*
  * Process Hacker -
- *   native support functions
+ *   native wrapper and support functions
  *
  * Copyright (C) 2009-2015 wj32
  *
@@ -22,7 +22,7 @@
 
 #include <ph.h>
 #include <kphuser.h>
-#include <symprv.h>
+#include <apiimport.h>
 
 #define PH_DEVICE_PREFIX_LENGTH 64
 #define PH_DEVICE_MUP_PREFIX_MAX_COUNT 16
@@ -242,6 +242,8 @@ NTSTATUS PhGetObjectSecurity(
 
     bufferSize = 0x100;
     buffer = PhAllocate(bufferSize);
+    // This is required (especially for File objects) because some drivers don't seem to handle QuerySecurity properly.
+    memset(buffer, 0, bufferSize);
 
     status = NtQuerySecurityObject(
         Handle,
@@ -255,6 +257,7 @@ NTSTATUS PhGetObjectSecurity(
     {
         PhFree(buffer);
         buffer = PhAllocate(bufferSize);
+        memset(buffer, 0, bufferSize);
 
         status = NtQuerySecurityObject(
             Handle,
@@ -583,13 +586,17 @@ NTSTATUS PhpQueryProcessVariableSize(
     PVOID buffer;
     ULONG returnLength = 0;
 
-    NtQueryInformationProcess(
+    status = NtQueryInformationProcess(
         ProcessHandle,
         ProcessInformationClass,
         NULL,
         0,
         &returnLength
         );
+
+    if (status != STATUS_BUFFER_OVERFLOW && status != STATUS_BUFFER_TOO_SMALL && status != STATUS_INFO_LENGTH_MISMATCH)
+        return status;
+
     buffer = PhAllocate(returnLength);
     status = NtQueryInformationProcess(
         ProcessHandle,
@@ -637,7 +644,7 @@ NTSTATUS PhGetProcessImageFileName(
     if (!NT_SUCCESS(status))
         return status;
 
-    *FileName = PhCreateStringEx(fileName->Buffer, fileName->Length);
+    *FileName = PhCreateStringFromUnicodeString(fileName);
     PhFree(fileName);
 
     return status;
@@ -672,7 +679,7 @@ NTSTATUS PhGetProcessImageFileNameWin32(
     if (!NT_SUCCESS(status))
         return status;
 
-    *FileName = PhCreateStringEx(fileName->Buffer, fileName->Length);
+    *FileName = PhCreateStringFromUnicodeString(fileName);
     PhFree(fileName);
 
     return status;
@@ -830,7 +837,7 @@ NTSTATUS PhGetProcessCommandLine(
 {
     NTSTATUS status;
 
-    if (WindowsVersion >= WINDOWS_81)
+    if (WindowsVersion >= WINDOWS_8_1)
     {
         PUNICODE_STRING commandLine;
 
@@ -842,7 +849,7 @@ NTSTATUS PhGetProcessCommandLine(
 
         if (NT_SUCCESS(status))
         {
-            *CommandLine = PhCreateStringEx(commandLine->Buffer, commandLine->Length);
+            *CommandLine = PhCreateStringFromUnicodeString(commandLine);
             PhFree(commandLine);
 
             return status;
@@ -1512,8 +1519,7 @@ NTSTATUS PhGetProcessWorkingSetInformation(
         PhFree(buffer);
         bufferSize *= 2;
 
-        // Fail if we're resizing the buffer to over
-        // 16 MB.
+        // Fail if we're resizing the buffer to something very large.
         if (bufferSize > PH_LARGE_BUFFER_SIZE)
             return STATUS_INSUFFICIENT_RESOURCES;
 
@@ -1547,7 +1553,7 @@ NTSTATUS PhGetProcessWsCounters(
     NTSTATUS status;
     PMEMORY_WORKING_SET_INFORMATION wsInfo;
     PH_PROCESS_WS_COUNTERS wsCounters;
-    ULONG i;
+    ULONG_PTR i;
 
     if (!NT_SUCCESS(status = PhGetProcessWorkingSetInformation(
         ProcessHandle,
@@ -1574,80 +1580,6 @@ NTSTATUS PhGetProcessWsCounters(
     *WsCounters = wsCounters;
 
     return status;
-}
-
-/**
- * Enumerates all handles in a process.
- *
- * \param ProcessHandle A handle to a process.
- * \param Handles A variable which receives a pointer
- * to a buffer containing information about the
- * opened handles. You must free the structure using
- * PhFree() when you no longer need it.
- *
- * \remarks This function requires a valid KProcessHacker
- * handle.
- */
-NTSTATUS PhEnumProcessHandles(
-    _In_ HANDLE ProcessHandle,
-    _Out_ PKPH_PROCESS_HANDLE_INFORMATION *Handles
-    )
-{
-    NTSTATUS status;
-    PVOID buffer;
-    ULONG bufferSize = 2048;
-
-    buffer = PhAllocate(bufferSize);
-
-    while (TRUE)
-    {
-        status = KphEnumerateProcessHandles(
-            ProcessHandle,
-            buffer,
-            bufferSize,
-            &bufferSize
-            );
-
-        if (status == STATUS_BUFFER_TOO_SMALL)
-        {
-            PhFree(buffer);
-            buffer = PhAllocate(bufferSize);
-        }
-        else
-        {
-            break;
-        }
-    }
-
-    if (!NT_SUCCESS(status))
-    {
-        PhFree(buffer);
-        return status;
-    }
-
-    *Handles = buffer;
-
-    return status;
-}
-
-/**
- * Sets a process' affinity mask.
- *
- * \param ProcessHandle A handle to a process. The handle
- * must have PROCESS_SET_INFORMATION access.
- * \param AffinityMask The new affinity mask.
- */
-NTSTATUS PhSetProcessAffinityMask(
-    _In_ HANDLE ProcessHandle,
-    _In_ ULONG_PTR AffinityMask
-    )
-{
-    return NtSetInformationProcess(
-        ProcessHandle,
-        ProcessAffinityMask,
-        &AffinityMask,
-        sizeof(ULONG_PTR)
-        );
 }
 
 /**
@@ -1735,7 +1667,7 @@ NTSTATUS PhSetProcessDepStatusInvasive(
     PVOID setProcessDepPolicy;
     ULONG flags;
 
-    setProcessDepPolicy = PhGetProcAddress(L"kernel32.dll", "SetProcessDEPPolicy");
+    setProcessDepPolicy = PhGetModuleProcAddress(L"kernel32.dll", "SetProcessDEPPolicy");
 
     if (!setProcessDepPolicy)
         return STATUS_NOT_SUPPORTED;
@@ -1843,7 +1775,7 @@ NTSTATUS PhInjectDllProcess(
     if (!isModule32)
     {
 #endif
-        threadStart = PhGetProcAddress(L"kernel32.dll", "LoadLibraryW");
+        threadStart = PhGetModuleProcAddress(L"kernel32.dll", "LoadLibraryW");
 #ifdef _WIN64
     }
     else
@@ -1873,7 +1805,7 @@ NTSTATUS PhInjectDllProcess(
     }
 #endif
 
-    PhInitializeStringRef(&fileName, FileName);
+    PhInitializeStringRefLongHint(&fileName, FileName);
     allocSize = fileName.Length + sizeof(WCHAR);
 
     if (!NT_SUCCESS(status = NtAllocateVirtualMemory(
@@ -2012,7 +1944,7 @@ NTSTATUS PhUnloadDllProcess(
     if (!isModule32)
     {
 #endif
-        threadStart = PhGetProcAddress(L"ntdll.dll", "LdrUnloadDll");
+        threadStart = PhGetModuleProcAddress(L"ntdll.dll", "LdrUnloadDll");
 #ifdef _WIN64
     }
     else
@@ -2092,26 +2024,6 @@ NTSTATUS PhUnloadDllProcess(
 }
 
 /**
- * Sets a thread's affinity mask.
- *
- * \param ThreadHandle A handle to a thread. The handle
- * must have THREAD_SET_LIMITED_INFORMATION access.
- * \param AffinityMask The new affinity mask.
- */
-NTSTATUS PhSetThreadAffinityMask(
-    _In_ HANDLE ThreadHandle,
-    _In_ ULONG_PTR AffinityMask
-    )
-{
-    return NtSetInformationThread(
-        ThreadHandle,
-        ThreadAffinityMask,
-        &AffinityMask,
-        sizeof(ULONG_PTR)
-        );
-}
-
-/**
  * Sets a thread's I/O priority.
  *
  * \param ThreadHandle A handle to a thread. The handle
@@ -2141,303 +2053,6 @@ NTSTATUS PhSetThreadIoPriority(
             sizeof(ULONG)
             );
     }
-}
-
-/**
- * Converts a STACKFRAME64 structure to a
- * PH_THREAD_STACK_FRAME structure.
- *
- * \param StackFrame64 A pointer to the STACKFRAME64 structure
- * to convert.
- * \param ThreadStackFrame A pointer to the resulting
- * PH_THREAD_STACK_FRAME structure.
- */
-VOID PhpConvertStackFrame(
-    _In_ STACKFRAME64 *StackFrame64,
-    _Out_ PPH_THREAD_STACK_FRAME ThreadStackFrame
-    )
-{
-    ULONG i;
-
-    ThreadStackFrame->PcAddress = (PVOID)StackFrame64->AddrPC.Offset;
-    ThreadStackFrame->ReturnAddress = (PVOID)StackFrame64->AddrReturn.Offset;
-    ThreadStackFrame->FrameAddress = (PVOID)StackFrame64->AddrFrame.Offset;
-    ThreadStackFrame->StackAddress = (PVOID)StackFrame64->AddrStack.Offset;
-    ThreadStackFrame->BStoreAddress = (PVOID)StackFrame64->AddrBStore.Offset;
-
-    for (i = 0; i < 4; i++)
-        ThreadStackFrame->Params[i] = (PVOID)StackFrame64->Params[i];
-}
-
-/**
- * Walks a thread's stack.
- *
- * \param ThreadHandle A handle to a thread. The handle
- * must have THREAD_GET_CONTEXT and THREAD_SUSPEND_RESUME
- * access. The handle can have any access for kernel stack
- * walking. If \a ClientId is not specified, the handle
- * should also have THREAD_QUERY_LIMITED_INFORMATION access.
- * \param ProcessHandle A handle to the thread's parent
- * process. The handle must have PROCESS_QUERY_INFORMATION
- * and PROCESS_VM_READ access. If a symbol provider is
- * being used, pass its process handle.
- * \param ClientId The client ID identifying the thread.
- * \param Flags A combination of flags.
- * \li \c PH_WALK_I386_STACK Walks the x86 stack. On AMD64
- * systems this flag walks the WOW64 stack.
- * \li \c PH_WALK_AMD64_STACK Walks the AMD64 stack. On x86
- * systems this flag is ignored.
- * \li \c PH_WALK_KERNEL_STACK Walks the kernel stack. This
- * flag is ignored if there is no active KProcessHacker
- * connection.
- * \param Callback A callback function which is executed
- * for each stack frame.
- * \param Context A user-defined value to pass to the
- * callback function.
- */
-NTSTATUS PhWalkThreadStack(
-    _In_ HANDLE ThreadHandle,
-    _In_opt_ HANDLE ProcessHandle,
-    _In_opt_ PCLIENT_ID ClientId,
-    _In_ ULONG Flags,
-    _In_ PPH_WALK_THREAD_STACK_CALLBACK Callback,
-    _In_opt_ PVOID Context
-    )
-{
-    NTSTATUS status = STATUS_SUCCESS;
-    BOOLEAN suspended = FALSE;
-    BOOLEAN processOpened = FALSE;
-    BOOLEAN isCurrentThread = FALSE;
-    BOOLEAN isSystemProcess = FALSE;
-
-    // Open a handle to the process if we weren't given one.
-    if (!ProcessHandle)
-    {
-        if (KphIsConnected() || !ClientId)
-        {
-            if (!NT_SUCCESS(status = PhOpenThreadProcess(
-                &ProcessHandle,
-                PROCESS_QUERY_INFORMATION | PROCESS_VM_READ,
-                ThreadHandle
-                )))
-                return status;
-        }
-        else
-        {
-            if (!NT_SUCCESS(status = PhOpenProcess(
-                &ProcessHandle,
-                PROCESS_QUERY_INFORMATION | PROCESS_VM_READ,
-                ClientId->UniqueProcess
-                )))
-                return status;
-        }
-
-        processOpened = TRUE;
-    }
-
-    // Determine if the caller specified the current thread.
-    if (ClientId)
-    {
-        if (ClientId->UniqueThread == NtCurrentTeb()->ClientId.UniqueThread)
-            isCurrentThread = TRUE;
-        if (ClientId->UniqueProcess == SYSTEM_PROCESS_ID)
-            isSystemProcess = TRUE;
-    }
-    else
-    {
-        THREAD_BASIC_INFORMATION basicInfo;
-
-        if (ThreadHandle == NtCurrentThread())
-        {
-            isCurrentThread = TRUE;
-        }
-        else if (NT_SUCCESS(PhGetThreadBasicInformation(ThreadHandle, &basicInfo)))
-        {
-            if (basicInfo.ClientId.UniqueThread == NtCurrentTeb()->ClientId.UniqueThread)
-                isCurrentThread = TRUE;
-            if (basicInfo.ClientId.UniqueProcess == SYSTEM_PROCESS_ID)
-                isSystemProcess = TRUE;
-        }
-    }
-
-    // Suspend the thread to avoid inaccurate results. Don't suspend if we're walking
-    // the stack of the current thread or this is the System process.
-    if (!isCurrentThread && !isSystemProcess)
-    {
-        if (NT_SUCCESS(NtSuspendThread(ThreadHandle, NULL)))
-            suspended = TRUE;
-    }
-
-    // Kernel stack walk.
-    if ((Flags & PH_WALK_KERNEL_STACK) && KphIsConnected())
-    {
-        PVOID stack[62 - 1]; // 62 limit for XP and Server 2003.
-        ULONG capturedFrames;
-        ULONG i;
-
-        if (NT_SUCCESS(KphCaptureStackBackTraceThread(
-            ThreadHandle,
-            1,
-            sizeof(stack) / sizeof(PVOID),
-            stack,
-            &capturedFrames,
-            NULL
-            )))
-        {
-            PH_THREAD_STACK_FRAME threadStackFrame;
-
-            memset(&threadStackFrame, 0, sizeof(PH_THREAD_STACK_FRAME));
-
-            for (i = 0; i < capturedFrames; i++)
-            {
-                threadStackFrame.PcAddress = stack[i];
-
-                if (!Callback(&threadStackFrame, Context))
-                {
-                    goto ResumeExit;
-                }
-            }
-        }
-    }
-
-#ifdef _WIN64
-    if (Flags & PH_WALK_AMD64_STACK)
-    {
-        STACKFRAME64 stackFrame;
-        PH_THREAD_STACK_FRAME threadStackFrame;
-        CONTEXT context;
-
-        context.ContextFlags = CONTEXT_ALL;
-
-        if (!NT_SUCCESS(status = PhGetThreadContext(
-            ThreadHandle,
-            &context
-            )))
-            goto SkipAmd64Stack;
-
-        memset(&stackFrame, 0, sizeof(STACKFRAME64));
-        stackFrame.AddrPC.Mode = AddrModeFlat;
-        stackFrame.AddrPC.Offset = context.Rip;
-        stackFrame.AddrStack.Mode = AddrModeFlat;
-        stackFrame.AddrStack.Offset = context.Rsp;
-        stackFrame.AddrFrame.Mode = AddrModeFlat;
-        stackFrame.AddrFrame.Offset = context.Rbp;
-
-        while (TRUE)
-        {
-            if (!PhStackWalk(
-                IMAGE_FILE_MACHINE_AMD64,
-                ProcessHandle,
-                ThreadHandle,
-                &stackFrame,
-                &context,
-                NULL,
-                NULL,
-                NULL,
-                NULL
-                ))
-                break;
-
-            // If we have an invalid instruction pointer, break.
-            if (!stackFrame.AddrPC.Offset || stackFrame.AddrPC.Offset == -1)
-                break;
-
-            // Convert the stack frame and execute the callback.
-
-            PhpConvertStackFrame(&stackFrame, &threadStackFrame);
-
-            if (!Callback(&threadStackFrame, Context))
-                goto ResumeExit;
-        }
-    }
-
-SkipAmd64Stack:
-#endif
-
-    // x86/WOW64 stack walk.
-    if (Flags & PH_WALK_I386_STACK)
-    {
-        STACKFRAME64 stackFrame;
-        PH_THREAD_STACK_FRAME threadStackFrame;
-#ifndef _WIN64
-        CONTEXT context;
-
-        context.ContextFlags = CONTEXT_ALL;
-
-        if (!NT_SUCCESS(status = PhGetThreadContext(
-            ThreadHandle,
-            &context
-            )))
-            goto SkipI386Stack;
-#else
-        WOW64_CONTEXT context;
-
-        context.ContextFlags = WOW64_CONTEXT_ALL;
-
-        if (!NT_SUCCESS(status = NtQueryInformationThread(
-            ThreadHandle,
-            ThreadWow64Context,
-            &context,
-            sizeof(WOW64_CONTEXT),
-            NULL
-            )))
-            goto SkipI386Stack;
-#endif
-
-        memset(&stackFrame, 0, sizeof(STACKFRAME64));
-        stackFrame.AddrPC.Mode = AddrModeFlat;
-        stackFrame.AddrPC.Offset = context.Eip;
-        stackFrame.AddrStack.Mode = AddrModeFlat;
-        stackFrame.AddrStack.Offset = context.Esp;
-        stackFrame.AddrFrame.Mode = AddrModeFlat;
-        stackFrame.AddrFrame.Offset = context.Ebp;
-
-        while (TRUE)
-        {
-            if (!PhStackWalk(
-                IMAGE_FILE_MACHINE_I386,
-                ProcessHandle,
-                ThreadHandle,
-                &stackFrame,
-                &context,
-                NULL,
-                NULL,
-                NULL,
-                NULL
-                ))
-                break;
-
-            // If we have an invalid instruction pointer, break.
-            if (!stackFrame.AddrPC.Offset || stackFrame.AddrPC.Offset == -1)
-                break;
-
-            // Convert the stack frame and execute the callback.
-
-            PhpConvertStackFrame(&stackFrame, &threadStackFrame);
-
-            if (!Callback(&threadStackFrame, Context))
-                goto ResumeExit;
-
-            // (x86 only) Allow the user to change Eip, Esp and Ebp.
-            context.Eip = PtrToUlong(threadStackFrame.PcAddress);
-            stackFrame.AddrPC.Offset = PtrToUlong(threadStackFrame.PcAddress);
-            context.Ebp = PtrToUlong(threadStackFrame.FrameAddress);
-            stackFrame.AddrFrame.Offset = PtrToUlong(threadStackFrame.FrameAddress);
-            context.Esp = PtrToUlong(threadStackFrame.StackAddress);
-            stackFrame.AddrStack.Offset = PtrToUlong(threadStackFrame.StackAddress);
-        }
-    }
-
-SkipI386Stack:
-
-ResumeExit:
-    if (suspended)
-        NtResumeThread(ThreadHandle, NULL);
-
-    if (processOpened)
-        NtClose(ProcessHandle);
-
-    return status;
 }
 
 NTSTATUS PhGetJobProcessIdList(
@@ -2874,11 +2489,7 @@ NTSTATUS PhpQueryFileVariableSize(
             FileInformationClass
             );
 
-        if (
-            status == STATUS_BUFFER_OVERFLOW ||
-            status == STATUS_BUFFER_TOO_SMALL ||
-            status == STATUS_INFO_LENGTH_MISMATCH
-            )
+        if (status == STATUS_BUFFER_OVERFLOW || status == STATUS_BUFFER_TOO_SMALL || status == STATUS_INFO_LENGTH_MISMATCH)
         {
             PhFree(buffer);
             bufferSize *= 2;
@@ -2956,14 +2567,14 @@ NTSTATUS PhpQueryTransactionManagerVariableSize(
     PVOID buffer;
     ULONG bufferSize = 0x100;
 
-    if (!NtQueryInformationTransactionManager)
+    if (!NtQueryInformationTransactionManager_Import())
         return STATUS_NOT_SUPPORTED;
 
     buffer = PhAllocate(bufferSize);
 
     while (TRUE)
     {
-        status = NtQueryInformationTransactionManager(
+        status = NtQueryInformationTransactionManager_Import()(
             TransactionManagerHandle,
             TransactionManagerInformationClass,
             buffer,
@@ -3004,9 +2615,9 @@ NTSTATUS PhGetTransactionManagerBasicInformation(
     _Out_ PTRANSACTIONMANAGER_BASIC_INFORMATION BasicInformation
     )
 {
-    if (NtQueryInformationTransactionManager)
+    if (NtQueryInformationTransactionManager_Import())
     {
-        return NtQueryInformationTransactionManager(
+        return NtQueryInformationTransactionManager_Import()(
             TransactionManagerHandle,
             TransactionManagerBasicInformation,
             BasicInformation,
@@ -3056,14 +2667,14 @@ NTSTATUS PhpQueryTransactionVariableSize(
     PVOID buffer;
     ULONG bufferSize = 0x100;
 
-    if (!NtQueryInformationTransaction)
+    if (!NtQueryInformationTransaction_Import())
         return STATUS_NOT_SUPPORTED;
 
     buffer = PhAllocate(bufferSize);
 
     while (TRUE)
     {
-        status = NtQueryInformationTransaction(
+        status = NtQueryInformationTransaction_Import()(
             TransactionHandle,
             TransactionInformationClass,
             buffer,
@@ -3104,9 +2715,9 @@ NTSTATUS PhGetTransactionBasicInformation(
     _Out_ PTRANSACTION_BASIC_INFORMATION BasicInformation
     )
 {
-    if (NtQueryInformationTransaction)
+    if (NtQueryInformationTransaction_Import())
     {
-        return NtQueryInformationTransaction(
+        return NtQueryInformationTransaction_Import()(
             TransactionHandle,
             TransactionBasicInformation,
             BasicInformation,
@@ -3172,14 +2783,14 @@ NTSTATUS PhpQueryResourceManagerVariableSize(
     PVOID buffer;
     ULONG bufferSize = 0x100;
 
-    if (!NtQueryInformationResourceManager)
+    if (!NtQueryInformationResourceManager_Import())
         return STATUS_NOT_SUPPORTED;
 
     buffer = PhAllocate(bufferSize);
 
     while (TRUE)
     {
-        status = NtQueryInformationResourceManager(
+        status = NtQueryInformationResourceManager_Import()(
             ResourceManagerHandle,
             ResourceManagerInformationClass,
             buffer,
@@ -3256,9 +2867,9 @@ NTSTATUS PhGetEnlistmentBasicInformation(
     _Out_ PENLISTMENT_BASIC_INFORMATION BasicInformation
     )
 {
-    if (NtQueryInformationEnlistment)
+    if (NtQueryInformationEnlistment_Import())
     {
-        return NtQueryInformationEnlistment(
+        return NtQueryInformationEnlistment_Import()(
             EnlistmentHandle,
             EnlistmentBasicInformation,
             BasicInformation,
@@ -3280,8 +2891,8 @@ typedef struct _OPEN_DRIVER_BY_BASE_ADDRESS_CONTEXT
 } OPEN_DRIVER_BY_BASE_ADDRESS_CONTEXT, *POPEN_DRIVER_BY_BASE_ADDRESS_CONTEXT;
 
 BOOLEAN NTAPI PhpOpenDriverByBaseAddressCallback(
-    _In_ PPH_STRING Name,
-    _In_ PPH_STRING TypeName,
+    _In_ PPH_STRINGREF Name,
+    _In_ PPH_STRINGREF TypeName,
     _In_opt_ PVOID Context
     )
 {
@@ -3295,7 +2906,7 @@ BOOLEAN NTAPI PhpOpenDriverByBaseAddressCallback(
     HANDLE driverHandle;
     DRIVER_BASIC_INFORMATION basicInfo;
 
-    driverName = PhConcatStringRef2(&driverDirectoryName, &Name->sr);
+    driverName = PhConcatStringRef2(&driverDirectoryName, Name);
 
     if (!PhStringRefToUnicodeString(&driverName->sr, &driverNameUs))
     {
@@ -3454,6 +3065,42 @@ NTSTATUS PhpQueryDriverVariableSize(
     {
         PhFree(buffer);
     }
+
+    return status;
+}
+
+/**
+ * Gets the object name of a driver.
+ *
+ * \param DriverHandle A handle to a driver.
+ * \param Name A variable which receives a pointer
+ * to a string containing the object name. You must
+ * free the string using PhDereferenceObject() when you no
+ * longer need it.
+ *
+ * \remarks This function requires a valid KProcessHacker
+ * handle.
+ */
+NTSTATUS PhGetDriverName(
+    _In_ HANDLE DriverHandle,
+    _Out_ PPH_STRING *Name
+    )
+{
+    NTSTATUS status;
+    PUNICODE_STRING unicodeString;
+
+    if (!NT_SUCCESS(status = PhpQueryDriverVariableSize(
+        DriverHandle,
+        DriverNameInformation,
+        &unicodeString
+        )))
+        return status;
+
+    *Name = PhCreateStringEx(
+        unicodeString->Buffer,
+        unicodeString->Length
+        );
+    PhFree(unicodeString);
 
     return status;
 }
@@ -4266,8 +3913,7 @@ BOOLEAN NTAPI PhpEnumProcessModules32Callback(
 
                     if (PhStartsWithStringRef(&fullDllName, &systemRootString, TRUE))
                     {
-                        fullDllName.Buffer = (PWCHAR)((PCHAR)fullDllName.Buffer + systemRootString.Length);
-                        fullDllName.Length -= systemRootString.Length;
+                        PhSkipStringRef(&fullDllName, systemRootString.Length);
 
                         if (PhStartsWithStringRef(&fullDllName, &system32String, TRUE))
                         {
@@ -4913,8 +4559,7 @@ NTSTATUS PhEnumHandles(
         PhFree(buffer);
         bufferSize *= 2;
 
-        // Fail if we're resizing the buffer to something
-        // very large.
+        // Fail if we're resizing the buffer to something very large.
         if (bufferSize > PH_LARGE_BUFFER_SIZE)
             return STATUS_INSUFFICIENT_RESOURCES;
 
@@ -4970,8 +4615,7 @@ NTSTATUS PhEnumHandlesEx(
         PhFree(buffer);
         bufferSize *= 2;
 
-        // Fail if we're resizing the buffer to something
-        // very large.
+        // Fail if we're resizing the buffer to something very large.
         if (bufferSize > PH_LARGE_BUFFER_SIZE)
             return STATUS_INSUFFICIENT_RESOURCES;
 
@@ -5022,8 +4666,7 @@ NTSTATUS PhEnumPagefiles(
         PhFree(buffer);
         bufferSize *= 2;
 
-        // Fail if we're resizing the buffer to something
-        // very large.
+        // Fail if we're resizing the buffer to something very large.
         if (bufferSize > PH_LARGE_BUFFER_SIZE)
             return STATUS_INSUFFICIENT_RESOURCES;
 
@@ -5099,7 +4742,7 @@ NTSTATUS PhGetProcessImageFileNameByProcessId(
         return status;
     }
 
-    *FileName = PhCreateStringEx(processIdInfo.ImageName.Buffer, processIdInfo.ImageName.Length);
+    *FileName = PhCreateStringFromUnicodeString(&processIdInfo.ImageName);
     PhFree(buffer);
 
     return status;
@@ -5445,21 +5088,18 @@ NTSTATUS PhEnumDirectoryObjects(
         while (TRUE)
         {
             POBJECT_DIRECTORY_INFORMATION info;
-            PPH_STRING name;
-            PPH_STRING typeName;
+            PH_STRINGREF name;
+            PH_STRINGREF typeName;
 
             info = &buffer[i];
 
             if (!info->Name.Buffer)
                 break;
 
-            name = PhCreateStringEx(info->Name.Buffer, info->Name.Length);
-            typeName = PhCreateStringEx(info->TypeName.Buffer, info->TypeName.Length);
+            PhUnicodeStringToStringRef(&info->Name, &name);
+            PhUnicodeStringToStringRef(&info->TypeName, &typeName);
 
-            cont = Callback(name, typeName, Context);
-
-            PhDereferenceObject(name);
-            PhDereferenceObject(typeName);
+            cont = Callback(&name, &typeName, Context);
 
             if (!cont)
                 break;
@@ -6008,14 +5648,14 @@ static BOOLEAN EnumGenericProcessModulesCallback(
         PhAddEntryHashtable(context->BaseAddressHashtable, &Module->DllBase);
     }
 
-    fileName = PhCreateStringEx(Module->FullDllName.Buffer, Module->FullDllName.Length);
+    fileName = PhCreateStringFromUnicodeString(&Module->FullDllName);
 
     moduleInfo.Type = context->Type;
     moduleInfo.BaseAddress = Module->DllBase;
     moduleInfo.Size = Module->SizeOfImage;
     moduleInfo.EntryPoint = Module->EntryPoint;
     moduleInfo.Flags = Module->Flags;
-    moduleInfo.Name = PhCreateStringEx(Module->BaseDllName.Buffer, Module->BaseDllName.Length);
+    moduleInfo.Name = PhCreateStringFromUnicodeString(&Module->BaseDllName);
     moduleInfo.FileName = PhGetFileName(fileName);
     moduleInfo.LoadOrderIndex = (USHORT)(context->LoadOrderIndex++);
     moduleInfo.LoadCount = Module->ObsoleteLoadCount;
