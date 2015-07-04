@@ -333,7 +333,7 @@ typedef struct _NTFS_VOLUME {
 __declspec(dllexport) BOOLEAN NtfsInitVolume(
 	_In_ PNTFS_READ_SECTOR NtfsReadSector,
 	_In_ USHORT BytesPerSector,
-	_In_ PVOID Context,
+	_In_opt_ PVOID Context,
 	_Out_ PNTFS_VOLUME Volume
 	);
 
