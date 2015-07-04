@@ -164,7 +164,7 @@ NTSTATUS KhspHandleScanMessage(
 	switch (Notification->ScanReason)
 	{
 	case HsScanOnPeOpen:
-		return KhspHandleScanPeOpen(Notification->ScanId, ResponseFlags);
+		return KhspHandleScanPeOpen(Notification->ScanId, Notification->FileNameLength, ResponseFlags);
 	}
 
 	return STATUS_INVALID_PARAMETER;
@@ -172,6 +172,7 @@ NTSTATUS KhspHandleScanMessage(
 
 NTSTATUS KhspHandleScanPeOpen(
 	_In_ LONGLONG ScanId,
+	_In_ USHORT FileNameLength,
 	_Out_ PUCHAR ResponseFlags)
 {
 	NTSTATUS status = STATUS_UNSUCCESSFUL;
@@ -201,20 +202,16 @@ NTSTATUS KhspHandleScanPeOpen(
 		if (VirtualQuery(address, &basicInfo, sizeof(basicInfo)))
 		{
 			HS_FILE_INFO fileInfo;
-			WCHAR filePath[MAX_PATH];
 
 			fileInfo.Buffer = address;
 			fileInfo.BufferSize = basicInfo.RegionSize;
-
-			if (SUCCEEDED(KhspQueryFileName(ScanId, sizeof(filePath), filePath)))
-			{
-				fileInfo.FilePath = filePath;
-			}
-			else
-				fileInfo.FilePath = NULL;
+			fileInfo.FileName = KhspQueryFileName(ScanId, FileNameLength);
 
 			*ResponseFlags = HsFileScanRoutine(&fileInfo);
 			status = STATUS_SUCCESS;
+
+			if (fileInfo.FileName)
+				PhDereferenceObject(fileInfo.FileName);
 		}
 
 		UnmapViewOfFile(address);
@@ -269,13 +266,14 @@ HRESULT KhspCreateSectionForDataScan(
 	return result;
 }
 
-HRESULT KhspQueryFileName(
+PPH_STRING KhspQueryFileName(
 	_In_ LONGLONG ScanId,
-	_In_ USHORT FileNameSizeInBytes,
-	_Out_ PWSTR FileName)
+	_In_ USHORT FileNameLength)
 {
 	HRESULT result;
+	PWCHAR buffer;
 	DWORD bytesReturned;
+	PPH_STRING fileName;
 
 	struct
 	{
@@ -283,19 +281,22 @@ HRESULT KhspQueryFileName(
 		LONGLONG ScanId;
 	} input = { HsCmdQueryFileName, ScanId };
 
+	buffer = PhAllocate(FileNameLength);
+
 	result = FilterSendMessage(
 		HsKhsPortHandle,
 		&input,
 		sizeof(input),
-		FileName,
-		FileNameSizeInBytes - sizeof(WCHAR),
+		buffer,
+		FileNameLength,
 		&bytesReturned);
 
 	if (SUCCEEDED(result))
-	{
-		// Add NULL terminator to file name.
-		FileName[bytesReturned / sizeof(WCHAR)] = L'\0';
-	}
+		fileName = PhCreateStringEx(buffer, FileNameLength);
+	else
+		fileName = NULL;
 
-	return result;
+	PhFree(buffer);
+
+	return fileName;
 }

@@ -27,7 +27,7 @@
 typedef struct _HS_FILE_INFO {
 	PVOID Buffer;
 	SIZE_T BufferSize;
-	PWSTR FilePath;
+	PPH_STRING FileName;
 } HS_FILE_INFO, *PHS_FILE_INFO;
 
 // This response is the lack of any other flags.

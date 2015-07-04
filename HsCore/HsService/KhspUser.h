@@ -26,6 +26,7 @@ typedef enum _HS_SCAN_REASON {
 
 typedef struct _HS_SCANNER_NOTIFICATION {
 	HS_SCAN_REASON ScanReason;
+	USHORT FileNameLength;
 	LONGLONG ScanId;
 } HS_SCANNER_NOTIFICATION, *PHS_SCANNER_NOTIFICATION;
 
@@ -56,6 +57,7 @@ NTSTATUS KhspHandleScanMessage(
 
 NTSTATUS KhspHandleScanPeOpen(
 	_In_ LONGLONG ScanId,
+	_In_ USHORT FileNameLength,
 	_Out_ PUCHAR ResponseFlags
 	);
 
@@ -69,8 +71,7 @@ HRESULT KhspCreateSectionForDataScan(
 	_Out_ PHANDLE SectionHandle
 	);
 
-HRESULT KhspQueryFileName(
+PPH_STRING KhspQueryFileName(
 	_In_ LONGLONG ScanId,
-	_In_ USHORT FileNameSizeInBytes,
-	_Out_ PWSTR FileName
+	_In_ USHORT FileNameLength
 	);

@@ -43,12 +43,12 @@ UCHAR ScanRoutine(
 
 	// Skip scanning files protected by Windows.
 
-	if (SfcIsFileProtected(NULL, FileInfo->FilePath))
+	if (SfcIsFileProtected(NULL, FileInfo->FileName->Buffer))
 	{
 		return HS_RESPONSE_FLAG_CLEAN;
 	}
 
-	wprintf(L"Scanning %s\n", FileInfo->FilePath);
+	wprintf(L"Scanning %s\n", FileInfo->FileName->Buffer);
 
 	// Acquire scanner lock in shared access. This is done
 	// so the database can be updated without having to
