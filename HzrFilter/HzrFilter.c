@@ -616,6 +616,16 @@ NTSTATUS HsFilterScanFile(
 	HS_SCANNER_NOTIFICATION notification;
 	ULONG replyLength;
 
+	status = IoQueryFileDosDeviceName(FileObject, &scanContext.FileName);
+
+	if (!NT_SUCCESS(status))
+	{
+		DbgPrint("IoQueryFileDosDeviceName failed %X for %wZ",
+			status, &FileObject->FileName);
+
+		return status;
+	}
+
 	scanContext.Instance = Instance;
 	scanContext.FileObject = FileObject;
 	scanContext.SectionContext = NULL;
@@ -634,6 +644,7 @@ NTSTATUS HsFilterScanFile(
 	// Send notification to user-mode service.
 
 	notification.ScanReason = ScanReason;
+	notification.FileNameLength = scanContext.FileName->Name.Length;
 	notification.ScanId = scanContext.ScanId;
 	replyLength = sizeof(UCHAR);
 
@@ -666,6 +677,8 @@ NTSTATUS HsFilterScanFile(
 	FltAcquirePushLockExclusive(&GlobalData.ScanContextListLock);
 	RemoveEntryList(&scanContext.List);
 	FltReleasePushLock(&GlobalData.ScanContextListLock);
+
+	ExFreePool(scanContext.FileName);
 
 	return status;
 }

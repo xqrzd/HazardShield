@@ -27,7 +27,7 @@ NTSTATUS HspFilterPortConnect(
 	_In_opt_ PVOID ServerPortCookie,
 	_In_reads_bytes_opt_(SizeOfContext) PVOID ConnectionContext,
 	_In_ ULONG SizeOfContext,
-	_Outptr_result_maybenull_ PVOID *ConnectionCookie
+	_Outptr_result_maybenull_ PVOID* ConnectionCookie
 	);
 
 VOID HspFilterPortDisconnect(
@@ -96,14 +96,15 @@ NTSTATUS HspFilterPortConnect(
 	_In_opt_ PVOID ServerPortCookie,
 	_In_reads_bytes_opt_(SizeOfContext) PVOID ConnectionContext,
 	_In_ ULONG SizeOfContext,
-	_Outptr_result_maybenull_ PVOID *ConnectionCookie)
+	_Outptr_result_maybenull_ PVOID* ConnectionCookie)
 {
 	UNREFERENCED_PARAMETER(ServerPortCookie);
 	UNREFERENCED_PARAMETER(ConnectionContext);
 	UNREFERENCED_PARAMETER(SizeOfContext);
 	UNREFERENCED_PARAMETER(ConnectionCookie);
 
-	// Only allow SYSTEM processes to connect.
+	// Only allow SYSTEM processes to connect. Starting with Windows Vista,
+	// SYSTEM processes run under a separate session.
 	//if (PsGetCurrentProcessSessionId() != 0)
 		//return STATUS_ACCESS_DENIED;
 
@@ -226,7 +227,7 @@ NTSTATUS HspFilterClientMessage(
 	case HsCmdQueryFileName:
 	{
 		PHS_SCAN_CONTEXT scanContext;
-		POBJECT_NAME_INFORMATION filePath;
+		PUNICODE_STRING fileName;
 
 		status = HspGetScanContextSynchronized(
 			request.QueryFileName.ScanId,
@@ -240,33 +241,20 @@ NTSTATUS HspFilterClientMessage(
 			return status;
 		}
 
-		status = IoQueryFileDosDeviceName(scanContext->FileObject, &filePath);
+		fileName = &scanContext->FileName->Name;
 
-		if (!NT_SUCCESS(status))
+		if (!OutputBuffer || OutputBufferLength < fileName->Length)
+			return STATUS_BUFFER_OVERFLOW;
+
+		__try
 		{
-			DbgPrint("IoQueryFileDosDeviceName failed %X for ScanId: %lld",
-				status,
-				request.QueryFileName.ScanId);
-
-			return status;
+			RtlCopyMemory(OutputBuffer, fileName->Buffer, fileName->Length);
+			*ReturnOutputBufferLength = fileName->Length;
 		}
-
-		if (OutputBuffer && OutputBufferLength >= filePath->Name.Length)
+		__except (EXCEPTION_EXECUTE_HANDLER)
 		{
-			__try
-			{
-				RtlCopyMemory(OutputBuffer, filePath->Name.Buffer, filePath->Name.Length);
-				*ReturnOutputBufferLength = filePath->Name.Length;
-			}
-			__except (EXCEPTION_EXECUTE_HANDLER)
-			{
-				status = GetExceptionCode();
-			}
+			return GetExceptionCode();
 		}
-		else
-			status = STATUS_INSUFFICIENT_RESOURCES;
-
-		ExFreePool(filePath);
 
 		break;
 	}
