@@ -30,7 +30,7 @@ PPH_BYTES HspGetClamAvDatabaseDirectory(
 struct {
 	SERVICE_STATUS ServiceStatus;
 	SERVICE_STATUS_HANDLE ServiceStatusHandle;
-	SRWLOCK ScannerLock;
+	PH_QUEUED_LOCK ScannerLock;
 	PHS_SCANNER Scanner;
 } ServiceData;
 
@@ -54,7 +54,7 @@ UCHAR ScanRoutine(
 	// so the database can be updated without having to
 	// stop filtering.
 
-	AcquireSRWLockShared(&ServiceData.ScannerLock);
+	PhAcquireQueuedLockShared(&ServiceData.ScannerLock);
 
 	result = HsScanBuffer(
 		ServiceData.Scanner,
@@ -72,7 +72,7 @@ UCHAR ScanRoutine(
 		virusNameCopy = PhCreateBytes(virusName);
 	}
 
-	ReleaseSRWLockShared(&ServiceData.ScannerLock);
+	PhReleaseQueuedLockShared(&ServiceData.ScannerLock);
 
 	if (result == CL_VIRUS)
 	{
@@ -125,7 +125,7 @@ VOID HspServiceInit()
 
 		printf("Sigs loaded: %u\n", ServiceData.Scanner->Signatures);
 
-		InitializeSRWLock(&ServiceData.ScannerLock);
+		PhInitializeQueuedLock(&ServiceData.ScannerLock);
 
 		// Finished service initialization. Start listening
 		// for messages from the driver.
