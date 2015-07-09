@@ -54,5 +54,5 @@ cl_error_t HsScanBuffer(
 	_In_ PVOID Buffer,
 	_In_ SIZE_T Length,
 	_In_ ULONG ScanOptions,
-	_Out_ PCHAR* VirusName
+	_Out_ PPH_BYTES* VirusName
 	);

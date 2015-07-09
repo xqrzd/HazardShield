@@ -78,10 +78,11 @@ cl_error_t HsScanBuffer(
 	_In_ PVOID Buffer,
 	_In_ SIZE_T Length,
 	_In_ ULONG ScanOptions,
-	_Out_ PCHAR* VirusName)
+	_Out_ PPH_BYTES* VirusName)
 {
 	cl_error_t result;
 	struct cl_fmap* map;
+	char* virusName;
 
 	map = cl_fmap_open_memory(Buffer, Length);
 
@@ -89,13 +90,16 @@ cl_error_t HsScanBuffer(
 	{
 		result = cl_scanmap_callback(
 			map,
-			VirusName,
+			&virusName,
 			NULL,
 			Scanner->ClamAvEngine,
 			ScanOptions,
 			NULL);
 
 		cl_fmap_close(map);
+
+		if (result == CL_VIRUS)
+			*VirusName = PhCreateBytes(virusName);
 	}
 	else
 		result = CL_EMAP;
