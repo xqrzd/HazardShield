@@ -96,6 +96,59 @@ VOID KhsDisconnect()
 	HsFileScanRoutine = NULL;
 }
 
+NTSTATUS KhsReadFile(
+	_In_ LONGLONG ScanId,
+	_Out_ PHS_FILE_DATA FileData)
+{
+	NTSTATUS status = STATUS_UNSUCCESSFUL;
+	HRESULT result;
+	HANDLE sectionHandle = NULL;
+	PVOID address = NULL;
+
+	result = KhspCreateSectionForDataScan(ScanId, &sectionHandle);
+
+	if (!SUCCEEDED(result))
+		return status;
+
+	address = MapViewOfFile(
+		sectionHandle,
+		FILE_MAP_READ,
+		0,
+		0,
+		0);
+
+	if (address)
+	{
+		MEMORY_BASIC_INFORMATION basicInfo;
+
+		if (VirtualQuery(address, &basicInfo, sizeof(basicInfo)))
+		{
+			FileData->SectionHandle = sectionHandle;
+			FileData->BaseAddress = address;
+			FileData->Size = basicInfo.RegionSize;
+
+			return STATUS_SUCCESS;
+		}
+	}
+
+	// One of the steps failed, clean up resources.
+
+	if (address)
+		UnmapViewOfFile(address);
+
+	if (sectionHandle)
+		CloseHandle(sectionHandle);
+
+	return status;
+}
+
+VOID KhsCloseFile(
+	_In_ PHS_FILE_DATA FileData)
+{
+	UnmapViewOfFile(FileData->BaseAddress);
+	CloseHandle(FileData->SectionHandle);
+}
+
 NTSTATUS NTAPI KhspUserScanWorker(
 	_In_ PVOID Parameter)
 {
@@ -175,51 +228,21 @@ NTSTATUS KhspHandleScanPeOpen(
 	_In_ USHORT FileNameLength,
 	_Out_ PUCHAR ResponseFlags)
 {
-	NTSTATUS status = STATUS_UNSUCCESSFUL;
-	HRESULT result;
-	HANDLE sectionHandle;
-	PVOID address;
+	PPH_STRING fileName;
 
 	if (!HsFileScanRoutine)
 		return STATUS_NO_CALLBACK_ACTIVE;
 
-	result = KhspCreateSectionForDataScan(ScanId, &sectionHandle);
+	fileName = KhspQueryFileName(ScanId, FileNameLength);
 
-	if (!SUCCEEDED(result))
-		return status;
+	if (!fileName)
+		return STATUS_UNSUCCESSFUL;
 
-	address = MapViewOfFile(
-		sectionHandle,
-		FILE_MAP_READ,
-		0,
-		0,
-		0);
+	*ResponseFlags = HsFileScanRoutine(ScanId, fileName);
 
-	if (address)
-	{
-		MEMORY_BASIC_INFORMATION basicInfo;
+	PhDereferenceObject(fileName);
 
-		if (VirtualQuery(address, &basicInfo, sizeof(basicInfo)))
-		{
-			HS_FILE_INFO fileInfo;
-
-			fileInfo.Buffer = address;
-			fileInfo.BufferSize = basicInfo.RegionSize;
-			fileInfo.FileName = KhspQueryFileName(ScanId, FileNameLength);
-
-			*ResponseFlags = HsFileScanRoutine(&fileInfo);
-			status = STATUS_SUCCESS;
-
-			if (fileInfo.FileName)
-				PhDereferenceObject(fileInfo.FileName);
-		}
-
-		UnmapViewOfFile(address);
-	}
-
-	CloseHandle(sectionHandle);
-
-	return status;
+	return STATUS_SUCCESS;
 }
 
 HRESULT KhspFilterReplyMessage(

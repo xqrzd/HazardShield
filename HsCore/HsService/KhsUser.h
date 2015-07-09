@@ -25,10 +25,15 @@
 #define KHS_PORT_NAME L"\\HzrFilterPort"
 
 typedef struct _HS_FILE_INFO {
-	PVOID Buffer;
-	SIZE_T BufferSize;
+	LONGLONG ScanId;
 	PPH_STRING FileName;
 } HS_FILE_INFO, *PHS_FILE_INFO;
+
+typedef struct _HS_FILE_DATA {
+	HANDLE SectionHandle;
+	PVOID BaseAddress;
+	SIZE_T Size;
+} HS_FILE_DATA, *PHS_FILE_DATA;
 
 // This response is the lack of any other flags.
 // It cannot be combined with any other flags.
@@ -37,7 +42,8 @@ typedef struct _HS_FILE_INFO {
 #define HS_RESPONSE_FLAG_DELETE 0x2
 
 typedef UCHAR(NTAPI *PHS_SCAN_FILE_ROUTINE)(
-	_In_ PHS_FILE_INFO FileInfo
+	_In_ LONGLONG ScanId,
+	_In_ PPH_STRING FileName
 	);
 
 HRESULT KhsConnect(
@@ -50,4 +56,13 @@ NTSTATUS KhsStartFiltering(
 	);
 
 VOID KhsDisconnect(
+	);
+
+NTSTATUS KhsReadFile(
+	_In_ LONGLONG ScanId,
+	_Out_ PHS_FILE_DATA FileData
+	);
+
+VOID KhsCloseFile(
+	_In_ PHS_FILE_DATA FileData
 	);

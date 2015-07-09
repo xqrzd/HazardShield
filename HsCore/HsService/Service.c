@@ -35,20 +35,28 @@ struct {
 } ServiceData;
 
 UCHAR ScanRoutine(
-	_In_ PHS_FILE_INFO FileInfo)
+	_In_ LONGLONG ScanId,
+	_In_ PPH_STRING FileName)
 {
+	HS_FILE_DATA fileData;
 	cl_error_t result;
-	PCHAR virusName;
-	PPH_BYTES virusNameCopy;
+	PPH_BYTES virusName;
 
 	// Skip scanning files protected by Windows.
 
-	if (SfcIsFileProtected(NULL, FileInfo->FileName->Buffer))
+	if (SfcIsFileProtected(NULL, FileName->Buffer))
 	{
 		return HS_RESPONSE_FLAG_CLEAN;
 	}
 
-	wprintf(L"Scanning %s\n", FileInfo->FileName->Buffer);
+	if (!NT_SUCCESS(KhsReadFile(ScanId, &fileData)))
+	{
+		wprintf(L"KhsReadFile failed for %s\n", FileName->Buffer);
+
+		return HS_RESPONSE_FLAG_CLEAN;
+	}
+
+	wprintf(L"Scanning %s\n", FileName->Buffer);
 
 	// Acquire scanner lock in shared access. This is done
 	// so the database can be updated without having to
@@ -58,27 +66,20 @@ UCHAR ScanRoutine(
 
 	result = HsScanBuffer(
 		ServiceData.Scanner,
-		FileInfo->Buffer,
-		FileInfo->BufferSize,
+		fileData.BaseAddress,
+		fileData.Size,
 		CL_SCAN_STDOPT,
 		&virusName);
 
-	if (result == CL_VIRUS)
-	{
-		// Make a copy of virusName. virusName is used outside
-		// of the lock, so it could become invalid if the
-		// database was reloaded.
-
-		virusNameCopy = PhCreateBytes(virusName);
-	}
-
 	PhReleaseQueuedLockShared(&ServiceData.ScannerLock);
 
+	KhsCloseFile(&fileData);
+
 	if (result == CL_VIRUS)
 	{
-		printf("Found virus: %s\n", virusNameCopy->Buffer);
+		printf("Found virus: %s\n", virusName->Buffer);
 
-		PhDereferenceObject(virusNameCopy);
+		PhDereferenceObject(virusName);
 
 		return HS_RESPONSE_FLAG_INFECTED;
 	}
