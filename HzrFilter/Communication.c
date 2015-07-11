@@ -291,6 +291,7 @@ NTSTATUS HspGetScanContextSynchronized(
 	return status;
 }
 
+#if WINVER >= _WIN32_WINNT_WIN8
 NTSTATUS HspHandleCmdCreateSectionForDataScan(
 	_Inout_ PHS_SCAN_CONTEXT ScanContext,
 	_Out_ PHANDLE SectionHandle)
@@ -357,3 +358,44 @@ NTSTATUS HspHandleCmdCreateSectionForDataScan(
 
 	return status;
 }
+#else
+NTSTATUS HspHandleCmdCreateSectionForDataScan(
+	_Inout_ PHS_SCAN_CONTEXT ScanContext,
+	_Out_ PHANDLE SectionHandle)
+{
+	NTSTATUS status;
+	PHS_SECTION_CONTEXT sectionContext;
+
+	sectionContext = ExAllocatePoolWithTag(
+		PagedPool,
+		sizeof(HS_SECTION_CONTEXT),
+		'nCzH');
+
+	if (!sectionContext)
+		return STATUS_INSUFFICIENT_RESOURCES;
+
+	status = FsRtlCreateSectionForDataScan(
+		&sectionContext->SectionHandle,
+		&sectionContext->SectionObject,
+		NULL,
+		ScanContext->FileObject,
+		SECTION_MAP_READ,
+		NULL,
+		NULL,
+		PAGE_READONLY,
+		SEC_COMMIT,
+		0);
+
+	if (NT_SUCCESS(status))
+	{
+		ScanContext->SectionContext = sectionContext;
+		*SectionHandle = sectionContext->SectionHandle;
+	}
+	else
+	{
+		ExFreePoolWithTag(sectionContext, 'nCzH');
+	}
+
+	return status;
+}
+#endif

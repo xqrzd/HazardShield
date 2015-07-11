@@ -63,6 +63,7 @@ const FLT_CONTEXT_REGISTRATION ContextRegistration[] = {
 		sizeof(HS_STREAMHANDLE_CONTEXT),
 		HS_CTX_STREAMHANDLE_TAG
 	},
+#if WINVER >= _WIN32_WINNT_WIN8
 	{
 		FLT_SECTION_CONTEXT,
 		0,
@@ -70,6 +71,7 @@ const FLT_CONTEXT_REGISTRATION ContextRegistration[] = {
 		sizeof(HS_SECTION_CONTEXT),
 		HS_CTX_SECTION_TAG
 	},
+#endif
 
 	{ FLT_CONTEXT_END }
 };
@@ -150,6 +152,7 @@ NTSTATUS HsReleaseSectionContext(
 {
 	NTSTATUS status;
 
+#if WINVER >= _WIN32_WINNT_WIN8
 	status = FltCloseSectionForDataScan(SectionContext);
 
 	if (!NT_SUCCESS(status))
@@ -159,6 +162,12 @@ NTSTATUS HsReleaseSectionContext(
 	// The section cleanup routine will dereference SectionObject.
 
 	FltReleaseContext(SectionContext);
+#else
+	ObDereferenceObject(SectionContext->SectionObject);
+	ExFreePoolWithTag(SectionContext, HS_CTX_SECTION_TAG);
+
+	status = STATUS_SUCCESS;
+#endif
 
 	return status;
 }
