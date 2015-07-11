@@ -187,7 +187,9 @@ NTSTATUS HsInstanceSetup(
 
 		if (NT_SUCCESS(status))
 		{
+#if WINVER >= _WIN32_WINNT_WIN8
 			FltRegisterForDataScan(FltObjects->Instance);
+#endif
 
 			if (VolumeDeviceType == FILE_DEVICE_DISK_FILE_SYSTEM &&
 				VolumeFilesystemType == FLT_FSTYPE_NTFS)
@@ -448,7 +450,9 @@ FLT_PREOP_CALLBACK_STATUS HsPreFsControl(
 
 	switch (Data->Iopb->Parameters.FileSystemControl.Common.FsControlCode)
 	{
+#if WINVER >= _WIN32_WINNT_WIN8
 	case FSCTL_OFFLOAD_WRITE:
+#endif
 	case FSCTL_WRITE_RAW_ENCRYPTED:
 	case FSCTL_SET_ZERO_DATA:
 	{
