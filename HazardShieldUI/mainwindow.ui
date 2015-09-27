@@ -36,6 +36,14 @@
     <property name="spacing">
      <number>0</number>
     </property>
+    <item row="0" column="1">
+     <widget class="QStackedWidget" name="stackedWidget">
+      <widget class="QWidget" name="page">
+       <zorder></zorder>
+      </widget>
+      <widget class="QWidget" name="page_2"/>
+     </widget>
+    </item>
     <item row="0" column="0">
      <layout class="QVBoxLayout" name="verticalLayout">
       <property name="spacing">
@@ -46,12 +54,18 @@
         <property name="text">
          <string>PushButton</string>
         </property>
+        <property name="checkable">
+         <bool>true</bool>
+        </property>
        </widget>
       </item>
       <item>
        <widget class="QPushButton" name="pushButton_2">
         <property name="text">
          <string>PushButton</string>
+        </property>
+        <property name="checkable">
+         <bool>true</bool>
         </property>
        </widget>
       </item>
@@ -60,12 +74,18 @@
         <property name="text">
          <string>PushButton</string>
         </property>
+        <property name="checkable">
+         <bool>true</bool>
+        </property>
        </widget>
       </item>
       <item>
        <widget class="QPushButton" name="pushButton_4">
         <property name="text">
          <string>PushButton</string>
+        </property>
+        <property name="checkable">
+         <bool>true</bool>
         </property>
        </widget>
       </item>
@@ -74,12 +94,18 @@
         <property name="text">
          <string>PushButton</string>
         </property>
+        <property name="checkable">
+         <bool>true</bool>
+        </property>
        </widget>
       </item>
       <item>
        <widget class="QPushButton" name="pushButton_6">
         <property name="text">
          <string>PushButton</string>
+        </property>
+        <property name="checkable">
+         <bool>true</bool>
         </property>
        </widget>
       </item>
@@ -88,15 +114,12 @@
         <property name="text">
          <string>PushButton</string>
         </property>
+        <property name="checkable">
+         <bool>true</bool>
+        </property>
        </widget>
       </item>
      </layout>
-    </item>
-    <item row="0" column="1">
-     <widget class="QStackedWidget" name="stackedWidget">
-      <widget class="QWidget" name="page"/>
-      <widget class="QWidget" name="page_2"/>
-     </widget>
     </item>
    </layout>
   </widget>
