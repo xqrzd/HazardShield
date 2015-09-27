@@ -38,9 +38,7 @@
     </property>
     <item row="0" column="1">
      <widget class="QStackedWidget" name="stackedWidget">
-      <widget class="QWidget" name="page">
-       <zorder></zorder>
-      </widget>
+      <widget class="QWidget" name="page"/>
       <widget class="QWidget" name="page_2"/>
      </widget>
     </item>
@@ -52,7 +50,7 @@
       <item>
        <widget class="QPushButton" name="pushButton">
         <property name="text">
-         <string>PushButton</string>
+         <string>Scanner</string>
         </property>
         <property name="checkable">
          <bool>true</bool>
@@ -65,7 +63,7 @@
       <item>
        <widget class="QPushButton" name="pushButton_2">
         <property name="text">
-         <string>PushButton</string>
+         <string>Updates</string>
         </property>
         <property name="checkable">
          <bool>true</bool>
@@ -78,7 +76,7 @@
       <item>
        <widget class="QPushButton" name="pushButton_3">
         <property name="text">
-         <string>PushButton</string>
+         <string>Protection</string>
         </property>
         <property name="checkable">
          <bool>true</bool>
@@ -91,7 +89,7 @@
       <item>
        <widget class="QPushButton" name="pushButton_4">
         <property name="text">
-         <string>PushButton</string>
+         <string>Settings</string>
         </property>
         <property name="checkable">
          <bool>true</bool>
@@ -104,7 +102,7 @@
       <item>
        <widget class="QPushButton" name="pushButton_5">
         <property name="text">
-         <string>PushButton</string>
+         <string>Quarantine</string>
         </property>
         <property name="checkable">
          <bool>true</bool>
@@ -117,7 +115,7 @@
       <item>
        <widget class="QPushButton" name="pushButton_6">
         <property name="text">
-         <string>PushButton</string>
+         <string>Tools</string>
         </property>
         <property name="checkable">
          <bool>true</bool>
@@ -130,7 +128,7 @@
       <item>
        <widget class="QPushButton" name="pushButton_7">
         <property name="text">
-         <string>PushButton</string>
+         <string>About</string>
         </property>
         <property name="checkable">
          <bool>true</bool>
