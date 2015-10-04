@@ -113,19 +113,6 @@
        </widget>
       </item>
       <item>
-       <widget class="QPushButton" name="pushButton_6">
-        <property name="text">
-         <string>Tools</string>
-        </property>
-        <property name="checkable">
-         <bool>true</bool>
-        </property>
-        <attribute name="buttonGroup">
-         <string notr="true">buttonGroup</string>
-        </attribute>
-       </widget>
-      </item>
-      <item>
        <widget class="QPushButton" name="pushButton_7">
         <property name="text">
          <string>About</string>
